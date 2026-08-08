@@ -1,0 +1,355 @@
+// Christian Foundation — milestone 1 schema
+// Concept note §4 (spine and map), §5 (creator gate), PLAN.md §6.
+// MySQL + relationMode "prisma" (PlanetScale-style, no DB-level FKs) — every
+// relation scalar needs its own @@index.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+// ---------- identity ----------
+
+model User {
+  id        String   @id // Clerk user id
+  email     String   @unique
+  name      String?
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  channels        Channel[]
+  follows         Follow[]
+  watchProgress   WatchProgress[]
+  likes           Like[]
+  comments        Comment[]
+  pathwayProgress PathwayProgress[]
+}
+
+enum ChannelKind {
+  TEACHER
+  PASTOR
+  MISSIONARY
+  MUSICIAN
+  FILMMAKER
+  AUTHOR
+  PODCASTER
+  ORGANIZER
+  RESEARCHER
+  ARCHAEOLOGIST
+  MINISTRY
+}
+
+enum ChannelStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+}
+
+model Channel {
+  id               String        @id @default(cuid())
+  handle           String        @unique // /@handle
+  name             String
+  kind             ChannelKind
+  status           ChannelStatus @default(PENDING)
+  bio              String?       @db.Text
+  links            Json?
+  youtubeChannelId String?       @unique
+  ownerId          String
+  owner            User          @relation(fields: [ownerId], references: [id])
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  contentItems ContentItem[]
+  series       Series[]
+  followers    Follow[]
+
+  @@index([ownerId])
+  @@index([status])
+}
+
+model Follow {
+  userId    String
+  channelId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  channel   Channel  @relation(fields: [channelId], references: [id])
+
+  @@id([userId, channelId])
+  @@index([channelId])
+  @@index([userId])
+}
+
+// ---------- content ----------
+
+enum ContentSource {
+  EMBEDDED_YOUTUBE
+  NATIVE_MUX
+  DOCUMENT
+}
+
+enum ContentKind {
+  VIDEO
+  SERMON
+  MUSIC
+  PODCAST
+  FILM
+  PAPER
+  DATASET
+}
+
+enum Visibility {
+  PUBLIC
+  MEMBERS
+  PAID
+}
+
+model Series {
+  id          String   @id @default(cuid())
+  channelId   String
+  channel     Channel  @relation(fields: [channelId], references: [id])
+  title       String
+  description String?  @db.Text
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  contentItems ContentItem[]
+
+  @@index([channelId])
+}
+
+model ContentItem {
+  id            String        @id @default(cuid())
+  channelId     String
+  channel       Channel       @relation(fields: [channelId], references: [id])
+  seriesId      String?
+  series        Series?       @relation(fields: [seriesId], references: [id])
+  source        ContentSource
+  kind          ContentKind
+  title         String
+  description   String?       @db.Text
+  // EMBEDDED_YOUTUBE
+  youtubeVideoId String?
+  // NATIVE_MUX
+  muxAssetId    String?
+  muxPlaybackId String?
+  // DOCUMENT
+  fileKey       String?
+  audioOnly     Boolean       @default(false)
+  durationSec   Int?
+  visibility    Visibility    @default(PUBLIC)
+  scriptureRefs Json? // normalized refs, see lib/scripture.ts
+  searchText    String?       @db.Text // transcript/captions-derived, for search
+  publishedAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  watchProgress WatchProgress[]
+  likes         Like[]
+  comments      Comment[]
+  placements    ContentPlacement[]
+  pathwaySteps  PathwayStep[]
+  shelfItems    ShelfItem[]
+
+  @@unique([channelId, youtubeVideoId])
+  @@index([channelId])
+  @@index([seriesId])
+  @@index([kind])
+  @@index([publishedAt])
+}
+
+model WatchProgress {
+  userId        String
+  contentItemId String
+  positionSec   Int       @default(0)
+  completedAt   DateTime?
+  updatedAt     DateTime  @updatedAt
+  user          User        @relation(fields: [userId], references: [id])
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id])
+
+  @@id([userId, contentItemId])
+  @@index([contentItemId])
+  @@index([userId])
+}
+
+model Like {
+  userId        String
+  contentItemId String
+  createdAt     DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id])
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id])
+
+  @@id([userId, contentItemId])
+  @@index([contentItemId])
+  @@index([userId])
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  HIDDEN
+  REMOVED
+}
+
+model Comment {
+  id            String        @id @default(cuid())
+  contentItemId String
+  contentItem   ContentItem   @relation(fields: [contentItemId], references: [id])
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  parentId      String?
+  body          String        @db.Text
+  status        CommentStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([contentItemId])
+  @@index([userId])
+  @@index([parentId])
+}
+
+// ---------- the doctrinal map (concept §4) ----------
+
+model Topic {
+  id        String  @id @default(cuid())
+  slug      String  @unique
+  name      String
+  parentId  String?
+  sortOrder Int     @default(0)
+
+  questions  Question[]
+  placements ContentPlacement[]
+
+  @@index([parentId])
+}
+
+enum QuestionTier {
+  SPINE // essentials: one curated path, one confident answer
+  DISPUTED // secondary questions: positions presented side by side
+}
+
+model Question {
+  id        String       @id @default(cuid())
+  slug      String       @unique
+  title     String
+  tier      QuestionTier
+  // plain-language explanation of what is at stake and why it matters
+  // less than the spine (DISPUTED) / why there is certainty here (SPINE)
+  framing   String       @db.Text
+  topicId   String?
+  topic     Topic?       @relation(fields: [topicId], references: [id])
+  sortOrder Int          @default(0)
+
+  positions  Position[]
+  placements ContentPlacement[]
+
+  @@index([topicId])
+}
+
+model Position {
+  id         String   @id @default(cuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+  slug       String
+  name       String
+  summary    String   @db.Text
+  sortOrder  Int      @default(0)
+
+  placements ContentPlacement[]
+
+  @@unique([questionId, slug])
+  @@index([questionId])
+}
+
+// Editorial placement of content into the map. Exactly one target
+// (topic, question, or position) per row — enforced in application code,
+// see lib/map.ts placementTarget().
+model ContentPlacement {
+  id            String      @id @default(cuid())
+  contentItemId String
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id])
+  topicId       String?
+  topic         Topic?      @relation(fields: [topicId], references: [id])
+  questionId    String?
+  question      Question?   @relation(fields: [questionId], references: [id])
+  positionId    String?
+  position      Position?   @relation(fields: [positionId], references: [id])
+  note          String?
+  createdAt     DateTime    @default(now())
+
+  @@index([contentItemId])
+  @@index([topicId])
+  @@index([questionId])
+  @@index([positionId])
+}
+
+// ---------- Start Here pathways (concept §7) ----------
+
+model Pathway {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  title       String
+  description String? @db.Text
+  published   Boolean @default(false)
+
+  steps PathwayStep[]
+}
+
+model PathwayStep {
+  id            String       @id @default(cuid())
+  pathwayId     String
+  pathway       Pathway      @relation(fields: [pathwayId], references: [id])
+  sortOrder     Int
+  title         String
+  description   String?      @db.Text
+  contentItemId String?
+  contentItem   ContentItem? @relation(fields: [contentItemId], references: [id])
+
+  progress PathwayProgress[]
+
+  @@unique([pathwayId, sortOrder])
+  @@index([pathwayId])
+  @@index([contentItemId])
+}
+
+model PathwayProgress {
+  userId      String
+  stepId      String
+  completedAt DateTime    @default(now())
+  user        User        @relation(fields: [userId], references: [id])
+  step        PathwayStep @relation(fields: [stepId], references: [id])
+
+  @@id([userId, stepId])
+  @@index([stepId])
+  @@index([userId])
+}
+
+// ---------- editorial shelves (home/explore rows) ----------
+
+model Shelf {
+  id        String  @id @default(cuid())
+  slug      String  @unique
+  title     String
+  sortOrder Int     @default(0)
+  published Boolean @default(false)
+
+  items ShelfItem[]
+}
+
+model ShelfItem {
+  id            String       @id @default(cuid())
+  shelfId       String
+  shelf         Shelf        @relation(fields: [shelfId], references: [id])
+  contentItemId String?
+  contentItem   ContentItem? @relation(fields: [contentItemId], references: [id])
+  sortOrder     Int          @default(0)
+
+  @@index([shelfId])
+  @@index([contentItemId])
+}
