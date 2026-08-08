@@ -33,7 +33,10 @@ export function videoToContentItemData(
 export interface IngestResult {
   discovered: number;
   ingested: number;
+  created: number; // new to the library (drives follower notifications)
+  updated: number; // metadata refresh on existing rows
   skipped: number; // private / unlisted / embedding disabled
+  createdItems: { id: string; title: string }[];
 }
 
 /**
@@ -62,15 +65,25 @@ export async function ingestChannel(
   });
   const videos = await fetchVideoDetails(videoIds, opts.apiKey);
 
+  const existing = await db.contentItem.findMany({
+    where: { channelId: channel.id, youtubeVideoId: { in: videoIds } },
+    select: { youtubeVideoId: true },
+  });
+  const existingIds = new Set(existing.map((row) => row.youtubeVideoId));
+
   let ingested = 0;
+  let created = 0;
+  let updated = 0;
   let skipped = 0;
+  const createdItems: { id: string; title: string }[] = [];
+
   for (const video of videos) {
     if (!isIngestable(video)) {
       skipped += 1;
       continue;
     }
     const data = videoToContentItemData(channel.id, video);
-    await db.contentItem.upsert({
+    const row = await db.contentItem.upsert({
       where: {
         channelId_youtubeVideoId: {
           channelId: channel.id,
@@ -86,7 +99,13 @@ export async function ingestChannel(
       },
     });
     ingested += 1;
+    if (existingIds.has(video.videoId)) {
+      updated += 1;
+    } else {
+      created += 1;
+      createdItems.push({ id: row.id, title: row.title });
+    }
   }
 
-  return { discovered: videos.length, ingested, skipped };
+  return { discovered: videos.length, ingested, created, updated, skipped, createdItems };
 }

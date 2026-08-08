@@ -1,11 +1,29 @@
 import { auth } from "@clerk/nextjs/server";
-import { ApplicationStatus } from "@prisma/client";
+import { ApplicationStatus, NotificationType } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { applicationTransition } from "@/lib/gate";
 import { validateHandle } from "@/lib/handles";
+import { applicationDecisionNotification } from "@/lib/notify";
+
+async function notifyDecision(
+  applicantUserId: string,
+  approved: boolean,
+  decisionNote?: string | null,
+) {
+  const planned = applicationDecisionNotification({ approved, decisionNote });
+  await db.notification.create({
+    data: {
+      userId: applicantUserId,
+      type: NotificationType.APPLICATION_DECIDED,
+      title: planned.title,
+      body: planned.body ?? null,
+      url: planned.url,
+    },
+  });
+}
 
 // Admin review queue for creator applications (concept §5).
 // Rejections are never arbitrary — a decision note is required to reject.
@@ -111,6 +129,7 @@ export async function POST(req: Request) {
         createdChannelId: channel.id,
       },
     });
+    await notifyDecision(application.userId, true);
     return NextResponse.json({ application: updated, channel });
   }
 
@@ -123,5 +142,8 @@ export async function POST(req: Request) {
         : {}),
     },
   });
+  if (body.action === "reject") {
+    await notifyDecision(application.userId, false, body.note);
+  }
   return NextResponse.json({ application: updated });
 }

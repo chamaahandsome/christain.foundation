@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { auth } from "@clerk/nextjs/server";
 import { Visibility } from "@prisma/client";
+import { FollowButton } from "@/components/FollowButton";
 import { db } from "@/lib/db";
 import { thumbnailUrl } from "@/lib/youtube";
 
@@ -12,6 +14,17 @@ async function getChannel(handle: string) {
     where: { handle },
     include: { _count: { select: { followers: true, contentItems: true } } },
   });
+}
+
+async function isFollowing(channelId: string): Promise<boolean> {
+  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) return false;
+  const { userId } = await auth();
+  if (!userId) return false;
+  const follow = await db.follow.findUnique({
+    where: { userId_channelId: { userId, channelId } },
+    select: { userId: true },
+  });
+  return Boolean(follow);
 }
 
 export async function generateMetadata({
@@ -61,11 +74,19 @@ export default async function ChannelPage({
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
       <header className="mb-8">
-        <h1 className="text-3xl font-semibold">{channel.name}</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          @{channel.handle} · {channel._count.followers} followers ·{" "}
-          {channel._count.contentItems} items
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold">{channel.name}</h1>
+            <p className="mt-1 text-sm text-neutral-500">
+              @{channel.handle} · {channel._count.contentItems} items
+            </p>
+          </div>
+          <FollowButton
+            channelId={channel.id}
+            initialFollowing={await isFollowing(channel.id)}
+            initialFollowers={channel._count.followers}
+          />
+        </div>
         {channel.bio && (
           <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-400">
             {channel.bio}

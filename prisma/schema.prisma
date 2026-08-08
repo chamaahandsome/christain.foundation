@@ -31,6 +31,28 @@ model User {
   pathwayProgress PathwayProgress[]
   applications    CreatorApplication[]
   affirmations    AffirmationRecord[]
+  notifications   Notification[]
+}
+
+enum NotificationType {
+  NEW_CONTENT
+  APPLICATION_DECIDED
+  SYSTEM
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+  type      NotificationType
+  title     String
+  body      String?          @db.Text
+  url       String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
 }
 
 enum ChannelKind {

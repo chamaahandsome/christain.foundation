@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { NotificationsBell } from "@/components/NotificationsBell";
 
 const hasClerkKeys = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
@@ -33,11 +34,18 @@ export function SiteHeader() {
             <>
               <SignedIn>
                 <Link
+                  href="/feed"
+                  className="rounded-lg px-3 py-1.5 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+                >
+                  Feed
+                </Link>
+                <Link
                   href="/studio"
                   className="rounded-lg px-3 py-1.5 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
                 >
                   Studio
                 </Link>
+                <NotificationsBell />
                 <UserButton afterSignOutUrl="/" />
               </SignedIn>
               <SignedOut>
