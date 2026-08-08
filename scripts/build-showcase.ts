@@ -28,6 +28,11 @@ const SHOWCASE_CHANNELS = [
   "@shaneandshane",
   "@HeartCryMissionary",
   "@thegospelcoalition",
+  "@godlogicapologetics",
+  "@InspiringPhilosophy",
+  "@DrJamesTour",
+  "@ExpeditionBible",
+  "@TruthUnites",
 ];
 
 const PER_CHANNEL = 3;
