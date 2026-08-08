@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Visibility } from "@prisma/client";
+import { VideoMarquee, type MarqueeItem } from "@/components/VideoMarquee";
 import { db } from "@/lib/db";
 import { thumbnailUrl } from "@/lib/youtube";
+import showcase from "@/lib/showcase.json";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +69,43 @@ const AVATAR_GRADIENTS = [
 ];
 
 export default async function Home() {
+  // Marquee: the platform's own library once it has enough items; until
+  // then, a generated showcase of real videos from well-known channels
+  // (lib/showcase.json — dev placeholder, links go to YouTube).
+  const libraryItems = await db.contentItem
+    .findMany({
+      where: {
+        visibility: Visibility.PUBLIC,
+        youtubeVideoId: { not: null },
+        channel: { status: "APPROVED" },
+      },
+      orderBy: { publishedAt: "desc" },
+      take: 24,
+      select: {
+        id: true,
+        title: true,
+        youtubeVideoId: true,
+        channel: { select: { name: true } },
+      },
+    })
+    .catch(() => []);
+
+  const marqueeItems: MarqueeItem[] =
+    libraryItems.length >= 8
+      ? libraryItems.map((item) => ({
+          videoId: item.youtubeVideoId!,
+          title: item.title,
+          channel: item.channel.name,
+          href: `/watch/${item.id}`,
+        }))
+      : (showcase as { videoId: string; title: string; channel: string }[]).map(
+          (item) => ({
+            ...item,
+            href: `https://www.youtube.com/watch?v=${item.videoId}`,
+            external: true,
+          }),
+        );
+
   const [channels, latest] = await Promise.all([
     db.channel
       .findMany({
@@ -139,6 +178,11 @@ export default async function Home() {
               Explore the library
             </Link>
           </div>
+        </div>
+
+        {/* The moving shop window — teaching scrolling by */}
+        <div className="pb-16">
+          <VideoMarquee items={marqueeItems} />
         </div>
       </section>
 
