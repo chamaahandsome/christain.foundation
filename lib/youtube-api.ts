@@ -1,0 +1,209 @@
+// Thin client for the YouTube Data API v3, used for library ingestion
+// (concept §8: the free library is embedded, not hosted). Response parsing is
+// split into pure functions so it can be tested without network access.
+
+const API_BASE = "https://www.googleapis.com/youtube/v3";
+
+export interface YouTubeChannelInfo {
+  channelId: string;
+  title: string;
+  description: string;
+  thumbnailUrl: string | null;
+  uploadsPlaylistId: string | null;
+}
+
+export interface YouTubeVideoInfo {
+  videoId: string;
+  title: string;
+  description: string;
+  durationSec: number | null;
+  publishedAt: string | null;
+  thumbnailUrl: string | null;
+  embeddable: boolean;
+  privacyStatus: string;
+}
+
+export class YouTubeApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status?: number,
+  ) {
+    super(message);
+    this.name = "YouTubeApiError";
+  }
+}
+
+// ---------- pure parsers ----------
+
+function bestThumbnail(thumbnails: Record<string, { url?: string }> | undefined): string | null {
+  if (!thumbnails) return null;
+  for (const key of ["maxres", "high", "medium", "default"]) {
+    const url = thumbnails[key]?.url;
+    if (url) return url;
+  }
+  return null;
+}
+
+export function parseChannelResponse(json: unknown): YouTubeChannelInfo | null {
+  const item = (json as { items?: unknown[] })?.items?.[0] as
+    | {
+        id?: string;
+        snippet?: { title?: string; description?: string; thumbnails?: Record<string, { url?: string }> };
+        contentDetails?: { relatedPlaylists?: { uploads?: string } };
+      }
+    | undefined;
+  if (!item?.id) return null;
+  return {
+    channelId: item.id,
+    title: item.snippet?.title ?? "",
+    description: item.snippet?.description ?? "",
+    thumbnailUrl: bestThumbnail(item.snippet?.thumbnails),
+    uploadsPlaylistId: item.contentDetails?.relatedPlaylists?.uploads ?? null,
+  };
+}
+
+export function parsePlaylistItemsResponse(json: unknown): {
+  videoIds: string[];
+  nextPageToken: string | null;
+} {
+  const data = json as {
+    items?: { contentDetails?: { videoId?: string } }[];
+    nextPageToken?: string;
+  };
+  const videoIds = (data.items ?? [])
+    .map((item) => item.contentDetails?.videoId)
+    .filter((id): id is string => Boolean(id));
+  return { videoIds, nextPageToken: data.nextPageToken ?? null };
+}
+
+export function parseVideosResponse(json: unknown): YouTubeVideoInfo[] {
+  const data = json as {
+    items?: {
+      id?: string;
+      snippet?: {
+        title?: string;
+        description?: string;
+        publishedAt?: string;
+        thumbnails?: Record<string, { url?: string }>;
+      };
+      contentDetails?: { duration?: string };
+      status?: { embeddable?: boolean; privacyStatus?: string };
+    }[];
+  };
+  return (data.items ?? [])
+    .filter((item): item is typeof item & { id: string } => Boolean(item.id))
+    .map((item) => ({
+      videoId: item.id,
+      title: item.snippet?.title ?? "",
+      description: item.snippet?.description ?? "",
+      durationSec: item.contentDetails?.duration
+        ? parseIsoDurationLoose(item.contentDetails.duration)
+        : null,
+      publishedAt: item.snippet?.publishedAt ?? null,
+      thumbnailUrl: bestThumbnail(item.snippet?.thumbnails),
+      embeddable: item.status?.embeddable ?? false,
+      privacyStatus: item.status?.privacyStatus ?? "unknown",
+    }));
+}
+
+// Local import to avoid a cycle: lib/youtube.ts exports parseIsoDuration.
+import { parseIsoDuration } from "@/lib/youtube";
+function parseIsoDurationLoose(iso: string): number | null {
+  return parseIsoDuration(iso);
+}
+
+/**
+ * Only public, embeddable videos enter the library — the embedded model
+ * cannot serve anything else, and unlisted/private uploads are not ours to
+ * surface.
+ */
+export function isIngestable(video: YouTubeVideoInfo): boolean {
+  return video.embeddable && video.privacyStatus === "public";
+}
+
+// ---------- fetch layer ----------
+
+async function apiGet(
+  path: string,
+  params: Record<string, string>,
+  apiKey: string,
+): Promise<unknown> {
+  const url = new URL(`${API_BASE}/${path}`);
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+  url.searchParams.set("key", apiKey);
+
+  const res = await fetch(url, { headers: { accept: "application/json" } });
+  if (!res.ok) {
+    throw new YouTubeApiError(
+      `YouTube API ${path} failed with ${res.status}`,
+      res.status,
+    );
+  }
+  return res.json();
+}
+
+const CHANNEL_ID_PATTERN = /^UC[A-Za-z0-9_-]{22}$/;
+
+/** Resolve a channel by UC… id or by @handle. */
+export async function resolveChannel(
+  idOrHandle: string,
+  apiKey: string,
+): Promise<YouTubeChannelInfo | null> {
+  const trimmed = idOrHandle.trim();
+  const params: Record<string, string> = {
+    part: "snippet,contentDetails",
+  };
+  if (CHANNEL_ID_PATTERN.test(trimmed)) {
+    params.id = trimmed;
+  } else {
+    params.forHandle = trimmed.replace(/^@/, "");
+  }
+  const json = await apiGet("channels", params, apiKey);
+  return parseChannelResponse(json);
+}
+
+/** List video ids from a channel's uploads playlist, newest first. */
+export async function listUploads(
+  uploadsPlaylistId: string,
+  apiKey: string,
+  opts: { maxPages?: number } = {},
+): Promise<string[]> {
+  const maxPages = opts.maxPages ?? 10; // 10 pages × 50 = 500 videos
+  const videoIds: string[] = [];
+  let pageToken: string | null = null;
+
+  for (let page = 0; page < maxPages; page++) {
+    const params: Record<string, string> = {
+      part: "contentDetails",
+      playlistId: uploadsPlaylistId,
+      maxResults: "50",
+    };
+    if (pageToken) params.pageToken = pageToken;
+    const json = await apiGet("playlistItems", params, apiKey);
+    const parsed = parsePlaylistItemsResponse(json);
+    videoIds.push(...parsed.videoIds);
+    pageToken = parsed.nextPageToken;
+    if (!pageToken) break;
+  }
+  return videoIds;
+}
+
+/** Fetch details for up to thousands of videos, chunked at the API's 50 max. */
+export async function fetchVideoDetails(
+  videoIds: string[],
+  apiKey: string,
+): Promise<YouTubeVideoInfo[]> {
+  const videos: YouTubeVideoInfo[] = [];
+  for (let i = 0; i < videoIds.length; i += 50) {
+    const chunk = videoIds.slice(i, i + 50);
+    const json = await apiGet(
+      "videos",
+      { part: "snippet,contentDetails,status", id: chunk.join(",") },
+      apiKey,
+    );
+    videos.push(...parseVideosResponse(json));
+  }
+  return videos;
+}

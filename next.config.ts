@@ -8,6 +8,17 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "img.clerk.com" },
     ],
   },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        // Public channel identity is /@handle (folder names can't start
+        // with @ — that's the parallel-routes convention).
+        { source: "/@:handle", destination: "/channel/:handle" },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
 };
 
 export default nextConfig;
