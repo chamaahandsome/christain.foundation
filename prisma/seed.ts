@@ -2,7 +2,14 @@
 // Data lives in prisma/seed-data.ts (validated by tests/seed-data.test.ts).
 
 import { PrismaClient } from "@prisma/client";
-import { QUESTIONS, START_HERE_STEPS, TOPICS } from "./seed-data";
+import {
+  QUESTIONS,
+  START_HERE_STEPS,
+  STATEMENT_CLAUSES,
+  STATEMENT_PREAMBLE,
+  STATEMENT_VERSION,
+  TOPICS,
+} from "./seed-data";
 
 const db = new PrismaClient();
 
@@ -77,8 +84,38 @@ async function main() {
     });
   }
 
+  // Doctrinal statement (the creator gate, concept §5)
+  const statement = await db.statementVersion.upsert({
+    where: { version: STATEMENT_VERSION },
+    create: {
+      version: STATEMENT_VERSION,
+      title: "The Christian Foundation Doctrinal Statement",
+      preamble: STATEMENT_PREAMBLE,
+      publishedAt: new Date(),
+    },
+    update: { preamble: STATEMENT_PREAMBLE },
+  });
+  for (const [index, clause] of STATEMENT_CLAUSES.entries()) {
+    await db.statementClause.upsert({
+      where: {
+        statementVersionId_key: {
+          statementVersionId: statement.id,
+          key: clause.key,
+        },
+      },
+      create: {
+        statementVersionId: statement.id,
+        key: clause.key,
+        title: clause.title,
+        text: clause.text,
+        sortOrder: index,
+      },
+      update: { title: clause.title, text: clause.text, sortOrder: index },
+    });
+  }
+
   console.log(
-    `Seeded ${TOPICS.length} topics, ${QUESTIONS.length} questions, ${START_HERE_STEPS.length} pathway steps.`,
+    `Seeded ${TOPICS.length} topics, ${QUESTIONS.length} questions, ${START_HERE_STEPS.length} pathway steps, statement v${STATEMENT_VERSION} with ${STATEMENT_CLAUSES.length} clauses.`,
   );
 }
 

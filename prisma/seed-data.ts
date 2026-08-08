@@ -294,3 +294,45 @@ export const START_HERE_STEPS = [
   },
 ];
 
+
+// ---------- the doctrinal statement (concept §5.1–5.2), version 1 ----------
+// Affirmed per-clause, in its plain, historic sense. Published in full.
+
+export interface SeedClause {
+  key: string;
+  title: string;
+  text: string;
+}
+
+export const STATEMENT_VERSION = 1;
+
+export const STATEMENT_PREAMBLE =
+  "We vet by affirmation, not by affiliation. We do not ask what tradition a person belongs to; we ask what they affirm. Every creator affirms the following in its plain, historic sense. The statement is published in full precisely so that no one is asked to affirm what they do not believe.";
+
+export const STATEMENT_CLAUSES: SeedClause[] = [
+  {
+    key: "nicene-creed",
+    title: "The Nicene Creed",
+    text: "I affirm the Nicene Creed in its plain, historic sense: one God in three persons; Jesus Christ true God and true man, crucified, bodily raised, returning to judge.",
+  },
+  {
+    key: "scripture-final-authority",
+    title: "Scripture as final authority",
+    text: "I affirm Scripture as the final authority in all matters of faith and practice.",
+  },
+  {
+    key: "justification",
+    title: "Justification",
+    text: "I affirm justification by grace alone, through faith alone, in Christ alone.",
+  },
+  {
+    key: "sole-mediator",
+    title: "Christ as sole mediator",
+    text: "I affirm Christ as the sole mediator between God and man (1 Timothy 2:5).",
+  },
+  {
+    key: "mary-and-the-saints",
+    title: "On Mary and the saints",
+    text: "I affirm Mary as Theotokos — mother of our Lord — and honor her as blessed among women. I reject the immaculate conception, the bodily assumption, co-redemptrix claims, and the practice of directing prayer or petition to Mary or to any saint. Christ alone mediates between God and man.",
+  },
+];

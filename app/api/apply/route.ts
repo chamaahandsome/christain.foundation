@@ -1,0 +1,149 @@
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { ApplicationStatus, ChannelKind } from "@prisma/client";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { db } from "@/lib/db";
+import { affirmationComplete } from "@/lib/gate";
+import { validateHandle } from "@/lib/handles";
+
+// The creator application (concept §5): draft + per-clause affirmation.
+// GET returns the current statement, the user's draft, and affirmation state.
+// POST upserts the draft and records affirmations/conduct agreement.
+
+async function currentStatement() {
+  return db.statementVersion.findFirst({
+    where: { publishedAt: { not: null } },
+    orderBy: { version: "desc" },
+    include: { clauses: { orderBy: { sortOrder: "asc" } } },
+  });
+}
+
+export async function GET() {
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const statement = await currentStatement();
+  if (!statement) {
+    return NextResponse.json({ error: "No published statement." }, { status: 503 });
+  }
+
+  const [application, affirmations] = await Promise.all([
+    db.creatorApplication.findFirst({
+      where: { userId, status: { in: [ApplicationStatus.DRAFT, ApplicationStatus.SUBMITTED, ApplicationStatus.UNDER_REVIEW] } },
+      include: { vouches: true },
+    }),
+    db.affirmationRecord.findMany({
+      where: { userId, statementVersionId: statement.id },
+      select: { clause: { select: { key: true } } },
+    }),
+  ]);
+
+  const check = affirmationComplete(
+    statement.clauses.map((c) => c.key),
+    affirmations.map((a) => a.clause.key),
+  );
+
+  return NextResponse.json({
+    statement: {
+      version: statement.version,
+      title: statement.title,
+      preamble: statement.preamble,
+      clauses: statement.clauses.map(({ key, title, text }) => ({ key, title, text })),
+    },
+    application,
+    affirmation: check,
+  });
+}
+
+const BodySchema = z.object({
+  proposedHandle: z.string().min(3),
+  proposedName: z.string().min(2).max(80),
+  proposedKind: z.nativeEnum(ChannelKind),
+  youtubeChannelId: z.string().optional(),
+  ministryStatement: z.string().min(50).max(5000),
+  // Clause keys being affirmed in this request. Affirmation is per-clause
+  // and deliberate — the client sends each clause the user actually checked.
+  affirmClauses: z.array(z.string()).default([]),
+  agreeConduct: z.boolean().default(false),
+});
+
+export async function POST(req: Request) {
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const parsed = BodySchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid request body", details: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+  const body = parsed.data;
+
+  const handleCheck = validateHandle(body.proposedHandle);
+  if (!handleCheck.valid) {
+    return NextResponse.json({ error: handleCheck.error }, { status: 400 });
+  }
+
+  const statement = await currentStatement();
+  if (!statement) {
+    return NextResponse.json({ error: "No published statement." }, { status: 503 });
+  }
+
+  // Ensure the User row exists (Clerk webhook provisioning lands later).
+  const clerkUser = await currentUser();
+  const email = clerkUser?.emailAddresses?.[0]?.emailAddress ?? `${userId}@placeholder.invalid`;
+  await db.user.upsert({
+    where: { id: userId },
+    create: { id: userId, email, name: clerkUser?.fullName ?? null },
+    update: {},
+  });
+
+  const existing = await db.creatorApplication.findFirst({
+    where: { userId, status: { in: [ApplicationStatus.DRAFT, ApplicationStatus.SUBMITTED, ApplicationStatus.UNDER_REVIEW] } },
+  });
+  if (existing && existing.status !== ApplicationStatus.DRAFT) {
+    return NextResponse.json(
+      { error: "Application is already under review." },
+      { status: 409 },
+    );
+  }
+
+  const data = {
+    proposedHandle: body.proposedHandle,
+    proposedName: body.proposedName,
+    proposedKind: body.proposedKind,
+    youtubeChannelId: body.youtubeChannelId ?? null,
+    ministryStatement: body.ministryStatement,
+    ...(body.agreeConduct ? { conductAgreedAt: new Date() } : {}),
+  };
+
+  const application = existing
+    ? await db.creatorApplication.update({ where: { id: existing.id }, data })
+    : await db.creatorApplication.create({ data: { userId, ...data } });
+
+  // Record affirmations for known clauses (idempotent per user+clause).
+  const known = new Map(statement.clauses.map((c) => [c.key, c.id]));
+  for (const key of body.affirmClauses) {
+    const clauseId = known.get(key);
+    if (!clauseId) continue;
+    await db.affirmationRecord.upsert({
+      where: { userId_clauseId: { userId, clauseId } },
+      create: { userId, clauseId, statementVersionId: statement.id },
+      update: {},
+    });
+  }
+
+  const affirmations = await db.affirmationRecord.findMany({
+    where: { userId, statementVersionId: statement.id },
+    select: { clause: { select: { key: true } } },
+  });
+
+  return NextResponse.json({
+    application,
+    affirmation: affirmationComplete(
+      statement.clauses.map((c) => c.key),
+      affirmations.map((a) => a.clause.key),
+    ),
+  });
+}

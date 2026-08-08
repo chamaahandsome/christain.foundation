@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { QuestionTier } from "@prisma/client";
-import { QUESTIONS, START_HERE_STEPS, TOPICS } from "@/prisma/seed-data";
+import {
+  QUESTIONS,
+  START_HERE_STEPS,
+  STATEMENT_CLAUSES,
+  TOPICS,
+} from "@/prisma/seed-data";
 import { validateQuestionPositions } from "@/lib/map";
 
 // The seeded map must obey the concept §4 rules encoded in lib/map.ts —
@@ -68,5 +73,40 @@ describe("seeded doctrinal map", () => {
     for (const step of START_HERE_STEPS) {
       expect(step.title.length).toBeGreaterThan(3);
     }
+  });
+});
+
+describe("seeded doctrinal statement (concept §5.1–5.2)", () => {
+  it("contains the four gate clauses plus Mary and the saints", () => {
+    const keys = STATEMENT_CLAUSES.map((c) => c.key);
+    expect(keys).toEqual([
+      "nicene-creed",
+      "scripture-final-authority",
+      "justification",
+      "sole-mediator",
+      "mary-and-the-saints",
+    ]);
+  });
+
+  it("clause keys are unique and well-formed", () => {
+    const keys = STATEMENT_CLAUSES.map((c) => c.key);
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const key of keys) {
+      expect(key).toMatch(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+    }
+  });
+
+  it("every clause carries substantive affirmation text", () => {
+    for (const clause of STATEMENT_CLAUSES) {
+      expect(clause.text.length, clause.key).toBeGreaterThan(40);
+      expect(clause.text).toMatch(/^I (affirm|reject)/);
+    }
+  });
+
+  it("the Mary clause addresses direction of prayer, not 'veneration' (drafting note)", () => {
+    const mary = STATEMENT_CLAUSES.find((c) => c.key === "mary-and-the-saints")!;
+    expect(mary.text).toMatch(/prayer or petition/);
+    expect(mary.text.toLowerCase()).not.toContain("veneration");
+    expect(mary.text).toContain("Theotokos");
   });
 });

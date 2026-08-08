@@ -29,6 +29,8 @@ model User {
   likes           Like[]
   comments        Comment[]
   pathwayProgress PathwayProgress[]
+  applications    CreatorApplication[]
+  affirmations    AffirmationRecord[]
 }
 
 enum ChannelKind {
@@ -68,8 +70,138 @@ model Channel {
   contentItems ContentItem[]
   series       Series[]
   followers    Follow[]
+  vouchesGiven Vouch[]
+  reviewCases  DoctrineReviewCase[]
 
   @@index([ownerId])
+  @@index([status])
+}
+
+// ---------- the creator gate (concept §5) ----------
+// Anyone can watch. Not anyone can publish. Vetting is by affirmation, not
+// affiliation: the published, versioned doctrinal statement is affirmed
+// per-clause, vouched for by existing creators, and audited against the
+// published body of work (§5.4) — never by interrogating church membership.
+
+model StatementVersion {
+  id          String    @id @default(cuid())
+  version     Int       @unique
+  title       String
+  preamble    String    @db.Text
+  publishedAt DateTime?
+
+  clauses      StatementClause[]
+  affirmations AffirmationRecord[]
+}
+
+model StatementClause {
+  id                 String           @id @default(cuid())
+  statementVersionId String
+  statementVersion   StatementVersion @relation(fields: [statementVersionId], references: [id])
+  key                String // e.g. "nicene-creed" — stable across versions
+  title              String
+  text               String           @db.Text
+  sortOrder          Int
+
+  affirmations AffirmationRecord[]
+
+  @@unique([statementVersionId, key])
+  @@index([statementVersionId])
+}
+
+// One row per clause per affirmation — §5.1: recorded in its plain, historic
+// sense, with timestamp and statement version. Never deleted; a re-affirmation
+// on a new statement version creates new rows.
+model AffirmationRecord {
+  id                 String           @id @default(cuid())
+  userId             String
+  user               User             @relation(fields: [userId], references: [id])
+  statementVersionId String
+  statementVersion   StatementVersion @relation(fields: [statementVersionId], references: [id])
+  clauseId           String
+  clause             StatementClause  @relation(fields: [clauseId], references: [id])
+  affirmedAt         DateTime         @default(now())
+
+  @@unique([userId, clauseId])
+  @@index([userId])
+  @@index([statementVersionId])
+  @@index([clauseId])
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+model CreatorApplication {
+  id               String            @id @default(cuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id])
+  status           ApplicationStatus @default(DRAFT)
+  // proposed channel
+  proposedHandle   String
+  proposedName     String
+  proposedKind     ChannelKind
+  youtubeChannelId String?
+  ministryStatement String           @db.Text // who they are, what they teach
+  conductAgreedAt  DateTime? // §5.3 conduct standard, standing obligation
+  submittedAt      DateTime?
+  decidedAt        DateTime?
+  decidedById      String? // admin user id
+  decisionNote     String?           @db.Text
+  createdChannelId String? // set on approval
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  vouches Vouch[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+// §5.3: existing creators vouch for new applicants. Trust compounds; it
+// doesn't scale by committee.
+model Vouch {
+  id               String             @id @default(cuid())
+  applicationId    String
+  application      CreatorApplication @relation(fields: [applicationId], references: [id])
+  voucherChannelId String
+  voucherChannel   Channel            @relation(fields: [voucherChannelId], references: [id])
+  note             String?            @db.Text
+  createdAt        DateTime           @default(now())
+
+  @@unique([applicationId, voucherChannelId])
+  @@index([applicationId])
+  @@index([voucherChannelId])
+}
+
+// §5.4: the signature is the gate; the body of work is the audit. Review is
+// on published teaching, not paperwork. Distinct from safety moderation.
+enum ReviewCaseStatus {
+  OPEN
+  IN_REVIEW
+  UPHELD // the standard was violated
+  DISMISSED
+  APPEALED
+}
+
+model DoctrineReviewCase {
+  id            String           @id @default(cuid())
+  channelId     String
+  channel       Channel          @relation(fields: [channelId], references: [id])
+  contentItemId String? // the published teaching cited
+  claim         String           @db.Text // what standard is alleged violated, citing content
+  status        ReviewCaseStatus @default(OPEN)
+  openedById    String? // user id; null = editorial
+  reviewerId    String?
+  outcomeNote   String?          @db.Text
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([channelId])
   @@index([status])
 }
 
