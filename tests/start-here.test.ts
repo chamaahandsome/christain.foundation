@@ -158,7 +158,7 @@ describe("the real content file", () => {
     expect(validateStartHere(data)).toEqual([]);
   });
 
-  it("has the 15 topics in the specified order", () => {
+  it("has the 16 topics in the specified order", () => {
     const slugs = [...data.topics].sort((a, b) => a.order - b.order).map((t) => t.slug);
     expect(slugs).toEqual([
       "who-is-jesus",
@@ -166,6 +166,7 @@ describe("the real content file", () => {
       "did-the-resurrection-happen",
       "who-is-god",
       "can-i-trust-the-bible",
+      "does-science-disprove-god",
       "how-do-i-read-the-bible",
       "how-do-i-pray",
       "am-i-really-saved",
@@ -181,12 +182,12 @@ describe("the real content file", () => {
 
   it("keeps baptism and disagreement as the two open questions, last", () => {
     const byOrder = [...data.topics].sort((a, b) => a.order - b.order);
-    expect(byOrder[13].slug).toBe("what-is-baptism");
-    expect(byOrder[13].tier).toBe("open_question");
-    expect(byOrder[14].slug).toBe("what-christians-disagree-about");
+    expect(byOrder[14].slug).toBe("what-is-baptism");
     expect(byOrder[14].tier).toBe("open_question");
-    expect(byOrder[14].next).toBeNull();
-    expect(byOrder.slice(0, 13).every((t) => t.tier === "essential")).toBe(true);
+    expect(byOrder[15].slug).toBe("what-christians-disagree-about");
+    expect(byOrder[15].tier).toBe("open_question");
+    expect(byOrder[15].next).toBeNull();
+    expect(byOrder.slice(0, 14).every((t) => t.tier === "essential")).toBe(true);
   });
 
   it("strict mode fails while placeholders remain (the pre-launch gate)", () => {
