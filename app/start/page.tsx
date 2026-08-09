@@ -11,16 +11,8 @@ export const metadata = {
     "Fifteen questions every new believer asks, in the order worth asking them — answered with the clearest teaching we could find.",
 };
 
-// Visual identity per card while curation is in progress; once a topic has
-// real videos, its first thumbnail takes over as the card art.
-const TILE_GRADIENTS = [
-  "from-amber-500 to-orange-700",
-  "from-sky-500 to-indigo-700",
-  "from-emerald-500 to-teal-700",
-  "from-rose-500 to-red-700",
-  "from-violet-500 to-purple-700",
-  "from-cyan-500 to-blue-700",
-];
+// Card art priority: curator cover_image → first curated video thumbnail →
+// mono tile with a ghosted number. Palette is monochrome throughout.
 
 export default function StartPage() {
   const topics = startHereTopics();
@@ -31,7 +23,7 @@ export default function StartPage() {
       <div className="relative overflow-hidden rounded-3xl bg-neutral-950 px-6 py-14 text-center text-white sm:px-12">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_100%_at_50%_0%,rgba(245,158,11,0.25),transparent_70%)]"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_100%_at_50%_0%,rgba(255,255,255,0.08),transparent_70%)]"
         />
         <p className="relative mx-auto w-fit rounded-full border border-white/20 px-4 py-1 text-xs tracking-wide text-neutral-300">
           Fifteen questions · in the order worth asking them
@@ -57,9 +49,13 @@ export default function StartPage() {
 
       {/* The pathway grid */}
       <ol className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {topics.map((topic, i) => {
+        {topics.map((topic) => {
           const curated = topic.videos.filter((v) => !isPlaceholderVideo(v));
-          const cover = curated[0]?.youtube_id;
+          const cover =
+            topic.cover_image ??
+            (curated[0]
+              ? `https://i.ytimg.com/vi/${curated[0].youtube_id}/hqdefault.jpg`
+              : null);
           const totalSec = curated.reduce((sum, v) => sum + v.duration_seconds, 0);
           const open = topic.tier === "open_question";
 
@@ -70,45 +66,41 @@ export default function StartPage() {
                 className="group block overflow-hidden rounded-2xl border border-neutral-200 transition-colors hover:border-neutral-400 dark:border-neutral-800 dark:hover:border-neutral-600"
               >
                 {/* Card art */}
-                <div className="relative aspect-[5/3] w-full overflow-hidden">
+                <div className="relative aspect-[5/3] w-full overflow-hidden bg-neutral-950">
                   {cover ? (
                     <>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={`https://i.ytimg.com/vi/${cover}/hqdefault.jpg`}
+                        src={cover}
                         alt=""
                         loading="lazy"
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="h-full w-full object-cover opacity-90 transition-transform duration-300 group-hover:scale-105"
                       />
-                      <span className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-transparent" />
+                      <span className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/75 via-black/20 to-transparent" />
                     </>
                   ) : (
-                    <div
-                      className={`flex h-full w-full items-end bg-linear-to-br p-4 ${TILE_GRADIENTS[i % TILE_GRADIENTS.length]}`}
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute -right-3 -top-9 select-none text-[9rem] font-bold leading-none text-white/10"
                     >
-                      <span
-                        aria-hidden
-                        className="pointer-events-none absolute -right-3 -top-9 select-none text-[9rem] font-bold leading-none text-white/15"
-                      >
-                        {topic.order}
-                      </span>
-                    </div>
+                      {topic.order}
+                    </span>
                   )}
 
                   {/* Number chip */}
-                  <span className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-sm font-semibold text-white backdrop-blur">
+                  <span className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white ring-1 ring-white/25 backdrop-blur">
                     {topic.order}
                   </span>
 
                   {open && (
-                    <span className="absolute right-3 top-3 rounded-full bg-sky-500/90 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur">
+                    <span className="absolute right-3 top-3 rounded-full border border-white/30 bg-black/40 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur">
                       Open question
                     </span>
                   )}
 
-                  {/* Bottom line over the art */}
+                  {/* Label strip over the art */}
                   <span className="pointer-events-none absolute inset-x-0 bottom-0 p-4">
-                    <span className="block text-xs font-medium uppercase tracking-widest text-white/70">
+                    <span className="block text-xs font-medium uppercase tracking-widest text-white/60">
                       {topic.label}
                     </span>
                   </span>

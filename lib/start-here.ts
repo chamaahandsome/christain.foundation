@@ -32,6 +32,9 @@ export interface StartHereTopic {
   slug: string;
   /** Short name for the progress pills, e.g. "The resurrection". */
   label: string;
+  /** Optional card art: an absolute URL or a /public path (e.g. "/covers/jesus.jpg").
+   * Falls back to the first curated video's thumbnail, then a mono tile. */
+  cover_image?: string | null;
   order: number;
   question: string;
   tier: StartHereTier;
@@ -124,6 +127,13 @@ export function validateStartHere(
     }
     if (!topic.label || topic.label.length > 24) {
       errors.push(`${topic.slug}: label must be 1–24 chars (pill text)`);
+    }
+    if (
+      topic.cover_image &&
+      !topic.cover_image.startsWith("/") &&
+      !topic.cover_image.startsWith("https://")
+    ) {
+      errors.push(`${topic.slug}: cover_image must be a /public path or https:// URL`);
     }
   }
 
