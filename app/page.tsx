@@ -113,7 +113,7 @@ export default async function Home() {
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/start-here"
+              href="/start"
               className="rounded-xl bg-neutral-900 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
             >
               Start Here
@@ -205,7 +205,7 @@ export default async function Home() {
       <section className="mx-auto max-w-6xl px-4 py-12">
         <div className="grid gap-4 lg:grid-cols-3">
           <Link
-            href="/start-here"
+            href="/start"
             className="group rounded-2xl border border-neutral-200 p-8 hover:border-neutral-400 dark:border-neutral-800 dark:hover:border-neutral-600"
           >
             <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">

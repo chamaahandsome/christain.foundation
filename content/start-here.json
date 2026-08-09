@@ -1,0 +1,574 @@
+{
+  "topics": [
+    {
+      "slug": "who-is-jesus",
+      "order": 1,
+      "question": "Who is Jesus?",
+      "tier": "essential",
+      "tier_note": "Christians do not disagree on this",
+      "framing": "Everything else rests here. Jesus of Nazareth claimed to be God — not a guru, not a prophet with good advice, but the Lord of heaven and earth in person. He was either wrong, lying, or telling the truth, and the church has staked everything on the third. Before anything else, get clear on who He is: true God and true man, crucified, and bodily raised.",
+      "next": "what-just-happened",
+      "videos": [
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 1
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 2
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 3
+        }
+      ]
+    },
+    {
+      "slug": "what-just-happened",
+      "order": 2,
+      "question": "What just happened to me?",
+      "tier": "essential",
+      "tier_note": "Christians do not disagree on this",
+      "framing": "You responded to something — now let's name it. The gospel is news, not advice: Christ died for your sins, was buried, and rose on the third day. You didn't clean yourself up and earn a place; God moved toward you while you were still His enemy. What happened is called grace, and the rest of your life is learning how deep it goes.",
+      "next": "did-the-resurrection-happen",
+      "videos": [
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 1
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 2
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 3
+        }
+      ]
+    },
+    {
+      "slug": "did-the-resurrection-happen",
+      "order": 3,
+      "question": "Did the resurrection really happen?",
+      "tier": "essential",
+      "tier_note": "Christians do not disagree on this",
+      "framing": "If Christ is not raised, your faith is worthless — the Bible itself says so. Christianity is the only faith that invites you to check its founding event as history: an empty tomb, hostile witnesses, men who died rather than recant what they saw. You are not asked to believe blindly. Look at the evidence; it holds.",
+      "next": "who-is-god",
+      "videos": [
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 1
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 2
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 3
+        }
+      ]
+    },
+    {
+      "slug": "who-is-god",
+      "order": 4,
+      "question": "Who is God?",
+      "tier": "essential",
+      "tier_note": "Christians do not disagree on this",
+      "framing": "One God, three persons — Father, Son, and Holy Spirit. Not three gods, not one person wearing masks. This is the deepest mystery of the faith and also the most practical: it means God has been love from all eternity, that the Father sent the Son, and that the Spirit now lives in everyone who belongs to Him — including you.",
+      "next": "can-i-trust-the-bible",
+      "videos": [
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 1
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 2
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 3
+        }
+      ]
+    },
+    {
+      "slug": "can-i-trust-the-bible",
+      "order": 5,
+      "question": "Can I trust the Bible?",
+      "tier": "essential",
+      "tier_note": "Christians do not disagree on this",
+      "framing": "The Bible is not one book but sixty-six, written across centuries, and it is the best-attested text of the ancient world by an enormous margin. But trust is not just about manuscripts — it's about whether God has spoken. Jesus treated Scripture as God's word, and if He is who He says He is, that settles the question of authority.",
+      "next": "how-do-i-read-the-bible",
+      "videos": [
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 1
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 2
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 3
+        }
+      ]
+    },
+    {
+      "slug": "how-do-i-read-the-bible",
+      "order": 6,
+      "question": "How do I read the Bible?",
+      "tier": "essential",
+      "tier_note": "Christians do not disagree on this",
+      "framing": "Don't start at page one and stall in Leviticus. Start with a Gospel — John or Mark — and watch Jesus. Read whole books, not fortune-cookie verses; context is everything. You will hit things you don't understand — keep going, the essentials are clear. The goal isn't finishing a reading plan. It's meeting God in what He said.",
+      "next": "how-do-i-pray",
+      "videos": [
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 1
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 2
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 3
+        }
+      ]
+    },
+    {
+      "slug": "how-do-i-pray",
+      "order": 7,
+      "question": "How do I pray?",
+      "tier": "essential",
+      "tier_note": "Christians do not disagree on this",
+      "framing": "Prayer is not a performance and there are no magic words — it is a child talking to a Father who already loves you. Jesus gave a model: honor God, ask for what you need, confess, and rest in His protection. Pray badly rather than not at all. The Spirit Himself helps you when you don't know what to say — that's a promise.",
+      "next": "am-i-really-saved",
+      "videos": [
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 1
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 2
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 3
+        }
+      ]
+    },
+    {
+      "slug": "am-i-really-saved",
+      "order": 8,
+      "question": "Am I really saved?",
+      "tier": "essential",
+      "tier_note": "Christians do not disagree on this",
+      "framing": "Almost every new believer asks this in the dark, and almost no one tells you it's normal. Assurance rests on what Christ did, not on the quality of your faith or the steadiness of your feelings. You are not saved by feeling saved. Look outward at the cross, not inward at your performance — He does not lose what is His.",
+      "next": "why-do-i-still-sin",
+      "videos": [
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 1
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 2
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 3
+        }
+      ]
+    },
+    {
+      "slug": "why-do-i-still-sin",
+      "order": 9,
+      "question": "Why do I still sin?",
+      "tier": "essential",
+      "tier_note": "Christians do not disagree on this",
+      "framing": "Becoming a Christian did not make you sinless — it made the war start. That struggle you feel is not evidence that nothing happened; it's evidence that something did. The old you never fought back. God's Spirit is remaking you slowly, through ordinary means, with real setbacks. Repent quickly, get up again, and keep walking.",
+      "next": "do-i-need-a-church",
+      "videos": [
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 1
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 2
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 3
+        }
+      ]
+    },
+    {
+      "slug": "do-i-need-a-church",
+      "order": 10,
+      "question": "Do I need a church?",
+      "tier": "essential",
+      "tier_note": "Christians do not disagree on this",
+      "framing": "You can't follow Jesus alone — not because the rules say so, but because He designed it that way. The church is not a building or a brand; it's the people He purchased, gathered to hear the word, break bread, and carry each other. Find one that preaches the Bible and loves people, and plant yourself. Imperfect is normal; absent is not.",
+      "next": "why-is-there-suffering",
+      "videos": [
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 1
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 2
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 3
+        }
+      ]
+    },
+    {
+      "slug": "why-is-there-suffering",
+      "order": 11,
+      "question": "Why is there suffering?",
+      "tier": "essential",
+      "tier_note": "Christians do not disagree on this",
+      "framing": "Christianity never pretends suffering isn't real or doesn't hurt — its center is a cross. God has not yet ended evil, but He has entered it: Jesus wept, bled, and died inside it, and rose to guarantee its end. You will not get every answer here. You will get a God who suffered with you and a promise that none of it is wasted.",
+      "next": "only-one-way",
+      "videos": [
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 1
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 2
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 3
+        }
+      ]
+    },
+    {
+      "slug": "only-one-way",
+      "order": 12,
+      "question": "Isn't it arrogant to say Jesus is the only way?",
+      "tier": "essential",
+      "tier_note": "Christians do not disagree on this",
+      "framing": "It would be arrogant — if Christians had invented the claim. But it's Jesus' own: no one comes to the Father except through Him. Every faith makes exclusive claims, including the claim that all paths are equal. The question is not which claim is humble; it's which is true. And an open door that cost God His Son is not arrogance — it's rescue.",
+      "next": "what-will-my-family-say",
+      "videos": [
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 1
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 2
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 3
+        }
+      ]
+    },
+    {
+      "slug": "what-will-my-family-say",
+      "order": 13,
+      "question": "What will my family and friends say?",
+      "tier": "essential",
+      "tier_note": "Christians do not disagree on this",
+      "framing": "Jesus was honest about this: following Him can cost relationships, and He asked for loyalty above even family. That's not a license to be obnoxious — you're called to more patience and love toward them, not less. Some will mock, some will watch, some will follow. Hold fast, stay kind, and remember that He was rejected first.",
+      "next": "what-is-baptism",
+      "videos": [
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 1
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 2
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 3
+        }
+      ]
+    },
+    {
+      "slug": "what-is-baptism",
+      "order": 14,
+      "question": "What is baptism?",
+      "tier": "open_question",
+      "tier_note": "That it matters is settled; how and when is honestly disputed",
+      "framing": "That baptism matters is not in dispute — Jesus commanded it, and the church has always obeyed. It is the public sign of belonging to Christ. But faithful Christians have honestly disagreed for centuries about how and when: believers on profession of faith, or the children of believers too. Here are both cases at their strongest. This is your first look at a question where good Christians differ — notice that it can be studied without fear.",
+      "next": "what-christians-disagree-about",
+      "videos": [
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 1
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 2
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 3
+        }
+      ]
+    },
+    {
+      "slug": "what-christians-disagree-about",
+      "order": 15,
+      "question": "What do Christians disagree about — and why is that alright?",
+      "tier": "open_question",
+      "tier_note": "How to hold everything you just learned",
+      "framing": "You now know the essentials — the things Christians cannot disagree on and still be Christians. Everything else on this pathway was that kind of truth. But you will soon meet believers who differ on baptism, the end times, spiritual gifts, church government — and you need to know which differences are which. Knowing which hills are worth dying on is the most useful skill a young believer can learn. In essentials, unity. In non-essentials, liberty. In all things, charity.",
+      "next": null,
+      "videos": [
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 1
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 2
+        },
+        {
+          "youtube_id": "REPLACE",
+          "title": "REPLACE",
+          "creator": "REPLACE",
+          "channel_url": "https://www.youtube.com/",
+          "duration_seconds": 0,
+          "why_this_one": "REPLACE",
+          "order": 3
+        }
+      ]
+    }
+  ]
+}

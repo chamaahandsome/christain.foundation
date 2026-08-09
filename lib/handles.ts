@@ -24,6 +24,7 @@ const RESERVED = new Set([
   "shop",
   "signin",
   "signup",
+  "start",
   "start-here",
   "starthere",
   "support",

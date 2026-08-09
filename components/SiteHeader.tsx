@@ -5,7 +5,7 @@ import { NotificationsBell } from "@/components/NotificationsBell";
 const hasClerkKeys = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
 const NAV = [
-  { href: "/start-here", label: "Start Here" },
+  { href: "/start", label: "Start Here" },
   { href: "/map", label: "The Map" },
   { href: "/explore", label: "Explore" },
   { href: "/search", label: "Search" },
