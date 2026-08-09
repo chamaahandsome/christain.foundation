@@ -4,12 +4,17 @@
 // - Lazy: thumbnail first, iframe only on click. Never autoplay (spec).
 // - Dead-video fallback: failed thumbnail → link-out card, logged.
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useYouTubeErrorLog } from "@/components/useYouTubeErrorLog";
 import type { StartHereVideo } from "@/lib/start-here";
 import { formatDurationCoarse } from "@/lib/start-here";
 
 function embedUrl(youtubeId: string): string {
-  return `https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1`;
+  // enablejsapi lets us observe onError events (logging + dead-video swap);
+  // origin is required alongside it for the API to accept the frame.
+  const origin =
+    typeof window !== "undefined" ? `&origin=${encodeURIComponent(window.location.origin)}` : "";
+  return `https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1&enablejsapi=1${origin}`;
 }
 
 function Caption({ video }: { video: StartHereVideo }) {
@@ -32,6 +37,50 @@ function Caption({ video }: { video: StartHereVideo }) {
       <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
         {video.why_this_one}
       </p>
+    </div>
+  );
+}
+
+function PlayingEmbed({
+  video,
+  onFatal,
+}: {
+  video: StartHereVideo;
+  onFatal: () => void;
+}) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  useYouTubeErrorLog(iframeRef, video.youtube_id, {
+    source: "start-here",
+    onFatal,
+  });
+
+  return (
+    <div>
+      <div className="aspect-video w-full overflow-hidden rounded-xl bg-black">
+        <iframe
+          ref={iframeRef}
+          src={embedUrl(video.youtube_id)}
+          title={video.title}
+          className="h-full w-full"
+          allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
+      </div>
+      <p className="mt-2 text-right text-xs text-neutral-400">
+        Trouble playing?{" "}
+        <a
+          href={`https://www.youtube.com/watch?v=${video.youtube_id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-neutral-600 dark:hover:text-neutral-300"
+        >
+          Watch on YouTube ↗
+        </a>
+      </p>
+      <div className="mt-2">
+        <Caption video={video} />
+      </div>
     </div>
   );
 }
@@ -59,23 +108,7 @@ export function StartHereVideoCard({ video }: { video: StartHereVideo }) {
   }
 
   if (playing) {
-    return (
-      <div>
-        <div className="aspect-video w-full overflow-hidden rounded-xl bg-black">
-          <iframe
-            src={embedUrl(video.youtube_id)}
-            title={video.title}
-            className="h-full w-full"
-            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin"
-          />
-        </div>
-        <div className="mt-3">
-          <Caption video={video} />
-        </div>
-      </div>
-    );
+    return <PlayingEmbed video={video} onFatal={() => setDead(true)} />;
   }
 
   return (

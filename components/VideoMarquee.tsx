@@ -8,7 +8,8 @@
 // pages); showcase cards open an on-page lightbox with the embedded player —
 // nobody leaves the site.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useYouTubeErrorLog } from "@/components/useYouTubeErrorLog";
 import { buildEmbedUrl, thumbnailUrl } from "@/lib/youtube";
 
 export interface MarqueeItem {
@@ -79,6 +80,9 @@ function Lightbox({
   item: MarqueeItem;
   onClose: () => void;
 }) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  useYouTubeErrorLog(iframeRef, item.videoId, { source: "home-lightbox" });
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -121,7 +125,8 @@ function Lightbox({
         </div>
         <div className="aspect-video w-full overflow-hidden rounded-xl bg-black shadow-2xl">
           <iframe
-            src={buildEmbedUrl(item.videoId, { autoplay: true })}
+            ref={iframeRef}
+            src={`${buildEmbedUrl(item.videoId, { autoplay: true })}&origin=${encodeURIComponent(window.location.origin)}`}
             title={item.title}
             className="h-full w-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -129,6 +134,17 @@ function Lightbox({
             referrerPolicy="strict-origin-when-cross-origin"
           />
         </div>
+        <p className="mt-2 text-right text-xs text-neutral-400">
+          Trouble playing?{" "}
+          <a
+            href={`https://www.youtube.com/watch?v=${item.videoId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-neutral-200"
+          >
+            Watch on YouTube ↗
+          </a>
+        </p>
       </div>
     </div>
   );
