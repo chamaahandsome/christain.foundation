@@ -2,6 +2,7 @@
   "topics": [
     {
       "slug": "who-is-jesus",
+      "label": "Who is Jesus",
       "order": 1,
       "question": "Who is Jesus?",
       "tier": "essential",
@@ -40,6 +41,7 @@
     },
     {
       "slug": "what-just-happened",
+      "label": "What happened",
       "order": 2,
       "question": "What just happened to me?",
       "tier": "essential",
@@ -78,6 +80,7 @@
     },
     {
       "slug": "did-the-resurrection-happen",
+      "label": "The resurrection",
       "order": 3,
       "question": "Did the resurrection really happen?",
       "tier": "essential",
@@ -116,6 +119,7 @@
     },
     {
       "slug": "who-is-god",
+      "label": "Who is God",
       "order": 4,
       "question": "Who is God?",
       "tier": "essential",
@@ -154,6 +158,7 @@
     },
     {
       "slug": "can-i-trust-the-bible",
+      "label": "Trusting the Bible",
       "order": 5,
       "question": "Can I trust the Bible?",
       "tier": "essential",
@@ -192,6 +197,7 @@
     },
     {
       "slug": "how-do-i-read-the-bible",
+      "label": "Reading the Bible",
       "order": 6,
       "question": "How do I read the Bible?",
       "tier": "essential",
@@ -230,6 +236,7 @@
     },
     {
       "slug": "how-do-i-pray",
+      "label": "Prayer",
       "order": 7,
       "question": "How do I pray?",
       "tier": "essential",
@@ -268,6 +275,7 @@
     },
     {
       "slug": "am-i-really-saved",
+      "label": "Assurance",
       "order": 8,
       "question": "Am I really saved?",
       "tier": "essential",
@@ -306,6 +314,7 @@
     },
     {
       "slug": "why-do-i-still-sin",
+      "label": "Still sinning",
       "order": 9,
       "question": "Why do I still sin?",
       "tier": "essential",
@@ -344,6 +353,7 @@
     },
     {
       "slug": "do-i-need-a-church",
+      "label": "Church",
       "order": 10,
       "question": "Do I need a church?",
       "tier": "essential",
@@ -382,6 +392,7 @@
     },
     {
       "slug": "why-is-there-suffering",
+      "label": "Suffering",
       "order": 11,
       "question": "Why is there suffering?",
       "tier": "essential",
@@ -420,6 +431,7 @@
     },
     {
       "slug": "only-one-way",
+      "label": "Only one way",
       "order": 12,
       "question": "Isn't it arrogant to say Jesus is the only way?",
       "tier": "essential",
@@ -458,6 +470,7 @@
     },
     {
       "slug": "what-will-my-family-say",
+      "label": "Family & friends",
       "order": 13,
       "question": "What will my family and friends say?",
       "tier": "essential",
@@ -496,6 +509,7 @@
     },
     {
       "slug": "what-is-baptism",
+      "label": "Baptism",
       "order": 14,
       "question": "What is baptism?",
       "tier": "open_question",
@@ -534,6 +548,7 @@
     },
     {
       "slug": "what-christians-disagree-about",
+      "label": "Disagreement",
       "order": 15,
       "question": "What do Christians disagree about — and why is that alright?",
       "tier": "open_question",

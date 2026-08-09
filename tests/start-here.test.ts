@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import rawData from "@/content/start-here.json";
 import {
   formatDuration,
+  formatDurationCoarse,
   hasPlaceholders,
   validateStartHere,
   type StartHereData,
@@ -25,6 +26,7 @@ function video(overrides: Partial<StartHereVideo> = {}): StartHereVideo {
 function topic(overrides: Partial<StartHereTopic> = {}): StartHereTopic {
   return {
     slug: "t1",
+    label: "Short label",
     order: 1,
     question: "A question?",
     tier: "essential",
@@ -194,6 +196,28 @@ describe("the real content file", () => {
       // once curation lands, the real file must pass strict in full
       expect(validateStartHere(data, { strict: true })).toEqual([]);
     }
+  });
+});
+
+describe("real content pills", () => {
+  it("every topic has a short label for the progress pills", () => {
+    for (const t of (rawData as StartHereData).topics) {
+      expect(t.label.length, t.slug).toBeGreaterThan(0);
+      expect(t.label.length, t.slug).toBeLessThanOrEqual(24);
+    }
+  });
+});
+
+describe("formatDurationCoarse", () => {
+  it.each([
+    [0, ""],
+    [45, "1 min"],
+    [840, "14 min"],
+    [2520, "42 min"],
+    [3600, "1 h"],
+    [3900, "1 h 5 min"],
+  ])("%d seconds → %s", (input, expected) => {
+    expect(formatDurationCoarse(input)).toBe(expected);
   });
 });
 

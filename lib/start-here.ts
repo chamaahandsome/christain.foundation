@@ -30,6 +30,8 @@ export type StartHereTier = "essential" | "open_question";
 
 export interface StartHereTopic {
   slug: string;
+  /** Short name for the progress pills, e.g. "The resurrection". */
+  label: string;
   order: number;
   question: string;
   tier: StartHereTier;
@@ -120,6 +122,9 @@ export function validateStartHere(
     if (topic.framing.trim().length < 40) {
       errors.push(`${topic.slug}: framing is too short to be the value-add`);
     }
+    if (!topic.label || topic.label.length > 24) {
+      errors.push(`${topic.slug}: label must be 1–24 chars (pill text)`);
+    }
   }
 
   if (opts.strict) {
@@ -180,6 +185,16 @@ export function formatDuration(totalSeconds: number): string {
   return h > 0
     ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
     : `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** Card-style duration: "42 min", "1 h 5 min". */
+export function formatDurationCoarse(totalSeconds: number): string {
+  if (totalSeconds <= 0) return "";
+  const totalMinutes = Math.max(1, Math.round(totalSeconds / 60));
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m} min`;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
 }
 
 // ---------- accessors used by the pages ----------
