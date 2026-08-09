@@ -96,8 +96,8 @@ export default async function Home() {
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_60%_at_50%_0%,rgba(245,158,11,0.12),transparent_70%)]"
         />
         <div className="mx-auto max-w-4xl px-4 pb-16 pt-20 text-center sm:pt-28">
-          <p className="mx-auto mb-5 w-fit rounded-full border border-neutral-200 px-4 py-1 text-xs tracking-wide text-neutral-500 dark:border-neutral-800">
-            For new believers, and the teachers who feed them
+          <p className="mx-auto mb-5 w-fit rounded-full border border-neutral-200 px-4 py-1.5 text-[11px] uppercase tracking-[0.18em] text-neutral-500 sm:text-xs dark:border-neutral-800">
+            In essentials, <span className="font-bold text-neutral-800 dark:text-neutral-200">unity</span> · In non-essentials, liberty · In all things, charity
           </p>
           <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-6xl">
             A home for sound teaching —{" "}
@@ -250,6 +250,53 @@ export default async function Home() {
             </p>
           </Link>
         </div>
+      </section>
+
+      {/* What we stand for */}
+      <section className="mx-auto max-w-6xl px-4 py-12">
+        <h2 className="text-xl font-semibold">What we stand for</h2>
+        <p className="mt-1 text-sm text-neutral-500">
+          Said plainly, so you know exactly where this platform stands.
+        </p>
+        <ul className="mt-6 grid gap-4 sm:grid-cols-2">
+          <li className="rounded-2xl border border-neutral-200 p-6 dark:border-neutral-800">
+            <h3 className="font-semibold">We affirm the Nicene Creed</h3>
+            <p className="mt-1.5 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
+              In its plain, historic sense: one God in three persons; Jesus
+              Christ true God and true man, crucified, bodily raised,
+              returning to judge.
+            </p>
+          </li>
+          <li className="rounded-2xl border border-neutral-200 p-6 dark:border-neutral-800">
+            <h3 className="font-semibold">Scripture is the final authority</h3>
+            <p className="mt-1.5 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
+              In all matters of faith and practice — and salvation is by grace
+              alone, through faith alone, in Christ alone.
+            </p>
+          </li>
+          <li className="rounded-2xl border border-neutral-200 p-6 dark:border-neutral-800">
+            <h3 className="font-semibold">Certainty on the essentials</h3>
+            <p className="mt-1.5 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
+              Where Christians cannot disagree, you'll find one confident
+              answer — no "perspectives," no both-sides framing.
+            </p>
+          </li>
+          <li className="rounded-2xl border border-neutral-200 p-6 dark:border-neutral-800">
+            <h3 className="font-semibold">Honest liberty on the rest</h3>
+            <p className="mt-1.5 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
+              Baptism, end times, spiritual gifts — where the faithful
+              disagree, we show each view at its strongest and say what's
+              actually at stake.
+            </p>
+          </li>
+        </ul>
+        <p className="mt-4 text-sm text-neutral-500">
+          Every teacher here has affirmed this — vetted by what they affirm,
+          not what label they wear.{" "}
+          <Link href="/map" className="underline hover:text-neutral-800 dark:hover:text-neutral-200">
+            See the map of what's settled and what's open →
+          </Link>
+        </p>
       </section>
 
       {/* Creator CTA */}
