@@ -12,13 +12,22 @@
       "next": "what-just-happened",
       "videos": [
         {
+          "youtube_id": "Kud-UrLXjjA",
+          "title": "The God-Man",
+          "creator": "Voddie Baucham",
+          "channel_url": "https://www.youtube.com/@FoundersMinistries",
+          "duration_seconds": 2498,
+          "why_this_one": "A sermon on the question itself: Jesus as fully God and fully man, and why nothing less can save.",
+          "order": 1
+        },
+        {
           "youtube_id": "WgnnennoOI8",
           "title": "The Person of Jesus in the Nicene Creed",
           "creator": "Dallas Theological Seminary",
           "channel_url": "https://www.youtube.com/channel/UCDeFY9KGgMd6V52ViVNhnIg",
           "duration_seconds": 2802,
           "why_this_one": "Walks through what the Nicene Creed confesses about Jesus — the same statement every teacher on this platform affirms.",
-          "order": 1
+          "order": 2
         },
         {
           "youtube_id": "E9hEzm4SrTE",
@@ -27,7 +36,7 @@
           "channel_url": "https://www.youtube.com/@MikeWinger",
           "duration_seconds": 5468,
           "why_this_one": "Hebrews 1, verse by verse, showing the New Testament calling Jesus YHWH outright.",
-          "order": 2
+          "order": 3
         },
         {
           "youtube_id": "REPLACE",
@@ -36,7 +45,7 @@
           "channel_url": "https://www.youtube.com/",
           "duration_seconds": 0,
           "why_this_one": "REPLACE",
-          "order": 3
+          "order": 4
         }
       ]
     },
