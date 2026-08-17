@@ -221,9 +221,19 @@ function ApplyForm() {
           ...(inviteCode.trim() ? { inviteCode: inviteCode.trim() } : {}),
         }),
       });
-      const data = await res.json();
+      // A crashed route returns a bodyless 500 — don't let json() throw.
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setErrors([data.error ?? "Could not save draft."]);
+        // Surface zod field messages ("give us at least one place to verify
+        // your content…") instead of the generic "Invalid request body".
+        const fieldErrors = data.details?.fieldErrors
+          ? (Object.values(data.details.fieldErrors).flat() as string[])
+          : [];
+        setErrors(
+          fieldErrors.length > 0
+            ? fieldErrors
+            : [data.error ?? `Could not save draft (HTTP ${res.status}).`],
+        );
         return false;
       }
       if (data.inviteCodeError) {
@@ -244,9 +254,9 @@ function ApplyForm() {
     setMessage(null);
     try {
       const res = await fetch("/api/apply/submit", { method: "POST" });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setErrors(data.details ?? [data.error ?? "Could not submit."]);
+        setErrors(data.details ?? [data.error ?? `Could not submit (HTTP ${res.status}).`]);
         return;
       }
       await load();
