@@ -5,6 +5,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { ingestChannel } from "@/lib/ingest";
 import { planContentNotifications } from "@/lib/notify";
+import { ACCESS_LEVELS, FEATURES } from "@/lib/team";
+import { getChannelAccess } from "@/lib/team-authorization";
 
 const BodySchema = z.object({
   channelId: z.string().min(1),
@@ -31,14 +33,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const channel = await db.channel.findUnique({
-    where: { id: parsed.data.channelId },
-    select: { id: true, ownerId: true, youtubeChannelId: true },
-  });
+  // Owner, or a team member with manager access to the library (PLAN §4:
+  // ministry staff run the channel).
+  const access = await getChannelAccess(
+    userId,
+    parsed.data.channelId,
+    FEATURES.LIBRARY,
+    ACCESS_LEVELS.MANAGER,
+  );
+  const { channel } = access;
   if (!channel) {
     return NextResponse.json({ error: "Channel not found" }, { status: 404 });
   }
-  if (channel.ownerId !== userId) {
+  if (!access.authorized) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   if (!channel.youtubeChannelId) {

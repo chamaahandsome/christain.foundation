@@ -32,11 +32,14 @@ model User {
   applications    CreatorApplication[]
   affirmations    AffirmationRecord[]
   notifications   Notification[]
+  teamMemberships TeamMember[]
 }
 
 enum NotificationType {
   NEW_CONTENT
   APPLICATION_DECIDED
+  VOUCH_RECEIVED
+  TEAM_INVITE
   SYSTEM
 }
 
@@ -94,9 +97,65 @@ model Channel {
   followers    Follow[]
   vouchesGiven Vouch[]
   reviewCases  DoctrineReviewCase[]
+  teamMembers  TeamMember[]
 
   @@index([ownerId])
   @@index([status])
+}
+
+// ---------- team access (PLAN §4: ministry staff manage a teacher's channel) ----------
+// Ported from Maltivas TeamMember/TeamInvitation, folded into one model: a
+// PENDING row carries the invite token; accepting binds the Clerk user and
+// activates it. Access is per-feature (lib/team.ts), not a single role.
+
+enum TeamMemberStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+model TeamMember {
+  id              String           @id @default(cuid())
+  channelId       String
+  channel         Channel          @relation(fields: [channelId], references: [id])
+  email           String
+  userId          String? // null until the invitation is accepted
+  user            User?            @relation(fields: [userId], references: [id])
+  // Per-feature access map, e.g. { "library": "manager", "team": "none" } —
+  // parsed and enforced by lib/team.ts. JSON so ported Maltivas features can
+  // slot in without migrations.
+  featureAccess   Json             @default("{}")
+  status          TeamMemberStatus @default(PENDING)
+  inviteToken     String?          @unique
+  inviteExpiresAt DateTime?
+  invitedById     String // Clerk user id of the inviter
+  invitedAt       DateTime         @default(now())
+  acceptedAt      DateTime?
+  updatedAt       DateTime         @updatedAt
+
+  @@unique([channelId, email])
+  @@index([channelId])
+  @@index([userId])
+  @@index([email])
+  @@index([status])
+}
+
+// Founding-cohort invitations (lib/gate.ts: invited applications bypass the
+// vouch minimum). Codes are minted by admins; redemption attaches the code to
+// the application so review can see how the applicant arrived.
+model InviteCode {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  note        String? // who/what this was minted for (admin-facing)
+  email       String? // intended recipient, informational
+  createdById String // admin Clerk user id
+  maxUses     Int       @default(1)
+  usageCount  Int       @default(0)
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  applications CreatorApplication[]
 }
 
 // ---------- the creator gate (concept §5) ----------
@@ -170,6 +229,8 @@ model CreatorApplication {
   youtubeChannelId String?
   ministryStatement String           @db.Text // who they are, what they teach
   conductAgreedAt  DateTime? // §5.3 conduct standard, standing obligation
+  inviteCodeId     String? // founding-cohort invitation, if redeemed
+  inviteCode       InviteCode?       @relation(fields: [inviteCodeId], references: [id])
   submittedAt      DateTime?
   decidedAt        DateTime?
   decidedById      String? // admin user id
@@ -182,6 +243,7 @@ model CreatorApplication {
 
   @@index([userId])
   @@index([status])
+  @@index([inviteCodeId])
 }
 
 // §5.3: existing creators vouch for new applicants. Trust compounds; it

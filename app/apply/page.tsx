@@ -31,6 +31,8 @@ interface ApplyState {
     youtubeChannelId: string | null;
     ministryStatement: string;
     conductAgreedAt: string | null;
+    inviteCode: { code: string } | null;
+    vouches: { voucherChannel: { handle: string; name: string } }[];
   } | null;
   affirmation: { complete: boolean; missing: string[] };
 }
@@ -90,6 +92,8 @@ function ApplyForm() {
   const [ministry, setMinistry] = useState("");
   const [affirmed, setAffirmed] = useState<Set<string>>(new Set());
   const [conduct, setConduct] = useState(false);
+  const [inviteCode, setInviteCode] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -167,6 +171,7 @@ function ApplyForm() {
           ministryStatement: ministry,
           affirmClauses: Array.from(affirmed),
           agreeConduct: conduct,
+          ...(inviteCode.trim() ? { inviteCode: inviteCode.trim() } : {}),
         }),
       });
       const data = await res.json();
@@ -174,7 +179,12 @@ function ApplyForm() {
         setErrors([data.error ?? "Could not save draft."]);
         return false;
       }
-      setMessage("Draft saved.");
+      if (data.inviteCodeError) {
+        setErrors([`Draft saved, but the invitation code wasn't accepted: ${data.inviteCodeError}`]);
+      } else {
+        setMessage("Draft saved.");
+      }
+      await load();
       return true;
     } finally {
       setBusy(false);
@@ -316,6 +326,72 @@ function ApplyForm() {
             {CONDUCT_SUMMARY} <span className="font-medium">I agree.</span>
           </span>
         </label>
+      </section>
+
+      {/* Vouching (§5.3) — or a founding-cohort invitation code */}
+      <section>
+        <h2 className="text-xl font-semibold">Vouching</h2>
+        <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
+          An approved creator who knows you or your ministry vouches for your
+          application. If you were invited directly, redeem your invitation
+          code instead.
+        </p>
+        {state.application?.vouches && state.application.vouches.length > 0 && (
+          <p className="mt-3 text-sm text-green-600 dark:text-green-400">
+            Vouched for by{" "}
+            {state.application.vouches
+              .map((v) => `${v.voucherChannel.name} (@${v.voucherChannel.handle})`)
+              .join(", ")}
+            .
+          </p>
+        )}
+        {state.application && (
+          <div className="mt-3 rounded-xl border border-neutral-200 p-4 dark:border-neutral-800">
+            <p className="text-sm font-medium">Ask a creator to vouch for you</p>
+            <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+              Share this link with an approved creator who knows you:
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <code className="rounded-lg bg-neutral-100 px-3 py-1.5 text-xs dark:bg-neutral-900">
+                {`${typeof window !== "undefined" ? window.location.origin : ""}/vouch/${state.application.id}`}
+              </code>
+              <button
+                onClick={() => {
+                  void navigator.clipboard.writeText(
+                    `${window.location.origin}/vouch/${state.application!.id}`,
+                  );
+                  setCopied(true);
+                }}
+                className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs dark:border-neutral-700"
+              >
+                {copied ? "Copied" : "Copy link"}
+              </button>
+            </div>
+          </div>
+        )}
+        <div className="mt-3">
+          {state.application?.inviteCode ? (
+            <p className="text-sm text-green-600 dark:text-green-400">
+              Invitation code {state.application.inviteCode.code} redeemed — you
+              can submit without a vouch.
+            </p>
+          ) : (
+            <>
+              <label className="mb-1 block text-sm font-medium">
+                Invitation code (if you have one)
+              </label>
+              <input
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 font-mono text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                placeholder="CF-XXXX-XXXX"
+              />
+              <p className="mt-1 text-xs text-neutral-500">
+                Redeemed when you save your draft.
+              </p>
+            </>
+          )}
+        </div>
       </section>
 
       {errors.length > 0 && (

@@ -2,29 +2,28 @@ import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { hasFeatureAccess, FEATURES, ACCESS_LEVELS } from "@/lib/team";
+import { getAccessibleChannels } from "@/lib/team-authorization";
 import { IngestButton } from "@/components/IngestButton";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Studio" };
 
-// Creator dashboard. Auth is enforced by middleware; unapproved visitors are
-// pointed at the application.
+// Creator dashboard: channels you own, plus channels you help manage as team
+// staff (PLAN §4). Unapproved visitors are pointed at the application.
 export default async function StudioPage() {
   const { userId } = await auth();
   if (!userId) redirect("/signin");
 
-  const [channels, application] = await Promise.all([
-    db.channel.findMany({
-      where: { ownerId: userId },
-      include: { _count: { select: { contentItems: true, followers: true } } },
-    }),
+  const [{ owned: channels, managing }, application] = await Promise.all([
+    getAccessibleChannels(userId),
     db.creatorApplication.findFirst({
       where: { userId },
       orderBy: { updatedAt: "desc" },
     }),
   ]);
 
-  if (channels.length === 0) {
+  if (channels.length === 0 && managing.length === 0) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-10">
         <h1 className="text-2xl font-semibold">Studio</h1>
@@ -79,17 +78,70 @@ export default async function StudioPage() {
                   {channel._count.followers} followers
                 </p>
               </div>
-              {channel.youtubeChannelId ? (
-                <IngestButton channelId={channel.id} />
-              ) : (
-                <p className="text-xs text-neutral-500">
-                  No YouTube channel linked.
-                </p>
-              )}
+              <div className="flex items-center gap-3">
+                <Link
+                  href={`/studio/team/${channel.id}`}
+                  className="text-sm underline"
+                >
+                  Team
+                </Link>
+                {channel.youtubeChannelId ? (
+                  <IngestButton channelId={channel.id} />
+                ) : (
+                  <p className="text-xs text-neutral-500">
+                    No YouTube channel linked.
+                  </p>
+                )}
+              </div>
             </div>
           </section>
         ))}
       </div>
+
+      {managing.length > 0 && (
+        <section className="mt-10">
+          <h2 className="text-lg font-medium">Channels you help manage</h2>
+          <div className="mt-4 space-y-4">
+            {managing.map(({ channel, featureAccess }) => (
+              <section
+                key={channel.id}
+                className="rounded-xl border border-neutral-200 p-6 dark:border-neutral-800"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-medium">{channel.name}</h3>
+                    <p className="text-sm text-neutral-500">
+                      <Link href={`/@${channel.handle}`} className="hover:underline">
+                        @{channel.handle}
+                      </Link>{" "}
+                      · {channel._count.contentItems} items ·{" "}
+                      {channel._count.followers} followers
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {hasFeatureAccess(featureAccess, FEATURES.TEAM) && (
+                      <Link
+                        href={`/studio/team/${channel.id}`}
+                        className="text-sm underline"
+                      >
+                        Team
+                      </Link>
+                    )}
+                    {hasFeatureAccess(
+                      featureAccess,
+                      FEATURES.LIBRARY,
+                      ACCESS_LEVELS.MANAGER,
+                    ) &&
+                      channel.youtubeChannelId && (
+                        <IngestButton channelId={channel.id} />
+                      )}
+                  </div>
+                </div>
+              </section>
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   );
 }

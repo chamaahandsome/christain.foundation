@@ -44,7 +44,11 @@ export async function POST() {
     ),
     conductAgreed: application.conductAgreedAt !== null,
     vouchCount: application._count.vouches,
-    invited: process.env.FOUNDING_COHORT_MODE === "true",
+    // Invited: a redeemed founding-cohort code on this application, or the
+    // global launch switch (kept as an operational escape hatch).
+    invited:
+      application.inviteCodeId !== null ||
+      process.env.FOUNDING_COHORT_MODE === "true",
   });
   if (!check.ok) {
     return NextResponse.json({ error: "Not ready to submit", details: check.errors }, { status: 422 });

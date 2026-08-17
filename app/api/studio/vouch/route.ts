@@ -1,9 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
-import { ApplicationStatus } from "@prisma/client";
+import { ApplicationStatus, NotificationType } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { canVouch } from "@/lib/gate";
+import { vouchReceivedNotification } from "@/lib/notify";
 
 const BodySchema = z.object({
   applicationId: z.string().min(1),
@@ -58,6 +59,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: check.error }, { status: 403 });
   }
 
+  const existingVouch = await db.vouch.findUnique({
+    where: {
+      applicationId_voucherChannelId: {
+        applicationId,
+        voucherChannelId: channelId,
+      },
+    },
+    select: { id: true },
+  });
+
   const vouch = await db.vouch.upsert({
     where: {
       applicationId_voucherChannelId: {
@@ -68,6 +79,27 @@ export async function POST(req: Request) {
     create: { applicationId, voucherChannelId: channelId, note: note ?? null },
     update: { note: note ?? null },
   });
+
+  // Tell the applicant on a new vouch (not on a note edit).
+  if (!existingVouch) {
+    const voucher = await db.channel.findUniqueOrThrow({
+      where: { id: channelId },
+      select: { name: true, handle: true },
+    });
+    const planned = vouchReceivedNotification({
+      voucherName: voucher.name,
+      voucherHandle: voucher.handle,
+    });
+    await db.notification.create({
+      data: {
+        userId: application.userId,
+        type: NotificationType.VOUCH_RECEIVED,
+        title: planned.title,
+        body: planned.body ?? null,
+        url: planned.url,
+      },
+    });
+  }
 
   return NextResponse.json({ vouch });
 }

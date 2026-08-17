@@ -46,6 +46,28 @@ export function planContentNotifications(input: {
   ];
 }
 
+export function vouchReceivedNotification(input: {
+  voucherName: string;
+  voucherHandle: string;
+}): PlannedNotification {
+  return {
+    title: `${input.voucherName} vouched for your application`,
+    body: `@${input.voucherHandle} put their name behind you. Vouches are visible to the review team.`,
+    url: "/apply",
+  };
+}
+
+export function teamInviteNotification(input: {
+  channelName: string;
+  token: string;
+}): PlannedNotification {
+  return {
+    title: `You've been invited to help manage ${input.channelName}`,
+    body: "Accept the invitation to join the channel's team.",
+    url: `/team/accept/${input.token}`,
+  };
+}
+
 export function applicationDecisionNotification(input: {
   approved: boolean;
   channelHandle?: string;

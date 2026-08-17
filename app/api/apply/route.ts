@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { affirmationComplete } from "@/lib/gate";
 import { validateHandle } from "@/lib/handles";
+import { inviteCodeUsable, normalizeInviteCode } from "@/lib/invites";
 
 // The creator application (concept §5): draft + per-clause affirmation.
 // GET returns the current statement, the user's draft, and affirmation state.
@@ -30,7 +31,12 @@ export async function GET() {
   const [application, affirmations] = await Promise.all([
     db.creatorApplication.findFirst({
       where: { userId, status: { in: [ApplicationStatus.DRAFT, ApplicationStatus.SUBMITTED, ApplicationStatus.UNDER_REVIEW] } },
-      include: { vouches: true },
+      include: {
+        vouches: {
+          include: { voucherChannel: { select: { handle: true, name: true } } },
+        },
+        inviteCode: { select: { code: true } },
+      },
     }),
     db.affirmationRecord.findMany({
       where: { userId, statementVersionId: statement.id },
@@ -65,6 +71,8 @@ const BodySchema = z.object({
   // and deliberate — the client sends each clause the user actually checked.
   affirmClauses: z.array(z.string()).default([]),
   agreeConduct: z.boolean().default(false),
+  // Founding-cohort invitation code — redeeming one waives the vouch minimum.
+  inviteCode: z.string().max(40).optional(),
 });
 
 export async function POST(req: Request) {
@@ -118,9 +126,35 @@ export async function POST(req: Request) {
     ...(body.agreeConduct ? { conductAgreedAt: new Date() } : {}),
   };
 
-  const application = existing
+  let application = existing
     ? await db.creatorApplication.update({ where: { id: existing.id }, data })
     : await db.creatorApplication.create({ data: { userId, ...data } });
+
+  // Redeem a founding-cohort invite code (usage counted at redemption; an
+  // invalid code never blocks saving the draft — it's reported back instead).
+  let inviteCodeError: string | undefined;
+  if (body.inviteCode && !application.inviteCodeId) {
+    const code = await db.inviteCode.findUnique({
+      where: { code: normalizeInviteCode(body.inviteCode) },
+    });
+    const check = code
+      ? inviteCodeUsable(code)
+      : { usable: false, reason: "Unknown invitation code." };
+    if (!code || !check.usable) {
+      inviteCodeError = check.reason;
+    } else {
+      [application] = await db.$transaction([
+        db.creatorApplication.update({
+          where: { id: application.id },
+          data: { inviteCodeId: code.id },
+        }),
+        db.inviteCode.update({
+          where: { id: code.id },
+          data: { usageCount: { increment: 1 } },
+        }),
+      ]);
+    }
+  }
 
   // Record affirmations for known clauses (idempotent per user+clause).
   const known = new Map(statement.clauses.map((c) => [c.key, c.id]));
@@ -141,6 +175,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     application,
+    ...(inviteCodeError ? { inviteCodeError } : {}),
     affirmation: affirmationComplete(
       statement.clauses.map((c) => c.key),
       affirmations.map((a) => a.clause.key),
