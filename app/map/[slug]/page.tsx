@@ -119,9 +119,11 @@ export default async function QuestionPage({
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10">
-      <p className="text-xs uppercase tracking-widest text-neutral-500">
+      <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">
         {isSpine ? "The spine — essential" : "Disputed among the faithful"}
-        {question.topic && <> · {question.topic.name}</>}
+        {question.topic && (
+          <span className="font-normal text-neutral-500"> · {question.topic.name}</span>
+        )}
       </p>
       <h1 className="mt-2 text-3xl font-semibold">{question.title}</h1>
       <p className="mt-4 max-w-2xl whitespace-pre-line text-sm leading-6 text-neutral-600 dark:text-neutral-400">

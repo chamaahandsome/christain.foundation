@@ -25,7 +25,10 @@ export default async function MapPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="text-3xl font-semibold">The Map</h1>
+      <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">
+        Spine &amp; disputed questions
+      </p>
+      <h1 className="mt-2 text-3xl font-semibold">The Map</h1>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-400">
         Some things Christians cannot disagree on — on those you will find one
         confident answer. Others, faithful believers have disputed for

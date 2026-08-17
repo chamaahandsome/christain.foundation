@@ -48,7 +48,10 @@ export default async function FeedPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-semibold">Your feed</h1>
+      <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">
+        Following
+      </p>
+      <h1 className="mb-6 mt-2 text-2xl font-semibold">Your feed</h1>
       {items.length === 0 ? (
         <div className="rounded-xl border border-neutral-200 p-8 text-center dark:border-neutral-800">
           <p className="text-sm text-neutral-500">

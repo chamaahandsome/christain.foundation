@@ -15,7 +15,15 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/80 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/80">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4">
-        <Link href="/" className="shrink-0 font-semibold tracking-tight">
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-2 font-semibold tracking-tight"
+        >
+          {/* The brand accent: the homepage hero's amber→orange, as a mark */}
+          <span
+            aria-hidden
+            className="h-3.5 w-3.5 rounded-sm bg-linear-to-br from-amber-500 to-orange-600"
+          />
           Christian Foundation
         </Link>
         <nav className="flex items-center gap-1 overflow-x-auto text-sm">

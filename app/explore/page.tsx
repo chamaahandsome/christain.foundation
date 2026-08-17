@@ -51,7 +51,10 @@ export default async function ExplorePage() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-semibold">Explore</h1>
+      <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">
+        The library
+      </p>
+      <h1 className="mb-6 mt-2 text-2xl font-semibold">Explore</h1>
 
       {shelves.map((shelf) => {
         const items = shelf.items.filter((i) => i.contentItem);

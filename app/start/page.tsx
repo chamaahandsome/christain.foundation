@@ -23,7 +23,7 @@ export default function StartPage() {
       <div className="relative overflow-hidden rounded-3xl bg-neutral-950 px-6 py-14 text-center text-white sm:px-12">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_100%_at_50%_0%,rgba(255,255,255,0.08),transparent_70%)]"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_100%_at_50%_0%,rgba(245,158,11,0.16),transparent_70%)]"
         />
         <p className="relative mx-auto w-fit rounded-full border border-white/20 px-4 py-1 text-xs tracking-wide text-neutral-300">
           Fifteen questions · in the order worth asking them

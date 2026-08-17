@@ -37,7 +37,7 @@ export function NotificationsBell() {
         <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
       </svg>
       {unread > 0 && (
-        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold text-white">
+        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-600 px-1 text-[10px] font-semibold text-white">
           {unread > 99 ? "99+" : unread}
         </span>
       )}

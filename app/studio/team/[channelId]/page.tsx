@@ -23,7 +23,10 @@ export default async function StudioTeamPage({
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
-      <h1 className="text-2xl font-semibold">
+      <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">
+        Creator studio
+      </p>
+      <h1 className="mt-2 text-2xl font-semibold">
         Team — {access.channel.name}
       </h1>
       <p className="mt-1 text-sm text-neutral-500">

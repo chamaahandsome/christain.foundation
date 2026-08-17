@@ -26,7 +26,10 @@ export default async function StudioPage() {
   if (channels.length === 0 && managing.length === 0) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-10">
-        <h1 className="text-2xl font-semibold">Studio</h1>
+        <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">
+          Creator studio
+        </p>
+        <h1 className="mt-2 text-2xl font-semibold">Studio</h1>
         {application ? (
           <div className="mt-6 rounded-xl border border-neutral-200 p-6 dark:border-neutral-800">
             <p className="font-medium">
@@ -60,7 +63,10 @@ export default async function StudioPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="text-2xl font-semibold">Studio</h1>
+      <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">
+        Creator studio
+      </p>
+      <h1 className="mt-2 text-2xl font-semibold">Studio</h1>
       <div className="mt-6 space-y-4">
         {channels.map((channel) => (
           <section

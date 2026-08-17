@@ -45,7 +45,7 @@ export function FollowButton({
           className={
             following
               ? "rounded-lg border border-neutral-300 px-4 py-1.5 text-sm font-medium disabled:opacity-50 dark:border-neutral-700"
-              : "rounded-lg bg-neutral-900 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900"
+              : "rounded-lg bg-orange-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-orange-500 disabled:opacity-50"
           }
         >
           {label}
@@ -53,7 +53,7 @@ export function FollowButton({
       </SignedIn>
       <SignedOut>
         <SignInButton mode="modal">
-          <button className="rounded-lg bg-neutral-900 px-4 py-1.5 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
+          <button className="rounded-lg bg-orange-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-orange-500">
             Follow
           </button>
         </SignInButton>
