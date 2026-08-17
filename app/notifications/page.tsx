@@ -33,7 +33,7 @@ export default function NotificationsPage() {
         <div className="text-center">
           <p className="text-sm text-neutral-500">Sign in to see notifications.</p>
           <SignInButton mode="modal">
-            <button className="mt-4 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
+            <button className="mt-4 rounded-lg bg-neutral-900 hover:bg-orange-600 px-4 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-orange-500 dark:hover:text-white">
               Sign in
             </button>
           </SignInButton>

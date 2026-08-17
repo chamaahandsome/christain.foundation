@@ -95,8 +95,8 @@ export function StartHerePathway({
             aria-current={t.slug === topic.slug ? "page" : undefined}
             className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
               t.slug === topic.slug
-                ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300"
-                : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300"
+                : "bg-neutral-100 text-neutral-700 hover:bg-amber-100 hover:text-amber-900 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-amber-950 dark:hover:text-amber-300"
             }`}
           >
             {t.order}. {t.label}
@@ -155,7 +155,7 @@ export function StartHerePathway({
               <button
                 type="button"
                 onClick={() => goTo(prevTopic.slug)}
-                className="group inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-base font-medium text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                className="group inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-base font-medium text-neutral-500 hover:bg-amber-50 hover:text-amber-900 dark:hover:bg-amber-950/40 dark:hover:text-amber-300"
               >
                 <span aria-hidden className="transition-transform group-hover:-translate-x-1">
                   ←
@@ -167,7 +167,7 @@ export function StartHerePathway({
               <button
                 type="button"
                 onClick={() => goTo(nextTopic.slug)}
-                className="group inline-flex items-center gap-2 rounded-2xl border border-neutral-300 px-6 py-3 text-base font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                className="group inline-flex items-center gap-2 rounded-2xl border border-neutral-300 px-6 py-3 text-base font-medium hover:border-amber-500 hover:bg-amber-50 dark:border-neutral-700 dark:hover:border-amber-600 dark:hover:bg-amber-950/40"
               >
                 Next: {nextTopic.question.replace(/\?$/, "").toLowerCase()}
                 <span aria-hidden className="transition-transform group-hover:translate-x-1">
@@ -177,7 +177,7 @@ export function StartHerePathway({
             ) : (
               <Link
                 href="/map"
-                className="group inline-flex items-center gap-2 rounded-2xl border border-neutral-300 px-6 py-3 text-base font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                className="group inline-flex items-center gap-2 rounded-2xl border border-neutral-300 px-6 py-3 text-base font-medium hover:border-amber-500 hover:bg-amber-50 dark:border-neutral-700 dark:hover:border-amber-600 dark:hover:bg-amber-950/40"
               >
                 Next: explore the map
                 <span aria-hidden className="transition-transform group-hover:translate-x-1">

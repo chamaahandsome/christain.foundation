@@ -97,7 +97,7 @@ export function StartHereVideoCard({ video }: { video: StartHereVideo }) {
             href={`https://www.youtube.com/watch?v=${video.youtube_id}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium hover:bg-white dark:border-neutral-600 dark:hover:bg-neutral-700"
+            className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium hover:border-amber-500 hover:bg-white dark:border-neutral-600 dark:hover:border-amber-600 dark:hover:bg-neutral-700"
           >
             Watch on YouTube ↗
           </a>

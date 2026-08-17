@@ -114,13 +114,13 @@ export default async function Home() {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/start"
-              className="rounded-xl bg-neutral-900 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
+              className="rounded-xl bg-neutral-900 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-orange-600 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-orange-500 dark:hover:text-white"
             >
               Start Here
             </Link>
             <Link
               href="/explore"
-              className="rounded-xl border border-neutral-300 px-6 py-3 text-sm font-semibold hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-900"
+              className="rounded-xl border border-neutral-300 px-6 py-3 text-sm font-semibold hover:border-amber-500 hover:bg-amber-50 dark:border-neutral-700 dark:hover:border-amber-600 dark:hover:bg-amber-950/40"
             >
               Explore the library
             </Link>
@@ -310,7 +310,7 @@ export default async function Home() {
           </p>
           <Link
             href="/apply"
-            className="mt-6 inline-block rounded-xl bg-white px-6 py-3 text-sm font-semibold text-neutral-900 hover:bg-neutral-200 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-700"
+            className="mt-6 inline-block rounded-xl bg-white px-6 py-3 text-sm font-semibold text-neutral-900 hover:bg-amber-200 dark:bg-neutral-900 dark:text-white dark:hover:bg-orange-600"
           >
             Apply to become a creator
           </Link>

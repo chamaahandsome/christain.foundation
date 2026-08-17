@@ -12,7 +12,8 @@ export const metadata = {
 };
 
 // Card art priority: curator cover_image → first curated video thumbnail →
-// mono tile with a ghosted number. Palette is monochrome throughout.
+// mono tile with a ghosted number. Palette is monochrome with the brand's
+// amber→orange accent (hero CTA, number chips, hover borders).
 
 export default function StartPage() {
   const topics = startHereTopics();
@@ -38,7 +39,7 @@ export default function StartPage() {
         </p>
         <Link
           href={`/start/${topics[0].slug}`}
-          className="group relative mt-8 inline-flex items-center gap-2 rounded-2xl bg-white px-7 py-3.5 text-base font-semibold text-neutral-900 shadow-lg hover:bg-neutral-200"
+          className="group relative mt-8 inline-flex items-center gap-2 rounded-2xl bg-linear-to-r from-amber-500 to-orange-600 px-7 py-3.5 text-base font-semibold text-white shadow-lg hover:from-amber-400 hover:to-orange-500"
         >
           Begin with question 1
           <span aria-hidden className="transition-transform group-hover:translate-x-1">
@@ -63,7 +64,7 @@ export default function StartPage() {
             <li key={topic.slug}>
               <Link
                 href={`/start/${topic.slug}`}
-                className="group block overflow-hidden rounded-2xl border border-neutral-200 transition-colors hover:border-neutral-400 dark:border-neutral-800 dark:hover:border-neutral-600"
+                className="group block overflow-hidden rounded-2xl border border-neutral-200 transition-colors hover:border-amber-500/70 dark:border-neutral-800 dark:hover:border-amber-500/60"
               >
                 {/* Card art */}
                 <div className="relative aspect-[5/3] w-full overflow-hidden bg-neutral-950">
@@ -88,7 +89,7 @@ export default function StartPage() {
                   )}
 
                   {/* Number chip */}
-                  <span className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white ring-1 ring-white/25 backdrop-blur">
+                  <span className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-orange-600/90 text-sm font-semibold text-white ring-1 ring-white/25 backdrop-blur">
                     {topic.order}
                   </span>
 

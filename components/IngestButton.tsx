@@ -33,7 +33,7 @@ export function IngestButton({ channelId }: { channelId: string }) {
       <button
         onClick={() => void run()}
         disabled={busy}
-        className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900"
+        className="rounded-lg bg-neutral-900 hover:bg-orange-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-orange-500 dark:hover:text-white"
       >
         {busy ? "Importing…" : "Import from YouTube"}
       </button>

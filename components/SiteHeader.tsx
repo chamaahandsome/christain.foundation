@@ -58,7 +58,7 @@ export function SiteHeader() {
               </SignedIn>
               <SignedOut>
                 <SignInButton mode="modal">
-                  <button className="rounded-lg bg-neutral-900 px-3 py-1.5 font-medium text-white hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300">
+                  <button className="rounded-lg bg-neutral-900 px-3 py-1.5 font-medium text-white hover:bg-orange-600 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-orange-500 dark:hover:text-white">
                     Sign in
                   </button>
                 </SignInButton>

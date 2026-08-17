@@ -88,7 +88,7 @@ export function ApplicationsQueue() {
               <button
                 onClick={() => void act(app.id, "approve")}
                 disabled={busyId === app.id}
-                className="rounded-lg bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900"
+                className="rounded-lg bg-neutral-900 hover:bg-orange-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-orange-500 dark:hover:text-white"
               >
                 Approve
               </button>

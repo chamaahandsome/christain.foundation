@@ -49,7 +49,7 @@ export default async function SearchPage({
           name="q"
           defaultValue={query}
           placeholder="Search teaching, sermons, topics…"
-          className="w-full rounded-xl border border-neutral-300 px-4 py-3 text-base outline-none focus:border-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
+          className="w-full rounded-xl border border-neutral-300 px-4 py-3 text-base outline-none focus:border-amber-500 dark:border-neutral-700 dark:bg-neutral-900 dark:focus:border-amber-600"
         />
       </form>
 
