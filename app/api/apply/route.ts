@@ -2,6 +2,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { ApplicationStatus, ChannelKind } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isAdminUser } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { affirmationComplete } from "@/lib/gate";
 import { validateHandle } from "@/lib/handles";
@@ -61,11 +62,24 @@ export async function GET() {
   });
 }
 
+// A social handle as typed by the user; the leading @ is tolerated and
+// stripped before storage.
+const socialHandle = z
+  .string()
+  .max(100)
+  .transform((value) => value.trim().replace(/^@/, ""))
+  .optional();
+
 const BodySchema = z.object({
   proposedHandle: z.string().min(3),
   proposedName: z.string().min(2).max(80),
   proposedKind: z.nativeEnum(ChannelKind),
+  // Where we can verify their content — at least one platform (enforced
+  // below for non-admins). YouTube doubles as the library-ingestion source.
   youtubeChannelId: z.string().optional(),
+  instagramHandle: socialHandle,
+  tiktokHandle: socialHandle,
+  xHandle: socialHandle,
   ministryStatement: z.string().min(50).max(5000),
   // Clause keys being affirmed in this request. Affirmation is per-clause
   // and deliberate — the client sends each clause the user actually checked.
@@ -75,11 +89,32 @@ const BodySchema = z.object({
   inviteCode: z.string().max(40).optional(),
 });
 
+// Applicants must give us at least one place to verify their content.
+const PublicBodySchema = BodySchema.refine(
+  (body) =>
+    [body.youtubeChannelId, body.instagramHandle, body.tiktokHandle, body.xHandle].some(
+      (value) => value && value.trim().length > 0,
+    ),
+  {
+    message:
+      "Give us at least one place to verify your content — YouTube, Instagram, TikTok, or X.",
+    path: ["youtubeChannelId"],
+  },
+);
+
+// Admins get to skip the essay and the socials — they file throwaway
+// applications to test the review pipeline. Handle/name/kind stay required:
+// approval creates a real channel from them.
+const AdminBodySchema = BodySchema.extend({
+  ministryStatement: z.string().max(5000).default(""),
+});
+
 export async function POST(req: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const parsed = BodySchema.safeParse(await req.json().catch(() => null));
+  const schema = (await isAdminUser()) ? AdminBodySchema : PublicBodySchema;
+  const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid request body", details: parsed.error.flatten() },
@@ -121,7 +156,10 @@ export async function POST(req: Request) {
     proposedHandle: body.proposedHandle,
     proposedName: body.proposedName,
     proposedKind: body.proposedKind,
-    youtubeChannelId: body.youtubeChannelId ?? null,
+    youtubeChannelId: body.youtubeChannelId || null,
+    instagramHandle: body.instagramHandle || null,
+    tiktokHandle: body.tiktokHandle || null,
+    xHandle: body.xHandle || null,
     ministryStatement: body.ministryStatement,
     ...(body.agreeConduct ? { conductAgreedAt: new Date() } : {}),
   };

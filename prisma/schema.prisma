@@ -226,7 +226,12 @@ model CreatorApplication {
   proposedHandle   String
   proposedName     String
   proposedKind     ChannelKind
+  // Where reviewers verify the applicant's teaching — at least one is
+  // required to apply (any platform; YouTube also feeds library ingestion).
   youtubeChannelId String?
+  instagramHandle  String?
+  tiktokHandle     String?
+  xHandle          String?
   ministryStatement String           @db.Text // who they are, what they teach
   conductAgreedAt  DateTime? // §5.3 conduct standard, standing obligation
   inviteCodeId     String? // founding-cohort invitation, if redeemed

@@ -29,6 +29,9 @@ interface ApplyState {
     proposedName: string;
     proposedKind: string;
     youtubeChannelId: string | null;
+    instagramHandle: string | null;
+    tiktokHandle: string | null;
+    xHandle: string | null;
     ministryStatement: string;
     conductAgreedAt: string | null;
     inviteCode: { code: string } | null;
@@ -96,6 +99,26 @@ export default function ApplyPage() {
   );
 }
 
+// Section-level "Required" marker, in the house amber. The gate rejects a
+// submission missing any of these, so say so up front rather than at the end.
+function RequiredChip({ label = "Required" }: { label?: string }) {
+  return (
+    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-900 dark:bg-amber-950 dark:text-amber-300">
+      {label}
+    </span>
+  );
+}
+
+// Field-level required mark.
+function Req() {
+  return (
+    <span className="text-amber-600" title="Required" aria-label="required">
+      {" "}
+      *
+    </span>
+  );
+}
+
 function ApplyForm() {
   const [state, setState] = useState<ApplyState | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -104,6 +127,9 @@ function ApplyForm() {
   const [name, setName] = useState("");
   const [kind, setKind] = useState<string>("TEACHER");
   const [youtube, setYoutube] = useState("");
+  const [instagram, setInstagram] = useState("");
+  const [tiktok, setTiktok] = useState("");
+  const [x, setX] = useState("");
   const [ministry, setMinistry] = useState("");
   const [affirmed, setAffirmed] = useState<Set<string>>(new Set());
   const [conduct, setConduct] = useState(false);
@@ -125,6 +151,9 @@ function ApplyForm() {
         setName(data.application.proposedName);
         setKind(data.application.proposedKind);
         setYoutube(data.application.youtubeChannelId ?? "");
+        setInstagram(data.application.instagramHandle ?? "");
+        setTiktok(data.application.tiktokHandle ?? "");
+        setX(data.application.xHandle ?? "");
         setMinistry(data.application.ministryStatement);
         setConduct(Boolean(data.application.conductAgreedAt));
       }
@@ -145,7 +174,7 @@ function ApplyForm() {
 
   if (loadError) {
     return (
-      <p className="mt-8 text-sm text-red-600">
+      <p className="mt-8 text-sm text-red-600 dark:text-red-400">
         Could not load the application: {loadError}
       </p>
     );
@@ -183,6 +212,9 @@ function ApplyForm() {
           proposedName: name,
           proposedKind: kind,
           youtubeChannelId: youtube || undefined,
+          instagramHandle: instagram || undefined,
+          tiktokHandle: tiktok || undefined,
+          xHandle: x || undefined,
           ministryStatement: ministry,
           affirmClauses: Array.from(affirmed),
           agreeConduct: conduct,
@@ -225,9 +257,18 @@ function ApplyForm() {
 
   return (
     <div className="mt-8 space-y-10">
+      <p className="text-xs text-neutral-500">
+        Every section below is required unless marked optional. Fields marked
+        <span className="text-amber-600"> *</span> must be filled in before you
+        submit.
+      </p>
+
       {/* The doctrinal statement — affirmed clause by clause */}
       <section>
-        <h2 className="text-xl font-semibold">{state.statement.title}</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-xl font-semibold">{state.statement.title}</h2>
+          <RequiredChip label="All clauses required" />
+        </div>
         <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
           {state.statement.preamble}
         </p>
@@ -261,9 +302,24 @@ function ApplyForm() {
 
       {/* Channel details */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold">Your channel</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-xl font-semibold">Claim your channel name &amp; handle</h2>
+          <RequiredChip />
+        </div>
+        <p className="text-sm leading-6 text-neutral-600 dark:text-neutral-400">
+          This is your identity here on Christian Foundation — not your social
+          accounts (those come below). If approved, your channel page will live
+          at{" "}
+          <code className="rounded bg-neutral-100 px-1 py-0.5 text-xs dark:bg-neutral-900">
+            /channel/{handle || "your-handle"}
+          </code>
+          .
+        </p>
         <div>
-          <label className="mb-1 block text-sm font-medium">Channel name</label>
+          <label className="mb-1 block text-sm font-medium">
+            Channel name
+            <Req />
+          </label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -272,7 +328,10 @@ function ApplyForm() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium">Handle</label>
+          <label className="mb-1 block text-sm font-medium">
+            Handle
+            <Req />
+          </label>
           <div className="flex items-center gap-2">
             <span className="text-sm text-neutral-500">@</span>
             <input
@@ -283,13 +342,16 @@ function ApplyForm() {
             />
           </div>
           {handle && !handleCheck.valid && (
-            <p className="mt-1 text-xs text-red-600">
+            <p className="mt-1 text-xs text-red-600 dark:text-red-400">
               {"error" in handleCheck ? handleCheck.error : "Invalid handle."}
             </p>
           )}
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium">What kind of creator are you?</label>
+          <label className="mb-1 block text-sm font-medium">
+            What kind of creator are you?
+            <Req />
+          </label>
           <select
             value={kind}
             onChange={(e) => setKind(e.target.value)}
@@ -303,19 +365,57 @@ function ApplyForm() {
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium">
-            YouTube channel (optional — we'll bring your library over)
-          </label>
-          <input
-            value={youtube}
-            onChange={(e) => setYoutube(e.target.value)}
-            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-            placeholder="@yourhandle or UC… channel id"
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-medium">Where can we verify your content?</p>
+            <RequiredChip label="At least one required" />
+          </div>
+          <p className="mt-1 text-xs text-neutral-500">
+            We review the teaching itself — point us at any platform where it
+            lives. A YouTube channel also lets us bring your library over.
+          </p>
+          <div className="mt-3 space-y-3">
+            <div>
+              <label className="mb-1 block text-sm font-medium">YouTube</label>
+              <input
+                value={youtube}
+                onChange={(e) => setYoutube(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                placeholder="@yourhandle or UC… channel id"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Instagram</label>
+              <input
+                value={instagram}
+                onChange={(e) => setInstagram(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                placeholder="@yourusername"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">TikTok</label>
+              <input
+                value={tiktok}
+                onChange={(e) => setTiktok(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                placeholder="@yourusername"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">X</label>
+              <input
+                value={x}
+                onChange={(e) => setX(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                placeholder="@yourusername"
+              />
+            </div>
+          </div>
         </div>
         <div>
           <label className="mb-1 block text-sm font-medium">
             Who are you, and what do you teach?
+            <Req />
           </label>
           <textarea
             value={ministry}
@@ -329,7 +429,10 @@ function ApplyForm() {
 
       {/* Conduct */}
       <section>
-        <h2 className="text-xl font-semibold">The conduct standard</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-xl font-semibold">The conduct standard</h2>
+          <RequiredChip />
+        </div>
         <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-xl border border-neutral-200 p-4 dark:border-neutral-800">
           <input
             type="checkbox"
@@ -345,7 +448,10 @@ function ApplyForm() {
 
       {/* Vouching (§5.3) — or a founding-cohort invitation code */}
       <section>
-        <h2 className="text-xl font-semibold">Vouching</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-xl font-semibold">Vouching</h2>
+          <RequiredChip label="Vouch or invitation code required" />
+        </div>
         <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
           An approved creator who knows you or your ministry vouches for your
           application. If you were invited directly, redeem your invitation

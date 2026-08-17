@@ -9,10 +9,43 @@ interface QueueApplication {
   proposedName: string;
   proposedKind: string;
   youtubeChannelId: string | null;
+  instagramHandle: string | null;
+  tiktokHandle: string | null;
+  xHandle: string | null;
   ministryStatement: string;
   submittedAt: string | null;
   user: { email: string; name: string | null };
   vouches: { voucherChannel: { handle: string; name: string } }[];
+}
+
+// The links reviewers click to verify the applicant's content.
+function socialLinks(app: QueueApplication): { label: string; url: string }[] {
+  const links: { label: string; url: string }[] = [];
+  if (app.youtubeChannelId) {
+    const id = app.youtubeChannelId;
+    links.push({
+      label: `YouTube: ${id}`,
+      url: id.startsWith("UC")
+        ? `https://www.youtube.com/channel/${id}`
+        : `https://www.youtube.com/@${id.replace(/^@/, "")}`,
+    });
+  }
+  if (app.instagramHandle) {
+    links.push({
+      label: `Instagram: @${app.instagramHandle}`,
+      url: `https://www.instagram.com/${app.instagramHandle}`,
+    });
+  }
+  if (app.tiktokHandle) {
+    links.push({
+      label: `TikTok: @${app.tiktokHandle}`,
+      url: `https://www.tiktok.com/@${app.tiktokHandle}`,
+    });
+  }
+  if (app.xHandle) {
+    links.push({ label: `X: @${app.xHandle}`, url: `https://x.com/${app.xHandle}` });
+  }
+  return links;
 }
 
 export function ApplicationsQueue() {
@@ -58,7 +91,7 @@ export function ApplicationsQueue() {
     }
   }
 
-  if (error) return <p className="mt-6 text-sm text-red-600">{error}</p>;
+  if (error) return <p className="mt-6 text-sm text-red-600 dark:text-red-400">{error}</p>;
   if (!applications) return <p className="mt-6 text-sm text-neutral-500">Loading…</p>;
   if (applications.length === 0) {
     return <p className="mt-6 text-sm text-neutral-500">The queue is empty.</p>;
@@ -81,8 +114,22 @@ export function ApplicationsQueue() {
               </p>
               <p className="text-sm text-neutral-500">
                 {app.user.name ?? "—"} · {app.user.email}
-                {app.youtubeChannelId && <> · YT: {app.youtubeChannelId}</>}
               </p>
+              {socialLinks(app).length > 0 && (
+                <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                  {socialLinks(app).map((link) => (
+                    <a
+                      key={link.url}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-amber-700 underline hover:text-orange-600 dark:text-amber-400 dark:hover:text-orange-400"
+                    >
+                      {link.label} ↗
+                    </a>
+                  ))}
+                </p>
+              )}
             </div>
             <div className="flex gap-2">
               <button
