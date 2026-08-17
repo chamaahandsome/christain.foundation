@@ -98,7 +98,7 @@ export function InviteCodesAdmin() {
     return "open";
   }
 
-  if (error && !codes) return <p className="mt-6 text-sm text-red-600">{error}</p>;
+  if (error && !codes) return <p className="mt-6 text-sm text-red-600 dark:text-red-400">{error}</p>;
   if (!codes) return <p className="mt-6 text-sm text-neutral-500">Loading…</p>;
 
   return (
@@ -158,7 +158,7 @@ export function InviteCodesAdmin() {
         </button>
       </section>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       <section>
         <h2 className="text-lg font-medium">Codes</h2>
@@ -208,7 +208,7 @@ export function InviteCodesAdmin() {
                       <button
                         onClick={() => void revoke(code.id)}
                         disabled={busy}
-                        className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 disabled:opacity-50 dark:border-red-900"
+                        className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 disabled:opacity-50 dark:border-red-900"
                       >
                         Revoke
                       </button>

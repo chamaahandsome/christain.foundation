@@ -91,7 +91,7 @@ export function TeamManager({ channelId }: { channelId: string }) {
     setNotice("Accept link copied.");
   }
 
-  if (error && !members) return <p className="mt-6 text-sm text-red-600">{error}</p>;
+  if (error && !members) return <p className="mt-6 text-sm text-red-600 dark:text-red-400">{error}</p>;
   if (!members) return <p className="mt-6 text-sm text-neutral-500">Loading…</p>;
 
   return (
@@ -120,7 +120,7 @@ export function TeamManager({ channelId }: { channelId: string }) {
         </section>
       )}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       {notice && <p className="text-sm text-neutral-500">{notice}</p>}
 
       <section>
@@ -183,7 +183,7 @@ export function TeamManager({ channelId }: { channelId: string }) {
                           }
                         }}
                         disabled={busy}
-                        className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 disabled:opacity-50 dark:border-red-900"
+                        className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 disabled:opacity-50 dark:border-red-900"
                       >
                         Remove
                       </button>

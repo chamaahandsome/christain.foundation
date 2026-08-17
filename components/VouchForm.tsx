@@ -86,7 +86,7 @@ export function VouchForm({
           placeholder="We served together at…; I've followed their teaching for…"
         />
       </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       <button
         onClick={() => void vouch()}
         disabled={busy || !channelId}

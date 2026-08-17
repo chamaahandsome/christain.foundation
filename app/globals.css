@@ -1,15 +1,22 @@
 @import "tailwindcss";
 
+/* Class-driven dark mode: the inline script in app/layout.tsx sets `.dark`
+   on <html> before paint, from localStorage("theme") or the OS preference. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  color-scheme: light;
+  /* Native checkboxes/radios pick up the brand orange instead of UA blue */
+  accent-color: #ea580c;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  color-scheme: dark;
+  accent-color: #f97316;
 }
 
 body {
