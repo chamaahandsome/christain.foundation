@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { isAdmin } from "@/lib/admin";
+import { isAdminUser } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { generateInviteCode } from "@/lib/invites";
 
@@ -10,7 +10,7 @@ import { generateInviteCode } from "@/lib/invites";
 
 export async function GET() {
   const { userId } = await auth();
-  if (!isAdmin(userId)) {
+  if (!(await isAdminUser())) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -35,7 +35,7 @@ const CreateSchema = z.object({
 
 export async function POST(req: Request) {
   const { userId } = await auth();
-  if (!isAdmin(userId)) {
+  if (!(await isAdminUser())) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -71,7 +71,7 @@ const RevokeSchema = z.object({
 
 export async function PATCH(req: Request) {
   const { userId } = await auth();
-  if (!isAdmin(userId)) {
+  if (!(await isAdminUser())) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

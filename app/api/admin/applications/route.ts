@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { ApplicationStatus, NotificationType } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { isAdmin } from "@/lib/admin";
+import { isAdminUser } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { applicationTransition } from "@/lib/gate";
 import { validateHandle } from "@/lib/handles";
@@ -30,7 +30,7 @@ async function notifyDecision(
 
 export async function GET() {
   const { userId } = await auth();
-  if (!isAdmin(userId)) {
+  if (!(await isAdminUser())) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -64,7 +64,7 @@ const BodySchema = z.discriminatedUnion("action", [
 
 export async function POST(req: Request) {
   const { userId } = await auth();
-  if (!isAdmin(userId)) {
+  if (!(await isAdminUser())) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

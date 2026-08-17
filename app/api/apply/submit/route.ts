@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { ApplicationStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { isAdminUser } from "@/lib/admin";
 import { db } from "@/lib/db";
 import {
   affirmationComplete,
@@ -10,7 +11,8 @@ import {
 
 // Submit the draft application for review. Blocks unless the statement is
 // affirmed in full, conduct is agreed, and (outside founding-cohort mode)
-// at least one approved creator has vouched.
+// at least one approved creator has vouched. Admins bypass the gate — they
+// review applications, and need throwaway ones to test the pipeline.
 export async function POST() {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -37,7 +39,8 @@ export async function POST() {
     select: { clause: { select: { key: true } } },
   });
 
-  const check = canSubmitApplication({
+  const admin = await isAdminUser();
+  const check = admin ? { ok: true as const, errors: [] } : canSubmitApplication({
     affirmation: affirmationComplete(
       statement.clauses.map((c) => c.key),
       affirmations.map((a) => a.clause.key),

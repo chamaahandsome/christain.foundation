@@ -1,15 +1,13 @@
 import Link from "next/link";
-import { auth } from "@clerk/nextjs/server";
 import { notFound } from "next/navigation";
-import { isAdmin } from "@/lib/admin";
+import { isAdminUser } from "@/lib/admin";
 import { InviteCodesAdmin } from "@/components/InviteCodesAdmin";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Invite codes" };
 
 export default async function AdminInvitesPage() {
-  const { userId } = await auth();
-  if (!isAdmin(userId)) notFound();
+  if (!(await isAdminUser())) notFound();
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10">
