@@ -13,7 +13,20 @@ interface NotificationRow {
   createdAt: string;
 }
 
+// Inlined at build time; SignedIn/SignedOut may only render when the root
+// layout mounted ClerkProvider (same degraded no-keys mode as SiteHeader).
+const hasClerkKeys = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
 export default function NotificationsPage() {
+  if (!hasClerkKeys) {
+    return (
+      <main className="mx-auto max-w-2xl px-4 py-10">
+        <p className="text-center text-sm text-neutral-500">
+          Notifications require sign-in, which isn't configured yet.
+        </p>
+      </main>
+    );
+  }
   return (
     <main className="mx-auto max-w-2xl px-4 py-10">
       <SignedOut>
@@ -62,7 +75,10 @@ function NotificationsList() {
   return (
     <>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Notifications</h1>
+        <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">
+          Updates
+        </p>
+        <h1 className="mt-2 text-2xl font-semibold">Notifications</h1>
         {unread > 0 && (
           <button onClick={() => void markAllRead()} className="text-sm underline">
             Mark all read ({unread})

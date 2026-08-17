@@ -53,30 +53,45 @@ const KINDS = [
 
 const CONDUCT_SUMMARY = `Financial integrity: transparent use of funds, no prosperity-gospel solicitation, no manipulative giving appeals. No attacking fellow believers: critique of public teaching, by name, is legitimate discernment; attacks on the person — motives, character, mockery — are disqualifying. This is a standing obligation, not a one-time question.`;
 
+// Inlined at build time; SignedIn/SignedOut may only render when the root
+// layout mounted ClerkProvider (same degraded no-keys mode as SiteHeader).
+const hasClerkKeys = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
 export default function ApplyPage() {
   return (
     <main className="mx-auto max-w-2xl px-4 py-10">
-      <h1 className="text-3xl font-semibold">Become a creator</h1>
+      <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">
+        The creator gate
+      </p>
+      <h1 className="mt-2 text-3xl font-semibold">Become a creator</h1>
       <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
         Anyone can watch. Not anyone can publish. We vet by affirmation, not by
         affiliation — we don't ask what tradition you belong to; we ask what
         you affirm.
       </p>
-      <SignedOut>
-        <div className="mt-8 rounded-xl border border-neutral-200 p-6 text-center dark:border-neutral-800">
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            Sign in to begin your application.
-          </p>
-          <SignInButton mode="modal">
-            <button className="mt-4 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
-              Sign in
-            </button>
-          </SignInButton>
-        </div>
-      </SignedOut>
-      <SignedIn>
-        <ApplyForm />
-      </SignedIn>
+      {hasClerkKeys ? (
+        <>
+          <SignedOut>
+            <div className="mt-8 rounded-xl border border-neutral-200 p-6 text-center dark:border-neutral-800">
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                Sign in to begin your application.
+              </p>
+              <SignInButton mode="modal">
+                <button className="mt-4 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
+                  Sign in
+                </button>
+              </SignInButton>
+            </div>
+          </SignedOut>
+          <SignedIn>
+            <ApplyForm />
+          </SignedIn>
+        </>
+      ) : (
+        <p className="mt-8 text-sm text-neutral-500">
+          Applications open once sign-in is configured.
+        </p>
+      )}
     </main>
   );
 }

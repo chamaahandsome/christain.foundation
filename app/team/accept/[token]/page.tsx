@@ -43,7 +43,10 @@ export default async function TeamAcceptPage({
 
   return (
     <main className="mx-auto max-w-lg px-4 py-16">
-      <h1 className="text-2xl font-semibold">
+      <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">
+        Team invitation
+      </p>
+      <h1 className="mt-2 text-2xl font-semibold">
         Join the team of {member.channel.name}
       </h1>
       <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
@@ -65,20 +68,34 @@ export default async function TeamAcceptPage({
         ))}
       </ul>
       <div className="mt-8">
-        <SignedOut>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            Sign in with {member.email} to accept.
+        {!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
+          <p className="text-sm text-neutral-500">
+            Accepting requires sign-in, which isn't configured yet.
           </p>
-          <SignInButton mode="modal">
-            <button className="mt-3 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
-              Sign in
-            </button>
-          </SignInButton>
-        </SignedOut>
-        <SignedIn>
-          <AcceptInviteButton token={token} />
-        </SignedIn>
+        ) : (
+          <ClerkGateContent token={token} email={member.email} />
+        )}
       </div>
     </main>
+  );
+}
+
+function ClerkGateContent({ token, email }: { token: string; email: string }) {
+  return (
+    <>
+      <SignedOut>
+        <p className="text-sm text-neutral-600 dark:text-neutral-400">
+          Sign in with {email} to accept.
+        </p>
+        <SignInButton mode="modal">
+          <button className="mt-3 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900">
+            Sign in
+          </button>
+        </SignInButton>
+      </SignedOut>
+      <SignedIn>
+        <AcceptInviteButton token={token} />
+      </SignedIn>
+    </>
   );
 }

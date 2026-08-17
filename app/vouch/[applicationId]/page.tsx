@@ -65,7 +65,10 @@ export default async function VouchPage({
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-10">
-      <h1 className="text-2xl font-semibold">Vouch for {application.proposedName}</h1>
+      <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">
+        The creator gate
+      </p>
+      <h1 className="mt-2 text-2xl font-semibold">Vouch for {application.proposedName}</h1>
       <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
         {application.user.name ?? "An applicant"} is applying to publish on
         Christian Foundation as{" "}
@@ -102,6 +105,10 @@ export default async function VouchPage({
         {!open ? (
           <p className="text-sm text-neutral-500">
             This application is no longer open for vouching.
+          </p>
+        ) : !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? (
+          <p className="text-sm text-neutral-500">
+            Vouching requires sign-in, which isn't configured yet.
           </p>
         ) : (
           <>
