@@ -16,9 +16,14 @@ export default async function AdminApplicationsPage() {
       </p>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Creator applications</h1>
-        <Link href="/admin/invites" className="text-sm underline">
-          Invite codes
-        </Link>
+        <span className="flex gap-4">
+          <Link href="/admin/invites" className="text-sm underline">
+            Invite codes
+          </Link>
+          <Link href="/admin/doctrine" className="text-sm underline">
+            Doctrine queue
+          </Link>
+        </span>
       </div>
       <p className="mt-1 text-sm text-neutral-500">
         Review the teaching, not the paperwork. Rejections require a note —

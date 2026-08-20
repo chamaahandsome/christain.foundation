@@ -16,9 +16,14 @@ export default async function AdminInvitesPage() {
       </p>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Founding-cohort invitations</h1>
-        <Link href="/admin/applications" className="text-sm underline">
-          Applications queue
-        </Link>
+        <span className="flex gap-4">
+          <Link href="/admin/applications" className="text-sm underline">
+            Applications queue
+          </Link>
+          <Link href="/admin/doctrine" className="text-sm underline">
+            Doctrine queue
+          </Link>
+        </span>
       </div>
       <p className="mt-1 text-sm text-neutral-500">
         An applicant who redeems a code may submit without vouches — there is

@@ -68,6 +68,22 @@ export function teamInviteNotification(input: {
   };
 }
 
+export function doctrineDecisionNotification(input: {
+  channelName: string;
+  upheld: boolean;
+  outcomeNote: string;
+}): PlannedNotification {
+  return {
+    title: input.upheld
+      ? `A doctrine review on ${input.channelName} was upheld`
+      : `A doctrine review on ${input.channelName} was dismissed`,
+    body: input.upheld
+      ? `${input.outcomeNote} — You may appeal this decision from your studio.`
+      : input.outcomeNote,
+    url: "/studio",
+  };
+}
+
 export function applicationDecisionNotification(input: {
   approved: boolean;
   channelHandle?: string;

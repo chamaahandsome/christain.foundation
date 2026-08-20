@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { Visibility } from "@prisma/client";
+import { ReportTeachingButton } from "@/components/ReportTeachingButton";
 import { YouTubeEmbed } from "@/components/YouTubeEmbed";
 import { db } from "@/lib/db";
 import { formatScriptureRef, type ScriptureRef } from "@/lib/scripture";
@@ -118,6 +119,7 @@ export default async function WatchPage({
             {item.description}
           </p>
         )}
+        <ReportTeachingButton contentItemId={item.id} />
       </div>
 
       <aside>

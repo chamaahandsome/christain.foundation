@@ -40,6 +40,7 @@ enum NotificationType {
   APPLICATION_DECIDED
   VOUCH_RECEIVED
   TEAM_INVITE
+  DOCTRINE_CASE
   SYSTEM
 }
 
@@ -282,15 +283,19 @@ model DoctrineReviewCase {
   channelId     String
   channel       Channel          @relation(fields: [channelId], references: [id])
   contentItemId String? // the published teaching cited
+  contentItem   ContentItem?     @relation(fields: [contentItemId], references: [id])
   claim         String           @db.Text // what standard is alleged violated, citing content
   status        ReviewCaseStatus @default(OPEN)
   openedById    String? // user id; null = editorial
   reviewerId    String?
   outcomeNote   String?          @db.Text
+  decidedAt     DateTime?
+  appealNote    String?          @db.Text // the channel's appeal (UPHELD → APPEALED)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
   @@index([channelId])
+  @@index([contentItemId])
   @@index([status])
 }
 
@@ -377,6 +382,7 @@ model ContentItem {
   placements    ContentPlacement[]
   pathwaySteps  PathwayStep[]
   shelfItems    ShelfItem[]
+  reviewCases   DoctrineReviewCase[]
 
   @@unique([channelId, youtubeVideoId])
   @@index([channelId])

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { hasFeatureAccess, FEATURES, ACCESS_LEVELS } from "@/lib/team";
 import { getAccessibleChannels } from "@/lib/team-authorization";
+import { AppealButton } from "@/components/AppealButton";
 import { IngestButton } from "@/components/IngestButton";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,20 @@ export default async function StudioPage() {
       orderBy: { updatedAt: "desc" },
     }),
   ]);
+
+  // Standing audit (§5.4): cases on the owner's channels, decided or in
+  // flight. Upheld decisions carry an appeal affordance.
+  const reviewCases =
+    channels.length > 0
+      ? await db.doctrineReviewCase.findMany({
+          where: { channelId: { in: channels.map((c) => c.id) } },
+          orderBy: { updatedAt: "desc" },
+          include: {
+            channel: { select: { name: true, handle: true } },
+            contentItem: { select: { id: true, title: true } },
+          },
+        })
+      : [];
 
   if (channels.length === 0 && managing.length === 0) {
     return (
@@ -103,6 +118,52 @@ export default async function StudioPage() {
           </section>
         ))}
       </div>
+
+      {reviewCases.length > 0 && (
+        <section className="mt-10">
+          <h2 className="text-lg font-medium">Doctrine review</h2>
+          <p className="mt-1 text-sm text-neutral-500">
+            Review runs on published teaching (§5.4). Outcomes are never
+            noteless, and upheld decisions can be appealed.
+          </p>
+          <ul className="mt-4 space-y-4">
+            {reviewCases.map((reviewCase) => (
+              <li
+                key={reviewCase.id}
+                className="rounded-xl border border-neutral-200 p-5 dark:border-neutral-800"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm">
+                    <span className="font-medium">@{reviewCase.channel.handle}</span>
+                    {reviewCase.contentItem && (
+                      <>
+                        {" · "}
+                        <Link
+                          href={`/watch/${reviewCase.contentItem.id}`}
+                          className="underline"
+                        >
+                          {reviewCase.contentItem.title}
+                        </Link>
+                      </>
+                    )}{" "}
+                    <span className="ml-1 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium uppercase text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                      {reviewCase.status.replace("_", " ")}
+                    </span>
+                  </p>
+                  {reviewCase.status === "UPHELD" && (
+                    <AppealButton caseId={reviewCase.id} />
+                  )}
+                </div>
+                {reviewCase.outcomeNote && (
+                  <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
+                    {reviewCase.outcomeNote}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {managing.length > 0 && (
         <section className="mt-10">
