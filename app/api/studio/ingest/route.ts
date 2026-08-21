@@ -95,6 +95,12 @@ export async function POST(req: Request) {
     return NextResponse.json(summary);
   } catch (err) {
     console.error("ingest failed", err);
+    // Resolution problems are the user's to fix (wrong handle/URL in
+    // settings) — surface them; anything else stays a generic upstream error.
+    const message = err instanceof Error ? err.message : "";
+    if (message.includes("Could not find that YouTube channel")) {
+      return NextResponse.json({ error: message }, { status: 422 });
+    }
     return NextResponse.json({ error: "Ingestion failed" }, { status: 502 });
   }
 }

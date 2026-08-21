@@ -57,7 +57,9 @@ export async function ingestChannel(
 
   const info = await resolveChannel(channel.youtubeChannelId, opts.apiKey);
   if (!info?.uploadsPlaylistId) {
-    throw new Error("Could not resolve the channel's uploads playlist.");
+    throw new Error(
+      "Could not find that YouTube channel. Check the channel in Settings — the @handle, UC… id, or channel URL all work.",
+    );
   }
 
   const videoIds = await listUploads(info.uploadsPlaylistId, opts.apiKey, {

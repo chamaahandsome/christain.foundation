@@ -146,20 +146,68 @@ async function apiGet(
 
 const CHANNEL_ID_PATTERN = /^UC[A-Za-z0-9_-]{22}$/;
 
-/** Resolve a channel by UC… id or by @handle. */
+export type ChannelRef =
+  | { kind: "id"; value: string }
+  | { kind: "handle"; value: string }
+  | { kind: "username"; value: string };
+
+/**
+ * Parse whatever a person pastes for "my YouTube channel" (pure, tested):
+ * UC… ids, @handles, bare handles, and full URLs in their common shapes —
+ * youtube.com/@handle[/tab], /channel/UC…, /user/Name, /c/Name — with or
+ * without protocol, www., or m. Legacy /c/ custom slugs usually match the
+ * handle, so they're tried as one. Returns null only for unparseable input.
+ */
+export function parseChannelInput(input: string): ChannelRef | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  if (CHANNEL_ID_PATTERN.test(trimmed)) return { kind: "id", value: trimmed };
+
+  const urlMatch = trimmed.match(
+    /^(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com(\/[^\s]*)$/i,
+  );
+  if (urlMatch) {
+    const segments = urlMatch[1].split(/[?#]/)[0].split("/").filter(Boolean);
+    const [first, second] = segments;
+    if (first?.startsWith("@") && first.length > 1) {
+      return { kind: "handle", value: first.slice(1) };
+    }
+    if (first === "channel" && second && CHANNEL_ID_PATTERN.test(second)) {
+      return { kind: "id", value: second };
+    }
+    if (first === "user" && second) return { kind: "username", value: second };
+    if (first === "c" && second) return { kind: "handle", value: second };
+    return null;
+  }
+  if (/^https?:\/\//i.test(trimmed)) return null; // some other site's URL
+
+  const handle = trimmed.replace(/^@/, "");
+  return handle ? { kind: "handle", value: handle } : null;
+}
+
+/** Canonical stored form: UC… id, @handle, or the trimmed original for
+ * legacy /user/ URLs (the resolver re-parses those). */
+export function canonicalChannelInput(input: string): string | null {
+  const ref = parseChannelInput(input);
+  if (!ref) return null;
+  if (ref.kind === "id") return ref.value;
+  if (ref.kind === "handle") return `@${ref.value}`;
+  return input.trim();
+}
+
+/** Resolve a channel from any accepted input form (see parseChannelInput). */
 export async function resolveChannel(
   idOrHandle: string,
   apiKey: string,
 ): Promise<YouTubeChannelInfo | null> {
-  const trimmed = idOrHandle.trim();
+  const ref = parseChannelInput(idOrHandle);
+  if (!ref) return null;
   const params: Record<string, string> = {
     part: "snippet,contentDetails",
   };
-  if (CHANNEL_ID_PATTERN.test(trimmed)) {
-    params.id = trimmed;
-  } else {
-    params.forHandle = trimmed.replace(/^@/, "");
-  }
+  if (ref.kind === "id") params.id = ref.value;
+  else if (ref.kind === "username") params.forUsername = ref.value;
+  else params.forHandle = ref.value;
   const json = await apiGet("channels", params, apiKey);
   return parseChannelResponse(json);
 }

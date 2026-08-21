@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { validateLinks, validateProfile } from "@/lib/channel-settings";
 import { db } from "@/lib/db";
+import { canonicalChannelInput } from "@/lib/youtube-api";
 import { ACCESS_LEVELS, FEATURES } from "@/lib/team";
 import { getChannelAccess } from "@/lib/team-authorization";
 
@@ -56,7 +57,21 @@ export async function PATCH(req: Request) {
     else data.links = checked.links;
   }
   if (body.youtubeChannelId !== undefined) {
-    data.youtubeChannelId = body.youtubeChannelId?.trim() || null;
+    const raw = body.youtubeChannelId?.trim();
+    if (!raw) {
+      data.youtubeChannelId = null;
+    } else {
+      // Accepts @handle, UC… id, or a channel URL; stored canonically so
+      // ingestion can always resolve it.
+      const canonical = canonicalChannelInput(raw);
+      if (!canonical) {
+        errors.push(
+          "YouTube channel not recognized — use the @handle, the UC… channel id, or the channel's URL.",
+        );
+      } else {
+        data.youtubeChannelId = canonical;
+      }
+    }
   }
 
   if (errors.length > 0) {
