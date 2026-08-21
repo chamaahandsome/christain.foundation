@@ -92,6 +92,23 @@ export default async function ChannelPage({
             {channel.bio}
           </p>
         )}
+        {channel.links != null && Object.keys(channel.links).length > 0 && (
+          <p className="mt-3 flex flex-wrap gap-3 text-sm">
+            {Object.entries(channel.links as Record<string, string>).map(
+              ([key, url]) => (
+                <a
+                  key={key}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="capitalize text-neutral-500 underline-offset-2 hover:text-amber-600 hover:underline"
+                >
+                  {key}
+                </a>
+              ),
+            )}
+          </p>
+        )}
       </header>
 
       {series.length > 0 && (

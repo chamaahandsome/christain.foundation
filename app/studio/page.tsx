@@ -24,6 +24,25 @@ export default async function StudioPage() {
     }),
   ]);
 
+  // Re-affirmation (§4): if the published statement moved past what this
+  // creator has signed, surface it — the signature is the gate.
+  let needsReaffirmation = false;
+  if (channels.some((c) => c.status === "APPROVED")) {
+    const statement = await db.statementVersion.findFirst({
+      where: { publishedAt: { not: null } },
+      orderBy: { version: "desc" },
+      include: { clauses: { select: { key: true } } },
+    });
+    if (statement) {
+      const affirmations = await db.affirmationRecord.findMany({
+        where: { userId, statementVersionId: statement.id },
+        select: { clause: { select: { key: true } } },
+      });
+      const affirmed = new Set(affirmations.map((a) => a.clause.key));
+      needsReaffirmation = statement.clauses.some((c) => !affirmed.has(c.key));
+    }
+  }
+
   // Standing audit (§5.4): cases on the owner's channels, decided or in
   // flight. Upheld decisions carry an appeal affordance.
   const reviewCases =
@@ -82,6 +101,19 @@ export default async function StudioPage() {
         Creator studio
       </p>
       <h1 className="mt-2 text-2xl font-semibold">Studio</h1>
+      {needsReaffirmation && (
+        <div className="mt-6 rounded-xl border border-amber-400 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950/40">
+          <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+            The doctrinal statement has been updated since you signed it.
+          </p>
+          <Link
+            href="/studio/affirm"
+            className="mt-1 inline-block text-sm text-amber-800 underline dark:text-amber-300"
+          >
+            Review and re-affirm the current version
+          </Link>
+        </div>
+      )}
       <div className="mt-6 space-y-4">
         {channels.map((channel) => (
           <section
@@ -99,12 +131,18 @@ export default async function StudioPage() {
                   {channel._count.followers} followers
                 </p>
               </div>
-              <div className="flex items-center gap-3">
-                <Link
-                  href={`/studio/team/${channel.id}`}
-                  className="text-sm underline"
-                >
+              <div className="flex flex-wrap items-center gap-3">
+                <Link href={`/studio/library/${channel.id}`} className="text-sm underline">
+                  Library
+                </Link>
+                <Link href={`/studio/analytics/${channel.id}`} className="text-sm underline">
+                  Analytics
+                </Link>
+                <Link href={`/studio/team/${channel.id}`} className="text-sm underline">
                   Team
+                </Link>
+                <Link href={`/studio/settings/${channel.id}`} className="text-sm underline">
+                  Settings
                 </Link>
                 {channel.youtubeChannelId ? (
                   <IngestButton channelId={channel.id} />
@@ -185,13 +223,41 @@ export default async function StudioPage() {
                       {channel._count.followers} followers
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    {hasFeatureAccess(featureAccess, FEATURES.LIBRARY) && (
+                      <Link
+                        href={`/studio/library/${channel.id}`}
+                        className="text-sm underline"
+                      >
+                        Library
+                      </Link>
+                    )}
+                    {hasFeatureAccess(featureAccess, FEATURES.ANALYTICS) && (
+                      <Link
+                        href={`/studio/analytics/${channel.id}`}
+                        className="text-sm underline"
+                      >
+                        Analytics
+                      </Link>
+                    )}
                     {hasFeatureAccess(featureAccess, FEATURES.TEAM) && (
                       <Link
                         href={`/studio/team/${channel.id}`}
                         className="text-sm underline"
                       >
                         Team
+                      </Link>
+                    )}
+                    {hasFeatureAccess(
+                      featureAccess,
+                      FEATURES.SETTINGS,
+                      ACCESS_LEVELS.MANAGER,
+                    ) && (
+                      <Link
+                        href={`/studio/settings/${channel.id}`}
+                        className="text-sm underline"
+                      >
+                        Settings
                       </Link>
                     )}
                     {hasFeatureAccess(
