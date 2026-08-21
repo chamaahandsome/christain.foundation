@@ -132,17 +132,11 @@ export default async function StudioPage() {
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <Link href={`/studio/library/${channel.id}`} className="text-sm underline">
-                  Library
-                </Link>
-                <Link href={`/studio/analytics/${channel.id}`} className="text-sm underline">
-                  Analytics
-                </Link>
-                <Link href={`/studio/team/${channel.id}`} className="text-sm underline">
-                  Team
-                </Link>
-                <Link href={`/studio/settings/${channel.id}`} className="text-sm underline">
-                  Settings
+                <Link
+                  href={`/studio/channel/${channel.id}`}
+                  className="rounded-lg bg-neutral-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-orange-600 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-orange-500 dark:hover:text-white"
+                >
+                  Open studio
                 </Link>
                 {channel.youtubeChannelId ? (
                   <IngestButton channelId={channel.id} />
@@ -224,42 +218,18 @@ export default async function StudioPage() {
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
-                    {hasFeatureAccess(featureAccess, FEATURES.LIBRARY) && (
-                      <Link
-                        href={`/studio/library/${channel.id}`}
-                        className="text-sm underline"
-                      >
-                        Library
-                      </Link>
-                    )}
-                    {hasFeatureAccess(featureAccess, FEATURES.ANALYTICS) && (
-                      <Link
-                        href={`/studio/analytics/${channel.id}`}
-                        className="text-sm underline"
-                      >
-                        Analytics
-                      </Link>
-                    )}
-                    {hasFeatureAccess(featureAccess, FEATURES.TEAM) && (
-                      <Link
-                        href={`/studio/team/${channel.id}`}
-                        className="text-sm underline"
-                      >
-                        Team
-                      </Link>
-                    )}
-                    {hasFeatureAccess(
-                      featureAccess,
-                      FEATURES.SETTINGS,
-                      ACCESS_LEVELS.MANAGER,
-                    ) && (
-                      <Link
-                        href={`/studio/settings/${channel.id}`}
-                        className="text-sm underline"
-                      >
-                        Settings
-                      </Link>
-                    )}
+                    <Link
+                      href={`/studio/channel/${channel.id}/${
+                        hasFeatureAccess(featureAccess, FEATURES.LIBRARY)
+                          ? "library"
+                          : hasFeatureAccess(featureAccess, FEATURES.ANALYTICS)
+                            ? "analytics"
+                            : "team"
+                      }`}
+                      className="rounded-lg bg-neutral-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-orange-600 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-orange-500 dark:hover:text-white"
+                    >
+                      Open studio
+                    </Link>
                     {hasFeatureAccess(
                       featureAccess,
                       FEATURES.LIBRARY,
