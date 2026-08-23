@@ -26,6 +26,7 @@ export interface ChannelAccess {
     handle: string;
     status: string;
     youtubeChannelId: string | null;
+    youtubeVerifiedAt: Date | null;
   } | null;
 }
 
@@ -55,6 +56,7 @@ export async function getChannelAccess(
       handle: true,
       status: true,
       youtubeChannelId: true,
+      youtubeVerifiedAt: true,
     },
   });
   if (!channel) return DENIED;

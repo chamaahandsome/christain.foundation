@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { Visibility } from "@prisma/client";
 import { FollowButton } from "@/components/FollowButton";
+import { VideoRow } from "@/components/VideoRow";
 import { db } from "@/lib/db";
 import { thumbnailUrl } from "@/lib/youtube";
 
@@ -47,10 +48,21 @@ export default async function ChannelPage({
   const channel = await getChannel(handle).catch(() => null);
   if (!channel || channel.status !== "APPROVED") notFound();
 
-  const [series, items] = await Promise.all([
+  const itemSelect = {
+    id: true,
+    title: true,
+    youtubeVideoId: true,
+    durationSec: true,
+    publishedAt: true,
+    format: true,
+    seriesId: true,
+  } as const;
+
+  const [seriesRows, items] = await Promise.all([
     db.series.findMany({
-      where: { channelId: channel.id },
+      where: { channelId: channel.id, contentItems: { some: {} } },
       orderBy: { sortOrder: "asc" },
+      take: 15,
       select: { id: true, title: true, _count: { select: { contentItems: true } } },
     }),
     db.contentItem.findMany({
@@ -60,16 +72,41 @@ export default async function ChannelPage({
         youtubeVideoId: { not: null },
       },
       orderBy: { publishedAt: "desc" },
-      take: 24,
-      select: {
-        id: true,
-        title: true,
-        youtubeVideoId: true,
-        durationSec: true,
-        publishedAt: true,
-      },
+      take: 60,
+      select: itemSelect,
     }),
   ]);
+
+  // Per-series shelf content (a video can appear in Latest and its series).
+  const seriesItems =
+    seriesRows.length > 0
+      ? await db.contentItem.findMany({
+          where: {
+            channelId: channel.id,
+            visibility: Visibility.PUBLIC,
+            youtubeVideoId: { not: null },
+            seriesId: { in: seriesRows.map((s) => s.id) },
+          },
+          orderBy: { publishedAt: "desc" },
+          take: 200,
+          select: itemSelect,
+        })
+      : [];
+
+  type Item = (typeof items)[number];
+
+  // Shelved the way the channel looks on YouTube: Latest, Shorts, Lives,
+  // then one slider per playlist-mirrored (or hand-made) series with content.
+  const shelves: { key: string; title: string; items: Item[]; short?: boolean }[] = [
+    { key: "latest", title: "Latest", items: items.filter((i) => i.format === "STANDARD").slice(0, 24) },
+    { key: "shorts", title: "Shorts", items: items.filter((i) => i.format === "SHORT").slice(0, 24), short: true },
+    { key: "live", title: "Live streams", items: items.filter((i) => i.format === "LIVE").slice(0, 24) },
+    ...seriesRows.map((s) => ({
+      key: s.id,
+      title: s.title,
+      items: seriesItems.filter((i) => i.seriesId === s.id).slice(0, 24),
+    })),
+  ].filter((shelf) => shelf.items.length > 0);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
@@ -111,52 +148,37 @@ export default async function ChannelPage({
         )}
       </header>
 
-      {series.length > 0 && (
-        <section className="mb-8">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-            Series
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {series.map((s) => (
-              <span
-                key={s.id}
-                className="rounded-full border border-neutral-200 px-3 py-1 text-sm dark:border-neutral-700"
+      {shelves.length === 0 ? (
+        <p className="text-sm text-neutral-500">No content yet.</p>
+      ) : (
+        shelves.map((shelf) => (
+          <VideoRow key={shelf.key} title={shelf.title} count={shelf.items.length}>
+            {shelf.items.map((item) => (
+              <Link
+                key={item.id}
+                href={`/watch/${item.id}`}
+                className={`group block shrink-0 snap-start ${
+                  shelf.short ? "w-32 sm:w-40" : "w-56 sm:w-64"
+                }`}
               >
-                {s.title} ({s._count.contentItems})
-              </span>
+                {item.youtubeVideoId && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={thumbnailUrl(item.youtubeVideoId, "mqdefault")}
+                    alt=""
+                    className={`w-full rounded-lg object-cover ${
+                      shelf.short ? "aspect-9/16" : "aspect-video"
+                    }`}
+                  />
+                )}
+                <p className="mt-2 line-clamp-2 text-sm group-hover:underline">
+                  {item.title}
+                </p>
+              </Link>
             ))}
-          </div>
-        </section>
+          </VideoRow>
+        ))
       )}
-
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-          Latest
-        </h2>
-        {items.length === 0 ? (
-          <p className="text-sm text-neutral-500">No content yet.</p>
-        ) : (
-          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {items.map((item) => (
-              <li key={item.id}>
-                <Link href={`/watch/${item.id}`} className="group block">
-                  {item.youtubeVideoId && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={thumbnailUrl(item.youtubeVideoId, "mqdefault")}
-                      alt=""
-                      className="aspect-video w-full rounded-lg object-cover"
-                    />
-                  )}
-                  <p className="mt-2 line-clamp-2 text-sm group-hover:underline">
-                    {item.title}
-                  </p>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </main>
   );
 }

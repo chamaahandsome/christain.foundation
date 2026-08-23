@@ -58,8 +58,9 @@ export async function PATCH(req: Request) {
   }
   if (body.youtubeChannelId !== undefined) {
     const raw = body.youtubeChannelId?.trim();
+    let nextValue: string | null | undefined;
     if (!raw) {
-      data.youtubeChannelId = null;
+      nextValue = null;
     } else {
       // Accepts @handle, UC… id, or a channel URL; stored canonically so
       // ingestion can always resolve it.
@@ -69,8 +70,15 @@ export async function PATCH(req: Request) {
           "YouTube channel not recognized — use the @handle, the UC… channel id, or the channel's URL.",
         );
       } else {
-        data.youtubeChannelId = canonical;
+        nextValue = canonical;
       }
+    }
+    if (nextValue !== undefined && nextValue !== access.channel.youtubeChannelId) {
+      // Relinking to a different channel voids the previous ownership proof.
+      data.youtubeChannelId = nextValue;
+      data.youtubeVerifiedAt = null;
+      data.youtubeVerifiedVia = null;
+      data.youtubeVerifyToken = null;
     }
   }
 

@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
+import { isAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { ACCESS_LEVELS, FEATURES } from "@/lib/team";
 import { getChannelAccess } from "@/lib/team-authorization";
@@ -38,6 +39,7 @@ export default async function LibraryTab({
         youtubeVideoId: true,
         publishedAt: true,
         durationSec: true,
+        format: true,
       },
     }),
     db.series.findMany({
@@ -56,12 +58,16 @@ export default async function LibraryTab({
           surfaces until those tiers launch.
         </p>
         {canEdit &&
-          (access.channel.youtubeChannelId ? (
-            <IngestButton channelId={channelId} />
-          ) : (
+          (!access.channel.youtubeChannelId ? (
             <p className="text-xs text-neutral-500">
               Link a YouTube channel in Settings to import.
             </p>
+          ) : !access.channel.youtubeVerifiedAt && !isAdmin(userId) ? (
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              Verify YouTube ownership in Settings to import.
+            </p>
+          ) : (
+            <IngestButton channelId={channelId} />
           ))}
       </div>
       <LibraryManager

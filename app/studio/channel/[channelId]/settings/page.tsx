@@ -5,6 +5,7 @@ import type { ChannelLinks } from "@/lib/channel-settings";
 import { ACCESS_LEVELS, FEATURES } from "@/lib/team";
 import { getChannelAccess } from "@/lib/team-authorization";
 import { ChannelSettingsForm } from "@/components/ChannelSettingsForm";
+import { YouTubeVerifyCard } from "@/components/YouTubeVerifyCard";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Channel settings" };
@@ -28,7 +29,15 @@ export default async function SettingsTab({
 
   const channel = await db.channel.findUniqueOrThrow({
     where: { id: channelId },
-    select: { id: true, name: true, bio: true, links: true, youtubeChannelId: true },
+    select: {
+      id: true,
+      name: true,
+      bio: true,
+      links: true,
+      youtubeChannelId: true,
+      youtubeVerifiedAt: true,
+      youtubeVerifiedVia: true,
+    },
   });
 
   return (
@@ -36,6 +45,12 @@ export default async function SettingsTab({
       <p className="text-sm text-neutral-500">
         The handle itself is fixed — it's a public identity.
       </p>
+      <YouTubeVerifyCard
+        channelId={channel.id}
+        youtubeChannelId={channel.youtubeChannelId}
+        verifiedAt={channel.youtubeVerifiedAt?.toISOString() ?? null}
+        verifiedVia={channel.youtubeVerifiedVia}
+      />
       <ChannelSettingsForm
         channelId={channel.id}
         initial={{

@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NotificationType } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { ingestChannel } from "@/lib/ingest";
 import { planContentNotifications } from "@/lib/notify";
@@ -52,6 +53,17 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { error: "Channel has no linked YouTube channel." },
       { status: 400 },
+    );
+  }
+  // Nobody imports a library they haven't proven is theirs (admins may,
+  // for editorial/founding-cohort curation).
+  if (!channel.youtubeVerifiedAt && !isAdmin(userId)) {
+    return NextResponse.json(
+      {
+        error:
+          "Verify ownership of the YouTube channel first — see Settings → YouTube verification.",
+      },
+      { status: 403 },
     );
   }
 

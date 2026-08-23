@@ -21,6 +21,15 @@ export interface YouTubeVideoInfo {
   thumbnailUrl: string | null;
   embeddable: boolean;
   privacyStatus: string;
+  /** True when this is (the archive of) a live stream. */
+  wasLive: boolean;
+}
+
+export interface YouTubePlaylistInfo {
+  playlistId: string;
+  title: string;
+  description: string;
+  itemCount: number;
 }
 
 export class YouTubeApiError extends Error {
@@ -88,6 +97,7 @@ export function parseVideosResponse(json: unknown): YouTubeVideoInfo[] {
       };
       contentDetails?: { duration?: string };
       status?: { embeddable?: boolean; privacyStatus?: string };
+      liveStreamingDetails?: { actualStartTime?: string };
     }[];
   };
   return (data.items ?? [])
@@ -103,7 +113,58 @@ export function parseVideosResponse(json: unknown): YouTubeVideoInfo[] {
       thumbnailUrl: bestThumbnail(item.snippet?.thumbnails),
       embeddable: item.status?.embeddable ?? false,
       privacyStatus: item.status?.privacyStatus ?? "unknown",
+      wasLive: Boolean(item.liveStreamingDetails?.actualStartTime),
     }));
+}
+
+export function parsePlaylistsResponse(json: unknown): {
+  playlists: YouTubePlaylistInfo[];
+  nextPageToken: string | null;
+} {
+  const data = json as {
+    items?: {
+      id?: string;
+      snippet?: { title?: string; description?: string };
+      contentDetails?: { itemCount?: number };
+    }[];
+    nextPageToken?: string;
+  };
+  return {
+    playlists: (data.items ?? [])
+      .filter((item): item is typeof item & { id: string } => Boolean(item.id))
+      .map((item) => ({
+        playlistId: item.id,
+        title: item.snippet?.title ?? "",
+        description: item.snippet?.description ?? "",
+        itemCount: item.contentDetails?.itemCount ?? 0,
+      })),
+    nextPageToken: data.nextPageToken ?? null,
+  };
+}
+
+export type VideoFormat = "STANDARD" | "SHORT" | "LIVE";
+
+/**
+ * Classify a video the way YouTube presents it. The API has no Shorts flag,
+ * so this is a heuristic: anything a minute or under is a Short; up to the
+ * current 3-minute Shorts cap counts only when the creator tagged it
+ * #shorts. Live detection is exact (liveStreamingDetails).
+ */
+export function classifyFormat(video: {
+  wasLive: boolean;
+  durationSec: number | null;
+  title: string;
+  description: string;
+}): VideoFormat {
+  if (video.wasLive) return "LIVE";
+  const duration = video.durationSec;
+  if (duration != null && duration > 0) {
+    if (duration <= 63) return "SHORT";
+    if (duration <= 183 && /#shorts?\b/i.test(`${video.title} ${video.description}`)) {
+      return "SHORT";
+    }
+  }
+  return "STANDARD";
 }
 
 // Local import to avoid a cycle: lib/youtube.ts exports parseIsoDuration.
@@ -248,10 +309,39 @@ export async function fetchVideoDetails(
     const chunk = videoIds.slice(i, i + 50);
     const json = await apiGet(
       "videos",
-      { part: "snippet,contentDetails,status", id: chunk.join(",") },
+      {
+        part: "snippet,contentDetails,status,liveStreamingDetails",
+        id: chunk.join(","),
+      },
       apiKey,
     );
     videos.push(...parseVideosResponse(json));
   }
   return videos;
+}
+
+/** List a channel's public playlists (bounded; 50 per page). */
+export async function listPlaylists(
+  channelId: string,
+  apiKey: string,
+  opts: { maxPages?: number } = {},
+): Promise<YouTubePlaylistInfo[]> {
+  const maxPages = opts.maxPages ?? 2; // 100 playlists is plenty
+  const playlists: YouTubePlaylistInfo[] = [];
+  let pageToken: string | null = null;
+
+  for (let page = 0; page < maxPages; page++) {
+    const params: Record<string, string> = {
+      part: "snippet,contentDetails",
+      channelId,
+      maxResults: "50",
+    };
+    if (pageToken) params.pageToken = pageToken;
+    const json = await apiGet("playlists", params, apiKey);
+    const parsed = parsePlaylistsResponse(json);
+    playlists.push(...parsed.playlists);
+    pageToken = parsed.nextPageToken;
+    if (!pageToken) break;
+  }
+  return playlists;
 }

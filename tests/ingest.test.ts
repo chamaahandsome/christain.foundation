@@ -12,6 +12,7 @@ const video: YouTubeVideoInfo = {
   thumbnailUrl: "https://example.com/t.jpg",
   embeddable: true,
   privacyStatus: "public",
+  wasLive: false,
 };
 
 describe("videoToContentItemData", () => {
@@ -25,6 +26,7 @@ describe("videoToContentItemData", () => {
       description: "Easter teaching",
       youtubeVideoId: "aaaaaaaaaaa",
       durationSec: 1800,
+      format: "STANDARD",
       publishedAt: new Date("2026-04-05T09:00:00Z"),
     });
   });

@@ -14,6 +14,7 @@ interface Item {
   youtubeVideoId: string | null;
   publishedAt: string | null;
   durationSec: number | null;
+  format: string;
 }
 
 interface SeriesRow {
@@ -23,6 +24,18 @@ interface SeriesRow {
 }
 
 const VISIBILITIES = ["PUBLIC", "MEMBERS", "PAID"] as const;
+
+const FORMAT_FILTERS = [
+  { key: "ALL", label: "All" },
+  { key: "STANDARD", label: "Videos" },
+  { key: "SHORT", label: "Shorts" },
+  { key: "LIVE", label: "Live" },
+] as const;
+
+const FORMAT_BADGES: Record<string, string> = {
+  SHORT: "Short",
+  LIVE: "Live",
+};
 
 export function LibraryManager({
   channelId,
@@ -40,6 +53,12 @@ export function LibraryManager({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newSeries, setNewSeries] = useState("");
+  const [formatFilter, setFormatFilter] = useState<string>("ALL");
+
+  const visibleItems =
+    formatFilter === "ALL"
+      ? items
+      : items.filter((item) => item.format === formatFilter);
 
   async function patchItem(
     itemId: string,
@@ -122,8 +141,32 @@ export function LibraryManager({
 
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
+      {/* Format filter — the way the channel is shaped on YouTube */}
+      <div className="flex flex-wrap gap-2">
+        {FORMAT_FILTERS.map((filter) => {
+          const count =
+            filter.key === "ALL"
+              ? items.length
+              : items.filter((item) => item.format === filter.key).length;
+          if (filter.key !== "ALL" && count === 0) return null;
+          return (
+            <button
+              key={filter.key}
+              onClick={() => setFormatFilter(filter.key)}
+              className={`rounded-xl px-3 py-1.5 text-xs font-medium transition-colors ${
+                formatFilter === filter.key
+                  ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300"
+                  : "bg-neutral-100 text-neutral-700 hover:bg-amber-100 hover:text-amber-900 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-amber-950 dark:hover:text-amber-300"
+              }`}
+            >
+              {filter.label} · {count}
+            </button>
+          );
+        })}
+      </div>
+
       <ul className="divide-y divide-neutral-200 dark:divide-neutral-800">
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <li key={item.id} className="flex flex-wrap items-center gap-3 py-3">
             {item.youtubeVideoId && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -140,6 +183,11 @@ export function LibraryManager({
               >
                 {item.title}
               </Link>
+              {FORMAT_BADGES[item.format] && (
+                <span className="mr-2 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium uppercase text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                  {FORMAT_BADGES[item.format]}
+                </span>
+              )}
               <p className="text-xs text-neutral-500">
                 {item.publishedAt
                   ? new Date(item.publishedAt).toLocaleDateString()

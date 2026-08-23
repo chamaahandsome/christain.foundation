@@ -94,6 +94,7 @@ describe("parseVideosResponse", () => {
         thumbnailUrl: "https://example.com/max.jpg",
         embeddable: true,
         privacyStatus: "public",
+        wasLive: false,
       },
     ]);
   });
@@ -120,6 +121,7 @@ describe("isIngestable", () => {
     thumbnailUrl: null,
     embeddable: true,
     privacyStatus: "public",
+    wasLive: false,
   };
 
   it("accepts public embeddable videos only", () => {

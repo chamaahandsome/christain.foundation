@@ -88,6 +88,13 @@ model Channel {
   bio              String?       @db.Text
   links            Json?
   youtubeChannelId String?       @unique
+  // Ownership proof for the linked YouTube channel. Two paths: "google"
+  // (Clerk Google OAuth token → channels?mine=true match) or "description"
+  // (one-time token pasted into the channel description, read back via the
+  // Data API). Importing requires it (admins excepted). Reset on relink.
+  youtubeVerifyToken String?
+  youtubeVerifiedAt  DateTime?
+  youtubeVerifiedVia String? // "google" | "description"
   ownerId          String
   owner            User          @relation(fields: [ownerId], references: [id])
   createdAt        DateTime      @default(now())
@@ -335,15 +342,26 @@ enum Visibility {
   PAID
 }
 
+// YouTube-shaped presentation format: Shorts and archived live streams get
+// their own shelves, mirroring how the channel looks on YouTube.
+enum ContentFormat {
+  STANDARD
+  SHORT
+  LIVE
+}
+
 model Series {
-  id          String   @id @default(cuid())
-  channelId   String
-  channel     Channel  @relation(fields: [channelId], references: [id])
-  title       String
-  description String?  @db.Text
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(cuid())
+  channelId         String
+  channel           Channel  @relation(fields: [channelId], references: [id])
+  title             String
+  description       String?  @db.Text
+  // Set when the series mirrors a YouTube playlist (ingest keeps it synced);
+  // null for hand-made series.
+  youtubePlaylistId String?  @unique
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   contentItems ContentItem[]
 
@@ -369,6 +387,7 @@ model ContentItem {
   fileKey       String?
   audioOnly     Boolean       @default(false)
   durationSec   Int?
+  format        ContentFormat @default(STANDARD)
   visibility    Visibility    @default(PUBLIC)
   scriptureRefs Json? // normalized refs, see lib/scripture.ts
   searchText    String?       @db.Text // transcript/captions-derived, for search
@@ -386,9 +405,12 @@ model ContentItem {
 
   @@unique([channelId, youtubeVideoId])
   @@index([channelId])
+  @@index([channelId, format])
   @@index([seriesId])
   @@index([kind])
   @@index([publishedAt])
+  // Topical search across metadata + transcript-derived text (PLAN §3).
+  @@fulltext([title, description, searchText])
 }
 
 model WatchProgress {
