@@ -27,6 +27,8 @@ export default async function PaymentsTab({
       stripeChargesEnabled: true,
       stripePayoutsEnabled: true,
       stripeOnboardedAt: true,
+      tricklProviderLinkCode: true,
+      tricklEnabledAt: true,
     },
   });
 
@@ -43,6 +45,8 @@ export default async function PaymentsTab({
         chargesEnabled={channel.stripeChargesEnabled}
         payoutsEnabled={channel.stripePayoutsEnabled}
         onboardedAt={channel.stripeOnboardedAt?.toISOString() ?? null}
+        tricklEnabled={Boolean(channel.tricklProviderLinkCode)}
+        tricklEnabledAt={channel.tricklEnabledAt?.toISOString() ?? null}
       />
     </section>
   );

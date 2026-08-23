@@ -102,6 +102,12 @@ model Channel {
   stripeChargesEnabled Boolean   @default(false)
   stripePayoutsEnabled Boolean   @default(false)
   stripeOnboardedAt    DateTime?
+  // Trickl save-to-buy (api.trickl.app): provider registration rides the
+  // channel's Stripe Connect account — Trickl pays the provider directly,
+  // CF is never in the money flow. Webhook secret is per-provider HMAC.
+  tricklProviderLinkCode String?   @unique
+  tricklWebhookSecret    String?
+  tricklEnabledAt        DateTime?
   ownerId          String
   owner            User          @relation(fields: [ownerId], references: [id])
   createdAt        DateTime      @default(now())

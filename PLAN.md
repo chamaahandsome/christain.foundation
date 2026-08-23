@@ -152,6 +152,8 @@ FilmAccess — FREE|PAID|TICKET_ONLY, FilmPurchase, Premiere
 
 **Trickl surface (hard rule):** tickets, books/ebooks, merch, paid films — commerce only. Never on SupportPlan or MISSION/NEED campaigns. CREATIVE-with-rewards is an open question for counsel (reward = commerce?) — default OFF until answered.
 
+**Trickl donations update (2026-08-16, from the Trickl repo):** Trickl has since shipped a verified-nonprofit donation product — providers can register as 501(c)(3) (Stripe `business_type: non_profit`, verification status tracked), Trickl issues donation tax receipts *for the verified NGO provider* per charge, supports recurring donation subscriptions and donor fee coverage. §9 analysis: the provider's own Stripe account receives funds (recipient is merchant of record, never CF) and receipts come from the NGO side (never CF) — so Trickl-for-giving is §9-compatible in the Mode-A shape (verified sending org as provider) and possible for Mode B with CF's non-deductible disclosure (isNonprofit=false → Trickl issues no receipts). This widens the phase-7 design space; the commerce-only rule stands until the concept note is amended and counsel confirms. Commerce integration shipped: provider registration rides the channel's Stripe Connect account (Payments tab), per-provider HMAC webhook at `/api/webhook/trickl`, amount rules ported (min $3 chunk, ~$40/45-day window scaling, 180-day clamp, deposit offsets).
+
 ---
 
 ## 7. Port map from Maltivas (`themaltivas-v2`)
