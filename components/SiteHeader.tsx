@@ -22,11 +22,8 @@ export async function SiteHeader() {
           href="/"
           className="flex shrink-0 items-center gap-2 font-semibold tracking-tight"
         >
-          {/* The brand accent: the homepage hero's amber→orange, as a mark */}
-          <span
-            aria-hidden
-            className="h-3.5 w-3.5 rounded-sm bg-linear-to-br from-amber-500 to-orange-600"
-          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/cf-mark.png" alt="" className="h-7 w-7" />
           Christian Foundation
         </Link>
         <nav className="flex items-center gap-1 overflow-x-auto text-sm">
