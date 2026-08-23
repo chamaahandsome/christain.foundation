@@ -390,7 +390,10 @@ model ContentItem {
   format        ContentFormat @default(STANDARD)
   visibility    Visibility    @default(PUBLIC)
   scriptureRefs Json? // normalized refs, see lib/scripture.ts
-  searchText    String?       @db.Text // transcript/captions-derived, for search
+  searchText    String?       @db.Text // tags now; transcripts once owner-OAuth captions land
+  // Set by the dead-embed cron when the source video vanishes from YouTube;
+  // public surfaces filter it out, the row stays for the creator to see.
+  unavailableAt DateTime?
   publishedAt   DateTime?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt

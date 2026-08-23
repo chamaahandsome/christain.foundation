@@ -13,6 +13,7 @@ const video: YouTubeVideoInfo = {
   embeddable: true,
   privacyStatus: "public",
   wasLive: false,
+  tags: [],
 };
 
 describe("videoToContentItemData", () => {
@@ -27,6 +28,7 @@ describe("videoToContentItemData", () => {
       youtubeVideoId: "aaaaaaaaaaa",
       durationSec: 1800,
       format: "STANDARD",
+      searchText: null,
       publishedAt: new Date("2026-04-05T09:00:00Z"),
     });
   });

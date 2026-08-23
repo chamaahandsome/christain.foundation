@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isAdminUser } from "@/lib/admin";
+import { AdminNav } from "@/components/AdminNav";
 import { InviteCodesAdmin } from "@/components/InviteCodesAdmin";
 
 export const dynamic = "force-dynamic";
@@ -16,15 +16,8 @@ export default async function AdminInvitesPage() {
       </p>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Founding-cohort invitations</h1>
-        <span className="flex gap-4">
-          <Link href="/admin/applications" className="text-sm underline">
-            Applications queue
-          </Link>
-          <Link href="/admin/doctrine" className="text-sm underline">
-            Doctrine queue
-          </Link>
-        </span>
       </div>
+      <AdminNav current="/admin/invites" />
       <p className="mt-1 text-sm text-neutral-500">
         An applicant who redeems a code may submit without vouches — there is
         no one to vouch for the first cohort. Codes are read aloud and retyped,

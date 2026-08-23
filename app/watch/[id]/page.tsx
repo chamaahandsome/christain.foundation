@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { Visibility } from "@prisma/client";
+import { Comments } from "@/components/Comments";
 import { ReportTeachingButton } from "@/components/ReportTeachingButton";
 import { YouTubeEmbed } from "@/components/YouTubeEmbed";
 import { db } from "@/lib/db";
@@ -50,6 +51,7 @@ export default async function WatchPage({
   if (
     !item ||
     item.visibility !== Visibility.PUBLIC ||
+    item.unavailableAt !== null ||
     item.channel.status !== "APPROVED" ||
     !item.youtubeVideoId
   ) {
@@ -73,6 +75,7 @@ export default async function WatchPage({
     where: {
       channelId: item.channelId,
       visibility: Visibility.PUBLIC,
+      unavailableAt: null,
       id: { not: item.id },
       youtubeVideoId: { not: null },
     },
@@ -120,6 +123,7 @@ export default async function WatchPage({
           </p>
         )}
         <ReportTeachingButton contentItemId={item.id} />
+        <Comments contentItemId={item.id} />
       </div>
 
       <aside>

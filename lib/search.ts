@@ -22,6 +22,7 @@ export function sanitizeFulltextQuery(input: string): string {
 
 const PUBLIC_ITEM = {
   visibility: Visibility.PUBLIC,
+  unavailableAt: null,
   youtubeVideoId: { not: null },
   channel: { status: "APPROVED" as const },
 };

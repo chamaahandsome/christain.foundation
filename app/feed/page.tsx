@@ -29,6 +29,7 @@ export default async function FeedPage() {
   const items = await db.contentItem.findMany({
     where: {
       visibility: Visibility.PUBLIC,
+      unavailableAt: null,
       youtubeVideoId: { not: null },
       channel: {
         status: "APPROVED",

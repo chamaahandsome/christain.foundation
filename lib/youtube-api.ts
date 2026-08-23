@@ -23,6 +23,8 @@ export interface YouTubeVideoInfo {
   privacyStatus: string;
   /** True when this is (the archive of) a live stream. */
   wasLive: boolean;
+  /** Creator-set topical tags — feeds searchText until transcripts land. */
+  tags: string[];
 }
 
 export interface YouTubePlaylistInfo {
@@ -94,6 +96,7 @@ export function parseVideosResponse(json: unknown): YouTubeVideoInfo[] {
         description?: string;
         publishedAt?: string;
         thumbnails?: Record<string, { url?: string }>;
+        tags?: string[];
       };
       contentDetails?: { duration?: string };
       status?: { embeddable?: boolean; privacyStatus?: string };
@@ -114,6 +117,7 @@ export function parseVideosResponse(json: unknown): YouTubeVideoInfo[] {
       embeddable: item.status?.embeddable ?? false,
       privacyStatus: item.status?.privacyStatus ?? "unknown",
       wasLive: Boolean(item.liveStreamingDetails?.actualStartTime),
+      tags: item.snippet?.tags ?? [],
     }));
 }
 

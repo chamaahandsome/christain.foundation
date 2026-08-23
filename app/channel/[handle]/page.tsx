@@ -69,6 +69,7 @@ export default async function ChannelPage({
       where: {
         channelId: channel.id,
         visibility: Visibility.PUBLIC,
+        unavailableAt: null,
         youtubeVideoId: { not: null },
       },
       orderBy: { publishedAt: "desc" },
@@ -84,6 +85,7 @@ export default async function ChannelPage({
           where: {
             channelId: channel.id,
             visibility: Visibility.PUBLIC,
+        unavailableAt: null,
             youtubeVideoId: { not: null },
             seriesId: { in: seriesRows.map((s) => s.id) },
           },

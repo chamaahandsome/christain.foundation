@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NotificationType } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { isAdmin } from "@/lib/admin";
+import { isAdminUser } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { ingestChannel } from "@/lib/ingest";
 import { planContentNotifications } from "@/lib/notify";
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
   }
   // Nobody imports a library they haven't proven is theirs (admins may,
   // for editorial/founding-cohort curation).
-  if (!channel.youtubeVerifiedAt && !isAdmin(userId)) {
+  if (!channel.youtubeVerifiedAt && !(await isAdminUser())) {
     return NextResponse.json(
       {
         error:

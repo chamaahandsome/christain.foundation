@@ -23,6 +23,7 @@ async function getQuestion(slug: string) {
                   title: true,
                   youtubeVideoId: true,
                   visibility: true,
+                  unavailableAt: true,
                   channel: { select: { name: true, handle: true, status: true } },
                 },
               },
@@ -38,6 +39,7 @@ async function getQuestion(slug: string) {
               title: true,
               youtubeVideoId: true,
               visibility: true,
+              unavailableAt: true,
               channel: { select: { name: true, handle: true, status: true } },
             },
           },
@@ -52,6 +54,7 @@ type PlacedContent = {
   title: string;
   youtubeVideoId: string | null;
   visibility: Visibility;
+  unavailableAt: Date | null;
   channel: { name: string; handle: string; status: string };
 };
 
@@ -59,6 +62,7 @@ function visible(item: PlacedContent | null | undefined): item is PlacedContent 
   return Boolean(
     item &&
       item.visibility === Visibility.PUBLIC &&
+      !item.unavailableAt &&
       item.channel.status === "APPROVED" &&
       item.youtubeVideoId,
   );

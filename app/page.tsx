@@ -38,6 +38,7 @@ export default async function Home() {
           .findMany({
             where: {
               visibility: Visibility.PUBLIC,
+              unavailableAt: null,
               youtubeVideoId: { not: null },
               channel: { status: "APPROVED" },
             },
@@ -84,6 +85,7 @@ export default async function Home() {
       .findMany({
         where: {
           visibility: Visibility.PUBLIC,
+          unavailableAt: null,
           youtubeVideoId: { not: null },
           channel: { status: "APPROVED" },
         },

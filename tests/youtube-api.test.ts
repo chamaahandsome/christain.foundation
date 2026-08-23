@@ -95,6 +95,7 @@ describe("parseVideosResponse", () => {
         embeddable: true,
         privacyStatus: "public",
         wasLive: false,
+        tags: [],
       },
     ]);
   });
@@ -122,6 +123,7 @@ describe("isIngestable", () => {
     embeddable: true,
     privacyStatus: "public",
     wasLive: false,
+    tags: [],
   };
 
   it("accepts public embeddable videos only", () => {

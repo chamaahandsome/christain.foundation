@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NotificationType, ReviewCaseStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { isAdmin } from "@/lib/admin";
+import { isAdminUser } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { caseTransition, isDecided } from "@/lib/doctrine";
 import { doctrineDecisionNotification } from "@/lib/notify";
@@ -11,8 +11,7 @@ import { doctrineDecisionNotification } from "@/lib/notify";
 // outcomes carry notes; upheld decisions can be appealed by the channel.
 
 export async function GET() {
-  const { userId } = await auth();
-  if (!isAdmin(userId)) {
+  if (!(await isAdminUser())) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -59,7 +58,7 @@ const BodySchema = z.discriminatedUnion("action", [
 
 export async function POST(req: Request) {
   const { userId } = await auth();
-  if (!isAdmin(userId)) {
+  if (!(await isAdminUser())) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

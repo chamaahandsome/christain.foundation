@@ -43,13 +43,14 @@ async function main() {
         if (!video) continue; // deleted/private on YouTube — leave as-is
         const format = classifyFormat(video);
         counts[format] = (counts[format] ?? 0) + 1;
-        if (format !== item.format) {
-          await db.contentItem.update({
-            where: { id: item.id },
-            data: { format },
-          });
-          reclassified += 1;
-        }
+        await db.contentItem.update({
+          where: { id: item.id },
+          data: {
+            format,
+            searchText: video.tags.length > 0 ? video.tags.join(" ") : null,
+          },
+        });
+        reclassified += format !== item.format ? 1 : 0;
       }
       console.log(
         `  formats: ${Object.entries(counts)

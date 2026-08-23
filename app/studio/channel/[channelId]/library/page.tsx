@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
-import { isAdmin } from "@/lib/admin";
+import { isAdminUser } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { ACCESS_LEVELS, FEATURES } from "@/lib/team";
 import { getChannelAccess } from "@/lib/team-authorization";
@@ -62,7 +62,7 @@ export default async function LibraryTab({
             <p className="text-xs text-neutral-500">
               Link a YouTube channel in Settings to import.
             </p>
-          ) : !access.channel.youtubeVerifiedAt && !isAdmin(userId) ? (
+          ) : !access.channel.youtubeVerifiedAt && !(await isAdminUser()) ? (
             <p className="text-xs text-amber-700 dark:text-amber-400">
               Verify YouTube ownership in Settings to import.
             </p>

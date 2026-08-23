@@ -29,6 +29,9 @@ export function videoToContentItemData(
     youtubeVideoId: video.videoId,
     durationSec: video.durationSec,
     format: classifyFormat(video),
+    // Topical search fodder: creator tags. Transcripts need owner OAuth
+    // (captions.download) — planned, see PLAN §8.
+    searchText: video.tags.length > 0 ? video.tags.join(" ") : null,
     publishedAt: video.publishedAt ? new Date(video.publishedAt) : null,
   };
 }
@@ -164,7 +167,9 @@ export async function ingestChannel(
         description: data.description,
         durationSec: data.durationSec,
         format: data.format,
+        searchText: data.searchText,
         publishedAt: data.publishedAt,
+        unavailableAt: null, // it just answered the API — it's alive
       },
     });
     ingested += 1;

@@ -187,6 +187,8 @@ Not ported: conventions/festivals full stacks, awards, Do-Biz, comics, Tolkoin, 
 
 ---
 
+**Cross-cutting debts cleared 2026-08-16 (§8):** editorial tooling shipped — `/admin/curation` places library teaching onto topics/questions/positions (the founding-cohort indexing tool) and `/admin/shelves` manages the explore rows; watch-page comments with post-moderation and a safety queue at `/admin/moderation` (distinct from the doctrine audit); dead-embed cron (`/api/cron/check-embeds`, daily via vercel.json, thumbnail-liveness signal — marks `ContentItem.unavailableAt`, public surfaces filter it, recovery is automatic); sitemap + robots; admin nav unified; admin checks accept `ADMIN_EMAILS` (verified addresses) alongside `ADMIN_USER_IDS`. Search now indexes creator tags (`searchText`); **true transcript search still needs owner-OAuth captions.download** — revisit when creators connect Google (the verification flow already establishes that connection).
+
 ## 9. Open questions
 
 1. **Trickl on CREATIVE reward campaigns** — commerce or giving? Counsel decides; OFF by default.
