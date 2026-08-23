@@ -33,6 +33,7 @@ model User {
   affirmations    AffirmationRecord[]
   notifications   Notification[]
   teamMemberships TeamMember[]
+  transactions    Transaction[]
 }
 
 enum NotificationType {
@@ -95,6 +96,12 @@ model Channel {
   youtubeVerifyToken String?
   youtubeVerifiedAt  DateTime?
   youtubeVerifiedVia String? // "google" | "description"
+  // Stripe Connect (Express) — commerce spine (PLAN §10 phase 6). A channel
+  // that can't be paid out must not publish revenue surfaces (§9.4).
+  stripeAccountId      String?   @unique
+  stripeChargesEnabled Boolean   @default(false)
+  stripePayoutsEnabled Boolean   @default(false)
+  stripeOnboardedAt    DateTime?
   ownerId          String
   owner            User          @relation(fields: [ownerId], references: [id])
   createdAt        DateTime      @default(now())
@@ -106,6 +113,7 @@ model Channel {
   vouchesGiven Vouch[]
   reviewCases  DoctrineReviewCase[]
   teamMembers  TeamMember[]
+  transactions Transaction[]
 
   @@index([ownerId])
   @@index([status])
@@ -316,6 +324,54 @@ model Follow {
   @@id([userId, channelId])
   @@index([channelId])
   @@index([userId])
+}
+
+// ---------- ledger (commerce spine, PLAN §10 phase 6) ----------
+// Every money movement gets a Transaction row; webhooks are processed
+// exactly once via ProcessedWebhookEvent. Partner gifts (phase 7) use
+// direct charges on the connected account — the recipient is merchant of
+// record, never CF (§9).
+
+enum TransactionType {
+  PURCHASE // commerce: ebooks, products, films
+  TICKET
+  GIFT // partner giving (phase 7)
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+model Transaction {
+  id          String            @id @default(cuid())
+  channelId   String
+  channel     Channel           @relation(fields: [channelId], references: [id])
+  userId      String?
+  user        User?             @relation(fields: [userId], references: [id])
+  type        TransactionType
+  status      TransactionStatus @default(PENDING)
+  amountCents Int
+  feeCents    Int               @default(0) // CF's application fee
+  currency    String            @default("usd")
+  provider    String            @default("stripe")
+  providerRef String?           @unique // payment intent / charge id
+  description String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([channelId])
+  @@index([userId])
+  @@index([status])
+}
+
+// Webhooks are at-least-once; this makes processing exactly-once.
+model ProcessedWebhookEvent {
+  id          String   @id // provider event id
+  provider    String
+  processedAt DateTime @default(now())
 }
 
 // ---------- content ----------

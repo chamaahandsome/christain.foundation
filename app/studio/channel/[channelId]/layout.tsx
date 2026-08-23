@@ -32,6 +32,8 @@ export default async function ChannelStudioLayout({
       slug: "settings",
       label: "Settings",
     },
+    // Money is owner-only — delegated staff never see payouts.
+    access.isOwner && { slug: "payments", label: "Payments" },
   ].filter((tab): tab is StudioTab => Boolean(tab));
 
   return (
