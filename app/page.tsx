@@ -19,27 +19,39 @@ const AVATAR_GRADIENTS = [
   "from-cyan-500 to-blue-600",
 ];
 
+/** The marquee hands over from the curated showcase to the platform's own
+ * library only once the creator base is broad enough to look like a
+ * platform, not one channel. */
+const MARQUEE_MIN_CREATORS = 20;
+
 export default async function Home() {
-  // Marquee: the platform's own library once it has enough items; until
-  // then, a generated showcase of real videos from well-known channels
-  // (lib/showcase.json — dev placeholder, links go to YouTube).
-  const libraryItems = await db.contentItem
-    .findMany({
-      where: {
-        visibility: Visibility.PUBLIC,
-        youtubeVideoId: { not: null },
-        channel: { status: "APPROVED" },
-      },
-      orderBy: { publishedAt: "desc" },
-      take: 24,
-      select: {
-        id: true,
-        title: true,
-        youtubeVideoId: true,
-        channel: { select: { name: true } },
-      },
-    })
-    .catch(() => []);
+  // Marquee: the platform's own library once at least MARQUEE_MIN_CREATORS
+  // approved channels exist; until then, the generated showcase of varied
+  // well-known channels (lib/showcase.json — display only).
+  const approvedCreators = await db.channel
+    .count({ where: { status: "APPROVED" } })
+    .catch(() => 0);
+
+  const libraryItems =
+    approvedCreators >= MARQUEE_MIN_CREATORS
+      ? await db.contentItem
+          .findMany({
+            where: {
+              visibility: Visibility.PUBLIC,
+              youtubeVideoId: { not: null },
+              channel: { status: "APPROVED" },
+            },
+            orderBy: { publishedAt: "desc" },
+            take: 24,
+            select: {
+              id: true,
+              title: true,
+              youtubeVideoId: true,
+              channel: { select: { name: true } },
+            },
+          })
+          .catch(() => [])
+      : [];
 
   const marqueeItems: MarqueeItem[] =
     libraryItems.length >= 8
