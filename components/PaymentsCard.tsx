@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { TricklDemo } from "@/components/TricklDemo";
 
 export function PaymentsCard({
   channelId,
@@ -138,11 +139,12 @@ export function PaymentsCard({
             <> Enabled {new Date(tricklEnabledAt).toLocaleDateString()}.</>
           )}
         </p>
+        <TricklDemo />
         {!tricklOn && (
           <button
             onClick={() => void enableTrickl()}
             disabled={tricklBusy || !ready}
-            className="mt-3 rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium hover:border-amber-500 hover:bg-amber-50 disabled:opacity-50 dark:border-neutral-700 dark:hover:border-amber-600 dark:hover:bg-amber-950/40"
+            className="mt-3 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-orange-500 dark:hover:text-white"
           >
             {tricklBusy ? "Enabling…" : "Enable Trickl"}
           </button>
