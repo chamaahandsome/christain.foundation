@@ -79,7 +79,7 @@ export async function POST(req: Request) {
       { status: 409 },
     );
   }
-  // ---- Trickl save-to-buy: rides the Stripe Connect account ----
+  // ---- Trickl micro-payments: rides the Stripe Connect account ----
   if (parsed.data.action === "enable_trickl") {
     if (!tricklConfigured()) {
       return NextResponse.json(

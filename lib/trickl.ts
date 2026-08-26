@@ -1,7 +1,8 @@
-// Trickl (api.trickl.app) — save-to-buy via round-ups, ported from Maltivas.
-// The buyer's spare change accumulates toward a goal in $3 chunks; Trickl
-// pays each chunk straight to the provider's Stripe Connect account. CF is
-// never in the money flow. Trickl also runs a verified-nonprofit donation
+// Trickl (api.trickl.app) — micro-payments via round-ups, ported from
+// Maltivas. NOT a savings/wallet product (that would be money transmission):
+// the buyer's spare change is collected in $3 chunks and each chunk is paid
+// STRAIGHT THROUGH to the provider's Stripe Connect account — nothing is
+// ever held. CF is never in the money flow. Trickl also runs a verified-nonprofit donation
 // product (receipts issued for the NGO provider, never by the platform) —
 // §9-relevant for phase 7 giving; commerce uses it today.
 //

@@ -114,11 +114,12 @@ export function PaymentsCard({
         pricing, giving, and tickets stay hidden until Stripe is ready.
       </p>
 
-      {/* Trickl save-to-buy — rides the Stripe account; Trickl pays you
-          directly in $3 round-up chunks. Commerce surfaces only for now. */}
+      {/* Trickl micro-payments — rides the Stripe account; every spare-change
+          chunk pays through to the creator immediately, nothing is held.
+          Commerce surfaces only for now. */}
       <div className="mt-6 border-t border-neutral-200 pt-5 dark:border-neutral-800">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-medium">Trickl save-to-buy</h3>
+          <h3 className="text-sm font-medium">Trickl micro-payments</h3>
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-medium uppercase ${
               tricklOn
@@ -130,9 +131,9 @@ export function PaymentsCard({
           </span>
         </div>
         <p className="mt-1 text-xs leading-5 text-neutral-500">
-          Lets supporters pay for books, tickets, and films gradually through
-          spare-change round-ups. Trickl pays your Stripe account directly —
-          CF never holds the money.
+          Lets supporters pay for books, tickets, and films in small chunks of
+          spare change. Each chunk pays through to your Stripe account
+          immediately — nothing is saved or held, by CF or anyone.
           {tricklOn && tricklEnabledAt && (
             <> Enabled {new Date(tricklEnabledAt).toLocaleDateString()}.</>
           )}
