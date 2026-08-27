@@ -3,13 +3,30 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
 
+const description =
+  "A home for sound teaching — and for the people who teach it. In essentials, UNITY. In non-essentials, liberty. In all things, charity.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.thechristian.foundation"),
   title: {
     default: "Christian Foundation",
     template: "%s · Christian Foundation",
   },
-  description:
-    "A home for sound teaching — and for the people who teach it. In essentials, UNITY. In non-essentials, liberty. In all things, charity.",
+  description,
+  openGraph: {
+    type: "website",
+    siteName: "Christian Foundation",
+    title: "Christian Foundation",
+    description,
+    url: "/",
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Christian Foundation — a home for sound teaching" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Christian Foundation",
+    description,
+    images: ["/og.png"],
+  },
 };
 
 const hasClerkKeys = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);

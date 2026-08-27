@@ -26,6 +26,7 @@ export default async function ChannelStudioLayout({
 
   const tabs: StudioTab[] = [
     hasFeatureAccess(fa, FEATURES.LIBRARY) && { slug: "library", label: "Library" },
+    hasFeatureAccess(fa, FEATURES.LIBRARY) && { slug: "books", label: "Books" },
     hasFeatureAccess(fa, FEATURES.ANALYTICS) && { slug: "analytics", label: "Analytics" },
     hasFeatureAccess(fa, FEATURES.TEAM) && { slug: "team", label: "Team" },
     hasFeatureAccess(fa, FEATURES.SETTINGS, ACCESS_LEVELS.MANAGER) && {

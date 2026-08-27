@@ -78,6 +78,13 @@ export default async function ChannelPage({
     }),
   ]);
 
+  const books = await db.ebook.findMany({
+    where: { channelId: channel.id, published: true },
+    orderBy: { createdAt: "desc" },
+    take: 12,
+    select: { id: true, title: true, coverImageUrl: true, priceCents: true },
+  });
+
   // Per-series shelf content (a video can appear in Latest and its series).
   const seriesItems =
     seriesRows.length > 0
@@ -149,6 +156,42 @@ export default async function ChannelPage({
           </p>
         )}
       </header>
+
+      {books.length > 0 && (
+        <section className="mb-10">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+            Books
+          </h2>
+          <ul className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {books.map((book) => (
+              <li key={book.id} className="w-32 shrink-0 sm:w-36">
+                <Link href={`/book/${book.id}`} className="group block">
+                  {book.coverImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={book.coverImageUrl}
+                      alt=""
+                      className="aspect-[5/7] w-full rounded-lg object-cover shadow-sm"
+                    />
+                  ) : (
+                    <div className="flex aspect-[5/7] w-full items-center justify-center rounded-lg bg-linear-to-br from-amber-500 to-orange-600 p-3 text-center text-sm font-semibold text-white shadow-sm">
+                      {book.title}
+                    </div>
+                  )}
+                  <p className="mt-2 line-clamp-2 text-sm group-hover:underline">
+                    {book.title}
+                  </p>
+                  <p className="text-xs text-neutral-500">
+                    {book.priceCents === 0
+                      ? "Free"
+                      : `$${(book.priceCents / 100).toFixed(2)}`}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {shelves.length === 0 ? (
         <p className="text-sm text-neutral-500">No content yet.</p>

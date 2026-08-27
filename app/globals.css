@@ -49,3 +49,27 @@ body {
     animation: none;
   }
 }
+
+/* Ebook reader typography — chapter HTML arrives sanitized with no classes,
+   so element styles restore what Tailwind preflight resets. */
+.prose-reader h1, .prose-reader h2, .prose-reader h3 {
+  font-weight: 600;
+  margin: 1.5em 0 0.5em;
+  line-height: 1.3;
+}
+.prose-reader h1 { font-size: 1.5rem; }
+.prose-reader h2 { font-size: 1.25rem; }
+.prose-reader h3 { font-size: 1.1rem; }
+.prose-reader p { margin: 0.9em 0; }
+.prose-reader blockquote {
+  margin: 1.2em 0;
+  padding-left: 1em;
+  border-left: 3px solid var(--color-amber-500, #f59e0b);
+  font-style: italic;
+}
+.prose-reader ul, .prose-reader ol { margin: 0.9em 0; padding-left: 1.5em; }
+.prose-reader ul { list-style: disc; }
+.prose-reader ol { list-style: decimal; }
+.prose-reader img { max-width: 100%; border-radius: 0.5rem; margin: 1.2em 0; }
+.prose-reader a { text-decoration: underline; text-underline-offset: 2px; }
+.prose-reader hr { margin: 2em 0; border-color: currentColor; opacity: 0.15; }

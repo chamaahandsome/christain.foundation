@@ -49,6 +49,12 @@ export async function SiteHeader() {
                   Feed
                 </Link>
                 <Link
+                  href="/books"
+                  className="rounded-lg px-3 py-1.5 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+                >
+                  Books
+                </Link>
+                <Link
                   href="/studio"
                   className="rounded-lg px-3 py-1.5 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
                 >

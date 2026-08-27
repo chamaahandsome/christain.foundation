@@ -34,6 +34,7 @@ model User {
   notifications   Notification[]
   teamMemberships TeamMember[]
   transactions    Transaction[]
+  ebookPurchases  EbookPurchase[]
 }
 
 enum NotificationType {
@@ -120,6 +121,7 @@ model Channel {
   reviewCases  DoctrineReviewCase[]
   teamMembers  TeamMember[]
   transactions Transaction[]
+  ebooks       Ebook[]
 
   @@index([ownerId])
   @@index([status])
@@ -378,6 +380,59 @@ model ProcessedWebhookEvent {
   id          String   @id // provider event id
   provider    String
   processedAt DateTime @default(now())
+}
+
+// ---------- ebooks (first purchasable, PLAN §10 phase 6) ----------
+// Chapter HTML lives in the database (the Maltivas model) — the reader
+// streams protected markup, never a downloadable file. Purchase is
+// book-level and grants all chapters.
+
+model Ebook {
+  id            String   @id @default(cuid())
+  channelId     String
+  channel       Channel  @relation(fields: [channelId], references: [id])
+  title         String
+  author        String?
+  description   String?  @db.Text
+  coverImageUrl String?  @db.Text
+  priceCents    Int      @default(0) // 0 = free
+  currency      String   @default("usd")
+  published     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  chapters  EbookChapter[]
+  purchases EbookPurchase[]
+
+  @@index([channelId, published])
+}
+
+model EbookChapter {
+  id          String  @id @default(cuid())
+  ebookId     String
+  ebook       Ebook   @relation(fields: [ebookId], references: [id])
+  sortOrder   Int
+  title       String
+  htmlContent String? @db.LongText
+  freePreview Boolean @default(false) // readable before purchase
+
+  @@unique([ebookId, sortOrder])
+  @@index([ebookId])
+}
+
+model EbookPurchase {
+  id            String   @id @default(cuid())
+  ebookId       String
+  ebook         Ebook    @relation(fields: [ebookId], references: [id])
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  provider      String // "stripe" | "trickl" | "free"
+  transactionId String? // ledger row backing this grant
+  createdAt     DateTime @default(now())
+
+  @@unique([userId, ebookId])
+  @@index([ebookId])
+  @@index([userId])
 }
 
 // ---------- content ----------

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { db } from "@/lib/db";
+import { grantEbookPurchase } from "@/lib/fulfillment";
+import { calcPlatformFee } from "@/lib/platform-fees";
 import { stripeClient, syncAccountStatus } from "@/lib/stripe";
 
 // Stripe webhook: signature-verified, exactly-once via
@@ -43,6 +45,32 @@ export async function POST(req: Request) {
     case "account.updated":
       await syncAccountStatus(event.data.object);
       break;
+    case "checkout.session.completed": {
+      const session = event.data.object;
+      const meta = session.metadata ?? {};
+      if (
+        meta.cfKind === "ebook" &&
+        meta.cfEbookId &&
+        meta.cfUserId &&
+        meta.cfChannelId &&
+        session.payment_status === "paid"
+      ) {
+        const amount = session.amount_total ?? 0;
+        await grantEbookPurchase({
+          ebookId: meta.cfEbookId,
+          userId: meta.cfUserId,
+          channelId: meta.cfChannelId,
+          provider: "stripe",
+          providerRef:
+            typeof session.payment_intent === "string"
+              ? session.payment_intent
+              : session.id,
+          amountCents: amount,
+          feeCents: calcPlatformFee(amount, "ebook", "stripe"),
+        });
+      }
+      break;
+    }
     default:
       // Unhandled event types are acknowledged, not errors.
       break;

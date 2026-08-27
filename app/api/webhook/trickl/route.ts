@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { grantEbookPurchase } from "@/lib/fulfillment";
 import { verifyTricklSignature } from "@/lib/trickl";
 
 // Trickl webhook: per-provider HMAC (X-Trickl-Signature over the raw body,
@@ -75,11 +76,28 @@ export async function POST(req: Request) {
   const eventType = payload.type ?? payload.event ?? "unknown";
   switch (eventType) {
     case "goal.completed":
-    case "payment.completed":
-      // Fulfillment arrives with the first purchasable — for now the event
-      // is verified, deduplicated, and logged.
-      console.log("trickl event acknowledged", eventType, payload.data?.goalId);
+    case "payment.completed": {
+      const meta = payload.data?.metadata ?? {};
+      if (meta.cfKind === "ebook" && meta.cfEbookId && meta.cfUserId) {
+        const ebook = await db.ebook.findUnique({
+          where: { id: meta.cfEbookId },
+          select: { priceCents: true },
+        });
+        await grantEbookPurchase({
+          ebookId: meta.cfEbookId,
+          userId: meta.cfUserId,
+          channelId: meta.cfChannelId ?? channel.id,
+          provider: "trickl",
+          providerRef: `trickl_${payload.data?.goalId ?? eventId}`,
+          amountCents: payload.data?.amount ?? ebook?.priceCents ?? 0,
+          // Trickl pays the provider directly — CF takes no fee on the rail.
+          feeCents: 0,
+        });
+      } else {
+        console.log("trickl event acknowledged", eventType, payload.data?.goalId);
+      }
       break;
+    }
     default:
       break;
   }
