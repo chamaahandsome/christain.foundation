@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { NavLink } from "@/components/NavLink";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { isAdminUser } from "@/lib/admin";
@@ -28,13 +29,9 @@ export async function SiteHeader() {
         </Link>
         <nav className="flex items-center gap-1 overflow-x-auto text-sm">
           {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-lg px-3 py-1.5 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
-            >
+            <NavLink key={item.href} href={item.href}>
               {item.label}
-            </Link>
+            </NavLink>
           ))}
         </nav>
         <div className="flex shrink-0 items-center gap-3 text-sm">
@@ -42,24 +39,9 @@ export async function SiteHeader() {
           {hasClerkKeys ? (
             <>
               <SignedIn>
-                <Link
-                  href="/feed"
-                  className="rounded-lg px-3 py-1.5 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
-                >
-                  Feed
-                </Link>
-                <Link
-                  href="/books"
-                  className="rounded-lg px-3 py-1.5 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
-                >
-                  Books
-                </Link>
-                <Link
-                  href="/studio"
-                  className="rounded-lg px-3 py-1.5 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
-                >
-                  Studio
-                </Link>
+                <NavLink href="/feed">Feed</NavLink>
+                <NavLink href="/books">Books</NavLink>
+                <NavLink href="/studio">Studio</NavLink>
                 {admin && (
                   <Link
                     href="/admin/applications"
