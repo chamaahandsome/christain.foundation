@@ -7,6 +7,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 interface Chapter {
   id: string;
@@ -163,6 +164,11 @@ function BookEditor({
   const [chapterHtml, setChapterHtml] = useState("");
   const [preview, setPreview] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [confirming, setConfirming] = useState<
+    | { kind: "book" }
+    | { kind: "chapter"; id: string; title: string }
+    | null
+  >(null);
   const router = useRouter();
 
   async function importBook(file: File) {
@@ -302,11 +308,7 @@ function BookEditor({
             </button>
             {book.purchases === 0 && (
               <button
-                onClick={() => {
-                  if (window.confirm(`Delete “${book.title}”?`)) {
-                    void call("/api/studio/ebooks", "DELETE", { ebookId: book.id });
-                  }
-                }}
+                onClick={() => setConfirming({ kind: "book" })}
                 disabled={busy}
                 className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 disabled:opacity-50 dark:border-red-900 dark:text-red-400"
               >
@@ -382,13 +384,13 @@ function BookEditor({
                       {chapter.freePreview ? "Lock" : "Make preview"}
                     </button>
                     <button
-                      onClick={() => {
-                        if (window.confirm(`Delete chapter “${chapter.title}”?`)) {
-                          void call("/api/studio/ebooks/chapters", "DELETE", {
-                            chapterId: chapter.id,
-                          });
-                        }
-                      }}
+                      onClick={() =>
+                        setConfirming({
+                          kind: "chapter",
+                          id: chapter.id,
+                          title: chapter.title,
+                        })
+                      }
                       disabled={busy}
                       className="text-xs text-neutral-400 hover:text-red-600"
                     >
@@ -450,6 +452,35 @@ function BookEditor({
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirming !== null}
+        title={
+          confirming?.kind === "chapter"
+            ? "Delete this chapter?"
+            : "Delete this book?"
+        }
+        body={
+          confirming?.kind === "chapter"
+            ? `“${confirming.title}” will be removed from the book. This can't be undone.`
+            : `“${book.title}” and all its chapters will be permanently removed. This can't be undone.`
+        }
+        confirmLabel="Delete"
+        destructive
+        busy={busy}
+        onCancel={() => setConfirming(null)}
+        onConfirm={() => {
+          const target = confirming;
+          setConfirming(null);
+          if (target?.kind === "chapter") {
+            void call("/api/studio/ebooks/chapters", "DELETE", {
+              chapterId: target.id,
+            });
+          } else if (target?.kind === "book") {
+            void call("/api/studio/ebooks", "DELETE", { ebookId: book.id });
+          }
+        }}
+      />
     </section>
   );
 }
