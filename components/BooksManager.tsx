@@ -8,6 +8,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { ImageUploadDialog } from "@/components/ImageUploadDialog";
+import { InputDialog } from "@/components/InputDialog";
 
 interface Chapter {
   id: string;
@@ -133,6 +135,7 @@ export function BooksManager({
           <BookEditor
             key={book.id}
             book={book}
+            channelId={channelId}
             canEdit={canEdit}
             payoutsReady={payoutsReady}
             busy={busy}
@@ -146,12 +149,14 @@ export function BooksManager({
 
 function BookEditor({
   book,
+  channelId,
   canEdit,
   payoutsReady,
   busy,
   call,
 }: {
   book: Book;
+  channelId: string;
   canEdit: boolean;
   payoutsReady: boolean;
   busy: boolean;
@@ -169,6 +174,7 @@ function BookEditor({
     | { kind: "chapter"; id: string; title: string }
     | null
   >(null);
+  const [editing, setEditing] = useState<"price" | "cover" | null>(null);
   const router = useRouter();
 
   async function importBook(file: File) {
@@ -230,25 +236,6 @@ function BookEditor({
     }
   }
 
-  function changePrice() {
-    const input = window.prompt(
-      "New price in USD (0 = free):",
-      (book.priceCents / 100).toFixed(2),
-    );
-    if (input === null) return;
-    const priceCents = Math.round(Number(input) * 100);
-    if (!Number.isFinite(priceCents) || priceCents < 0) return;
-    void call("/api/studio/ebooks", "PATCH", { ebookId: book.id, priceCents });
-  }
-
-  function changeCover() {
-    const url = window.prompt("Cover image URL (https):");
-    if (url === null) return;
-    void call("/api/studio/ebooks", "PATCH", {
-      ebookId: book.id,
-      coverImageUrl: url.trim() || null,
-    });
-  }
 
   return (
     <section className="rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
@@ -281,14 +268,14 @@ function BookEditor({
               View
             </Link>
             <button
-              onClick={changePrice}
+              onClick={() => setEditing("price")}
               disabled={busy}
               className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-neutral-700"
             >
               Price
             </button>
             <button
-              onClick={changeCover}
+              onClick={() => setEditing("cover")}
               disabled={busy}
               className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-neutral-700"
             >
@@ -452,6 +439,39 @@ function BookEditor({
           )}
         </div>
       )}
+
+      <InputDialog
+        open={editing === "price"}
+        title="Set the price"
+        body="0 makes the book free. Paid books start at $1.00."
+        label="Price (USD)"
+        prefix="$"
+        type="number"
+        initialValue={(book.priceCents / 100).toFixed(2)}
+        confirmLabel="Save price"
+        busy={busy}
+        onCancel={() => setEditing(null)}
+        onSubmit={(value) => {
+          const priceCents = Math.round(Number(value) * 100);
+          if (!Number.isFinite(priceCents) || priceCents < 0) return;
+          setEditing(null);
+          void call("/api/studio/ebooks", "PATCH", { ebookId: book.id, priceCents });
+        }}
+      />
+
+      <ImageUploadDialog
+        open={editing === "cover"}
+        title="Cover image"
+        channelId={channelId}
+        onCancel={() => setEditing(null)}
+        onDone={(url) => {
+          setEditing(null);
+          void call("/api/studio/ebooks", "PATCH", {
+            ebookId: book.id,
+            coverImageUrl: url,
+          });
+        }}
+      />
 
       <ConfirmDialog
         open={confirming !== null}

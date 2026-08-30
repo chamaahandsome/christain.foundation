@@ -5,7 +5,7 @@ import { startHereTopics } from "@/lib/start-here";
 // Sharing/SEO (PLAN §8): the map is highly linkable — every question,
 // channel, and watch page belongs in the sitemap.
 
-const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://christian.foundation";
+const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.thechristian.foundation";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const statics: MetadataRoute.Sitemap = [
