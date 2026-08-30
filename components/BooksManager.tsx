@@ -156,10 +156,56 @@ function BookEditor({
   busy: boolean;
   call: (path: string, method: string, body: unknown) => Promise<boolean>;
 }) {
-  const [open, setOpen] = useState(false);
+  // A book with no chapters opens straight into the editor — writing the
+  // first chapter IS the next step, don't hide it.
+  const [open, setOpen] = useState(book.chapters.length === 0);
   const [chapterTitle, setChapterTitle] = useState("");
   const [chapterHtml, setChapterHtml] = useState("");
   const [preview, setPreview] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const router = useRouter();
+
+  async function importBook(file: File) {
+    setImporting(true);
+    try {
+      const form = new FormData();
+      form.set("ebookId", book.id);
+      form.set("file", file);
+      const res = await fetch("/api/studio/ebooks/import", {
+        method: "POST",
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        window.alert(data.error ?? `Import failed (${res.status})`);
+        return;
+      }
+      router.refresh();
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function importFile(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result ?? "");
+      // Plain text becomes paragraphs; HTML passes through as written.
+      const isHtml = /<\w+[^>]*>/.test(text);
+      setChapterHtml(
+        isHtml
+          ? text
+          : text
+              .split(/\n\s*\n/)
+              .map((paragraph) => `<p>${paragraph.trim()}</p>`)
+              .join("\n"),
+      );
+      if (!chapterTitle.trim()) {
+        setChapterTitle(file.name.replace(/\.(txt|html?|md)$/i, ""));
+      }
+    };
+    reader.readAsText(file);
+  }
 
   const paid = book.priceCents > 0;
 
@@ -187,6 +233,15 @@ function BookEditor({
     const priceCents = Math.round(Number(input) * 100);
     if (!Number.isFinite(priceCents) || priceCents < 0) return;
     void call("/api/studio/ebooks", "PATCH", { ebookId: book.id, priceCents });
+  }
+
+  function changeCover() {
+    const url = window.prompt("Cover image URL (https):");
+    if (url === null) return;
+    void call("/api/studio/ebooks", "PATCH", {
+      ebookId: book.id,
+      coverImageUrl: url.trim() || null,
+    });
   }
 
   return (
@@ -227,6 +282,13 @@ function BookEditor({
               Price
             </button>
             <button
+              onClick={changeCover}
+              disabled={busy}
+              className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-neutral-700"
+            >
+              Cover
+            </button>
+            <button
               onClick={() =>
                 void call("/api/studio/ebooks", "PATCH", {
                   ebookId: book.id,
@@ -260,12 +322,34 @@ function BookEditor({
         </p>
       )}
 
-      <button
-        onClick={() => setOpen(!open)}
-        className="mt-3 text-sm text-neutral-500 underline-offset-2 hover:text-amber-600 hover:underline"
-      >
-        {open ? "Hide chapters" : `Chapters (${book.chapters.length})`}
-      </button>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => setOpen(!open)}
+          className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:border-amber-500 hover:bg-amber-50 dark:border-neutral-700 dark:hover:border-amber-600 dark:hover:bg-amber-950/40"
+        >
+          {open
+            ? "Hide chapters"
+            : book.chapters.length === 0
+              ? "✍️ Write the first chapter"
+              : `Chapters (${book.chapters.length})`}
+        </button>
+        {canEdit && (
+          <label className="cursor-pointer rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:border-amber-500 hover:bg-amber-50 dark:border-neutral-700 dark:hover:border-amber-600 dark:hover:bg-amber-950/40">
+            {importing ? "Importing…" : "📚 Upload book (.epub / .pdf)"}
+            <input
+              type="file"
+              accept=".epub,.pdf,application/epub+zip,application/pdf"
+              disabled={importing}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void importBook(file);
+                e.target.value = "";
+              }}
+              className="hidden"
+            />
+          </label>
+        )}
+      </div>
 
       {open && (
         <div className="mt-3 space-y-3">
@@ -332,6 +416,21 @@ function BookEditor({
                 placeholder="Chapter content — plain text or HTML (<h2>, <p>, <blockquote>, <img>…)"
                 className="mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 font-mono text-xs dark:border-neutral-700 dark:bg-neutral-900"
               />
+              <label className="mt-2 block text-xs text-neutral-500">
+                …or import a file (.txt, .html, .md) — it fills the editor
+                above; the text is stored as chapters, never as a
+                downloadable file:
+                <input
+                  type="file"
+                  accept=".txt,.html,.htm,.md,text/plain,text/html"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) importFile(file);
+                    e.target.value = "";
+                  }}
+                  className="mt-1 block w-full text-xs file:mr-3 file:rounded-lg file:border file:border-neutral-300 file:bg-transparent file:px-3 file:py-1.5 file:text-xs file:font-medium hover:file:border-amber-500 hover:file:bg-amber-50 dark:file:border-neutral-700 dark:hover:file:border-amber-600 dark:hover:file:bg-amber-950/40"
+                />
+              </label>
               <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400">
                 <input
                   type="checkbox"

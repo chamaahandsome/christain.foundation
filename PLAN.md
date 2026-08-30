@@ -186,6 +186,7 @@ Not ported: conventions/festivals full stacks, awards, Do-Biz, comics, Tolkoin, 
 - **Sharing/SEO**: watch/question/pathway pages with OG cards + sitemaps; the doctrinal map is highly linkable ("what's at stake in the baptism question" is a shareable page).
 - **Admin**: creator gate queue, doctrine review queue (§5.4), moderation queue, campaign qualification review (esp. RESEARCH/NEED), refunds.
 - **Legal docs**: ToS, community guidelines, privacy/GDPR, DMCA (registered agent — still required for native uploads and community content), published doctrinal statement + disputed-questions list (versioned).
+- **Capacity & load** (2026-08-30): scale posture for 100K–1M visitors/mo, ranked bottlenecks (public pages are all `force-dynamic` — ISR is the big fix), phased hardening, and the k6 stress-test harness (`tests/load/`, `npm run load:*`) live in **SCALABILITY.md**.
 
 ---
 

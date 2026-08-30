@@ -12,6 +12,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:trickl-webhook": "node scripts/test-trickl-webhook.mjs",
+    "load:smoke": "k6 run -e PROFILE=smoke tests/load/cf-load.js",
+    "load:baseline": "k6 run -e PROFILE=baseline tests/load/cf-load.js",
+    "load:spike": "k6 run -e PROFILE=spike tests/load/cf-load.js",
+    "load:stress": "k6 run -e PROFILE=stress tests/load/cf-load.js",
+    "load:soak": "k6 run -e PROFILE=soak tests/load/cf-load.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "postinstall": "prisma generate"
@@ -19,7 +25,10 @@
   "dependencies": {
     "@clerk/nextjs": "^6.12.0",
     "@prisma/client": "^6.5.0",
+    "fast-xml-parser": "^5.11.1",
+    "jszip": "^3.10.1",
     "next": "^15.2.0",
+    "pdf2json": "^4.0.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "stripe": "^22.5.0",
