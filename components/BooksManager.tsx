@@ -22,6 +22,7 @@ interface Book {
   id: string;
   title: string;
   author: string | null;
+  coverImageUrl: string | null;
   priceCents: number;
   published: boolean;
   purchases: number;
@@ -240,7 +241,20 @@ function BookEditor({
   return (
     <section className="rounded-xl border border-neutral-200 p-5 dark:border-neutral-800">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+        <div className="flex min-w-0 items-center gap-4">
+          {book.coverImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={book.coverImageUrl}
+              alt=""
+              className="h-20 w-14 shrink-0 rounded-md object-cover shadow-sm"
+            />
+          ) : (
+            <div className="flex h-20 w-14 shrink-0 items-center justify-center rounded-md bg-linear-to-br from-amber-500 to-orange-600 p-1 text-center text-[9px] font-semibold leading-tight text-white shadow-sm">
+              {book.title.slice(0, 40)}
+            </div>
+          )}
+          <div className="min-w-0">
           <p className="font-medium">
             {book.title}{" "}
             <span
@@ -258,26 +272,27 @@ function BookEditor({
             {paid ? `$${(book.priceCents / 100).toFixed(2)}` : "Free"} ·{" "}
             {book.chapters.length} chapters · {book.purchases} readers
           </p>
+          </div>
         </div>
         {canEdit && (
           <div className="flex flex-wrap gap-2">
             <Link
               href={`/book/${book.id}`}
-              className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700"
+              className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm transition-colors hover:border-amber-500 hover:bg-amber-50 dark:border-neutral-700 dark:hover:border-amber-600 dark:hover:bg-amber-950/40"
             >
               View
             </Link>
             <button
               onClick={() => setEditing("price")}
               disabled={busy}
-              className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-neutral-700"
+              className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm transition-colors hover:border-amber-500 hover:bg-amber-50 disabled:opacity-50 dark:border-neutral-700 dark:hover:border-amber-600 dark:hover:bg-amber-950/40"
             >
               Price
             </button>
             <button
               onClick={() => setEditing("cover")}
               disabled={busy}
-              className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-neutral-700"
+              className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm transition-colors hover:border-amber-500 hover:bg-amber-50 disabled:opacity-50 dark:border-neutral-700 dark:hover:border-amber-600 dark:hover:bg-amber-950/40"
             >
               Cover
             </button>
@@ -297,7 +312,7 @@ function BookEditor({
               <button
                 onClick={() => setConfirming({ kind: "book" })}
                 disabled={busy}
-                className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 disabled:opacity-50 dark:border-red-900 dark:text-red-400"
+                className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/30"
               >
                 Delete
               </button>
@@ -324,7 +339,14 @@ function BookEditor({
         </button>
         {canEdit && (
           <label className="cursor-pointer rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:border-amber-500 hover:bg-amber-50 dark:border-neutral-700 dark:hover:border-amber-600 dark:hover:bg-amber-950/40">
-            {importing ? "Importing…" : "📚 Upload book (.epub / .pdf)"}
+            {importing ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+                Importing chapters…
+              </span>
+            ) : (
+              "📚 Upload book (.epub / .pdf)"
+            )}
             <input
               type="file"
               accept=".epub,.pdf,application/epub+zip,application/pdf"

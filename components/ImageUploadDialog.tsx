@@ -22,12 +22,14 @@ export function ImageUploadDialog({
 }) {
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setUrl("");
       setError(null);
+      setProgress(0);
     }
   }, [open]);
 
@@ -42,26 +44,42 @@ export function ImageUploadDialog({
 
   if (!open) return null;
 
-  async function upload(file: File) {
+  function upload(file: File) {
     setBusy(true);
     setError(null);
-    try {
-      const form = new FormData();
-      form.set("channelId", channelId);
-      form.set("file", file);
-      const res = await fetch("/api/studio/upload-image", {
-        method: "POST",
-        body: form,
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? `Upload failed (${res.status})`);
-        return;
+    setProgress(0);
+
+    const form = new FormData();
+    form.set("channelId", channelId);
+    form.set("file", file);
+
+    // XHR instead of fetch: real upload-progress events for the bar.
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/studio/upload-image");
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        setProgress(Math.round((e.loaded / e.total) * 100));
       }
-      onDone(data.url);
-    } finally {
+    };
+    xhr.onload = () => {
       setBusy(false);
-    }
+      try {
+        const data = JSON.parse(xhr.responseText || "{}");
+        if (xhr.status >= 200 && xhr.status < 300 && data.url) {
+          setProgress(100);
+          onDone(data.url);
+        } else {
+          setError(data.error ?? `Upload failed (${xhr.status})`);
+        }
+      } catch {
+        setError(`Upload failed (${xhr.status})`);
+      }
+    };
+    xhr.onerror = () => {
+      setBusy(false);
+      setError("Upload failed — check your connection and try again.");
+    };
+    xhr.send(form);
   }
 
   return (
@@ -81,15 +99,30 @@ export function ImageUploadDialog({
         <label
           className={`mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-neutral-300 px-4 py-8 text-center transition-colors hover:border-amber-500 hover:bg-amber-50 dark:border-neutral-700 dark:hover:border-amber-600 dark:hover:bg-amber-950/30 ${busy ? "pointer-events-none opacity-60" : ""}`}
         >
-          <span className="text-2xl" aria-hidden>
-            🖼️
-          </span>
-          <span className="mt-2 text-sm font-medium">
-            {busy ? "Uploading…" : "Upload an image"}
-          </span>
-          <span className="mt-1 text-xs text-neutral-500">
-            PNG, JPEG, WebP, or GIF · up to 5MB
-          </span>
+          {busy ? (
+            <>
+              <span className="h-6 w-6 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+              <span className="mt-3 text-sm font-medium">
+                Uploading… {progress}%
+              </span>
+              <span className="mt-3 block h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
+                <span
+                  className="block h-full rounded-full bg-linear-to-r from-amber-500 to-orange-600 transition-all duration-200"
+                  style={{ width: `${progress}%` }}
+                />
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-2xl" aria-hidden>
+                🖼️
+              </span>
+              <span className="mt-2 text-sm font-medium">Upload an image</span>
+              <span className="mt-1 text-xs text-neutral-500">
+                PNG, JPEG, WebP, or GIF · up to 5MB
+              </span>
+            </>
+          )}
           <input
             type="file"
             accept="image/png,image/jpeg,image/webp,image/gif"

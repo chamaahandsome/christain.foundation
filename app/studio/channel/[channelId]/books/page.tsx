@@ -58,6 +58,7 @@ export default async function BooksTab({
           id: ebook.id,
           title: ebook.title,
           author: ebook.author,
+          coverImageUrl: ebook.coverImageUrl,
           priceCents: ebook.priceCents,
           published: ebook.published,
           purchases: ebook._count.purchases,
