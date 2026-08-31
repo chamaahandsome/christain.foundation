@@ -89,6 +89,8 @@ model Channel {
   status           ChannelStatus @default(PENDING)
   bio              String?       @db.Text
   links            Json?
+  avatarUrl        String?       @db.Text // profile picture (S3)
+  bannerUrl        String?       @db.Text // page header image (S3)
   youtubeChannelId String?       @unique
   // Ownership proof for the linked YouTube channel. Two paths: "google"
   // (Clerk Google OAuth token → channels?mine=true match) or "description"

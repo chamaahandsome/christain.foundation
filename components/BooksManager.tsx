@@ -491,6 +491,7 @@ function BookEditor({
         open={editing === "cover"}
         title="Cover image"
         channelId={channelId}
+        aspect={5 / 7}
         onCancel={() => setEditing(null)}
         onDone={(url) => {
           setEditing(null);

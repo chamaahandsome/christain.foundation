@@ -4,11 +4,14 @@
 // paste an https URL (fallback), with a remove option.
 
 import { useEffect, useState } from "react";
+import { ImageCropModal } from "@/components/ImageCropModal";
 
 export function ImageUploadDialog({
   open,
   title,
   channelId,
+  aspect,
+  cropShape,
   allowRemove = true,
   onDone,
   onCancel,
@@ -16,6 +19,9 @@ export function ImageUploadDialog({
   open: boolean;
   title: string;
   channelId: string;
+  /** When set, picked files go through a crop step at this aspect ratio. */
+  aspect?: number;
+  cropShape?: "rect" | "round";
   allowRemove?: boolean;
   onDone: (url: string | null) => void;
   onCancel: () => void;
@@ -24,12 +30,14 @@ export function ImageUploadDialog({
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setUrl("");
       setError(null);
       setProgress(0);
+      setCropSrc(null);
     }
   }, [open]);
 
@@ -44,14 +52,24 @@ export function ImageUploadDialog({
 
   if (!open) return null;
 
-  function upload(file: File) {
+  function pick(file: File) {
+    if (aspect) {
+      const reader = new FileReader();
+      reader.onload = () => setCropSrc(String(reader.result));
+      reader.readAsDataURL(file);
+      return;
+    }
+    upload(file);
+  }
+
+  function upload(file: Blob) {
     setBusy(true);
     setError(null);
     setProgress(0);
 
     const form = new FormData();
     form.set("channelId", channelId);
-    form.set("file", file);
+    form.set("file", new File([file], "image.jpg", { type: file.type || "image/jpeg" }));
 
     // XHR instead of fetch: real upload-progress events for the bar.
     const xhr = new XMLHttpRequest();
@@ -67,6 +85,7 @@ export function ImageUploadDialog({
         const data = JSON.parse(xhr.responseText || "{}");
         if (xhr.status >= 200 && xhr.status < 300 && data.url) {
           setProgress(100);
+          setCropSrc(null);
           onDone(data.url);
         } else {
           setError(data.error ?? `Upload failed (${xhr.status})`);
@@ -129,7 +148,7 @@ export function ImageUploadDialog({
             disabled={busy}
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) void upload(file);
+              if (file) pick(file);
               e.target.value = "";
             }}
             className="hidden"
@@ -160,6 +179,17 @@ export function ImageUploadDialog({
         </form>
 
         {error && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
+
+        {cropSrc && aspect && (
+          <ImageCropModal
+            imageSrc={cropSrc}
+            aspect={aspect}
+            cropShape={cropShape}
+            busy={busy}
+            onCancel={() => setCropSrc(null)}
+            onCropped={(blob) => upload(blob)}
+          />
+        )}
 
         <div className="mt-5 flex justify-between gap-2">
           {allowRemove ? (

@@ -13,6 +13,8 @@ const BodySchema = z.object({
   bio: z.string().max(4000).optional(),
   links: z.record(z.string(), z.string().max(400)).optional(),
   youtubeChannelId: z.string().max(120).nullable().optional(),
+  avatarUrl: z.string().url().max(600).nullable().optional(),
+  bannerUrl: z.string().url().max(600).nullable().optional(),
 });
 
 // Channel profile settings — owner, or team staff with settings:manager.
@@ -56,6 +58,8 @@ export async function PATCH(req: Request) {
     if (checked.errors.length > 0) errors.push(...checked.errors);
     else data.links = checked.links;
   }
+  if (body.avatarUrl !== undefined) data.avatarUrl = body.avatarUrl;
+  if (body.bannerUrl !== undefined) data.bannerUrl = body.bannerUrl;
   if (body.youtubeChannelId !== undefined) {
     const raw = body.youtubeChannelId?.trim();
     let nextValue: string | null | undefined;

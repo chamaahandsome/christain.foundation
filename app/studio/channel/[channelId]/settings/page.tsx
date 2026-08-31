@@ -37,6 +37,8 @@ export default async function SettingsTab({
       youtubeChannelId: true,
       youtubeVerifiedAt: true,
       youtubeVerifiedVia: true,
+      avatarUrl: true,
+      bannerUrl: true,
     },
   });
 
@@ -58,6 +60,8 @@ export default async function SettingsTab({
           bio: channel.bio ?? "",
           links: (channel.links as ChannelLinks | null) ?? {},
           youtubeChannelId: channel.youtubeChannelId ?? "",
+          avatarUrl: channel.avatarUrl,
+          bannerUrl: channel.bannerUrl,
         }}
       />
     </section>

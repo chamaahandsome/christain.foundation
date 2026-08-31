@@ -32,6 +32,11 @@ const STACK_ICONS: Record<string, React.ReactNode> = {
       <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
     </svg>
   ),
+  cup: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+      <path d="M12 2.69 6.34 8.34a8 8 0 1 0 11.32 0Z" />
+    </svg>
+  ),
 };
 
 
@@ -45,7 +50,13 @@ export default async function ChannelHomePage({
   const { handle } = await params;
   const channel = await db.channel.findUnique({
     where: { handle },
-    select: { id: true, status: true, links: true },
+    select: {
+      id: true,
+      status: true,
+      links: true,
+      stripeChargesEnabled: true,
+      stripePayoutsEnabled: true,
+    },
   });
   if (!channel || channel.status !== "APPROVED") notFound();
 
@@ -122,6 +133,14 @@ export default async function ChannelHomePage({
           icon: "book",
           label: "Books",
           sub: books.map((b) => b.title).slice(0, 2).join(" · "),
+        }]
+      : []),
+    ...(channel.stripeChargesEnabled && channel.stripePayoutsEnabled
+      ? [{
+          href: `/@${handle}/support`,
+          icon: "cup",
+          label: "Send a cup of cold water",
+          sub: "Small support, straight to the ministry (Matt 10:42)",
         }]
       : []),
     ...Object.entries(links).map(([key, url]) => ({

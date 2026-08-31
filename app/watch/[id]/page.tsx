@@ -5,6 +5,7 @@ import { auth } from "@clerk/nextjs/server";
 import { Visibility } from "@prisma/client";
 import { Comments } from "@/components/Comments";
 import { MobileWatchPanels } from "@/components/MobileWatchPanels";
+import { PinnedPlayer } from "@/components/PinnedPlayer";
 import { ReportTeachingButton } from "@/components/ReportTeachingButton";
 import { YouTubeEmbed } from "@/components/YouTubeEmbed";
 import { db } from "@/lib/db";
@@ -95,16 +96,16 @@ export default async function WatchPage({
       <ul className="space-y-3">
         {related.map((video) => (
           <li key={video.id}>
-            <Link href={`/watch/${video.id}`} className="group flex gap-3">
+            <Link href={`/watch/${video.id}`} className="group flex items-start gap-3">
               {video.youtubeVideoId && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={thumbnailUrl(video.youtubeVideoId, "mqdefault")}
                   alt=""
-                  className="h-16 w-28 shrink-0 rounded-md object-cover"
+                  className="h-22 w-40 shrink-0 rounded-lg object-cover"
                 />
               )}
-              <span className="line-clamp-3 text-sm group-hover:underline">
+              <span className="line-clamp-3 pt-0.5 text-[15px] leading-snug group-hover:underline">
                 {video.title}
               </span>
             </Link>
@@ -117,18 +118,26 @@ export default async function WatchPage({
   return (
     <main className="mx-auto max-w-6xl pb-8 lg:grid lg:grid-cols-[1fr_320px] lg:gap-8 lg:px-4 lg:py-8">
       <div>
-        {/* Mobile: full-bleed player pinned under the site header — content
-            scrolls beneath it, YouTube-app style. Desktop: in-flow. */}
-        <div className="sticky top-14 z-30 bg-black lg:static lg:z-auto lg:rounded-none lg:bg-transparent">
+        {/* Below the desktop layout (lg): player pinned under the site
+            header — the page scrolls beneath it, YouTube-app style. The
+            video is centered and width-capped; PinnedPlayer measures the
+            real bar height so nothing ever hides behind it. */}
+        <PinnedPlayer>
           <YouTubeEmbed
             videoId={item.youtubeVideoId}
             contentItemId={item.id}
             startSec={startSec}
             title={item.title}
           />
-        </div>
+        </PinnedPlayer>
         <div className="px-4 lg:px-0">
-        <h1 className="mt-4 text-2xl font-semibold">{item.title}</h1>
+        <Link
+          href={`/@${item.channel.handle}`}
+          className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-amber-700 hover:underline lg:hidden dark:text-amber-400"
+        >
+          <span aria-hidden>←</span> Back to @{item.channel.handle}
+        </Link>
+        <h1 className="mt-2 text-2xl font-semibold lg:mt-4">{item.title}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-neutral-500">
           <Link
             href={`/@${item.channel.handle}`}

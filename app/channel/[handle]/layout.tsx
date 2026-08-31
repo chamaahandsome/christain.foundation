@@ -3,8 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
+import { affirmationComplete } from "@/lib/gate";
 import { ChannelTabs, type ChannelTab } from "@/components/ChannelTabs";
 import { FollowButton } from "@/components/FollowButton";
+import { StatementBadge } from "@/components/StatementBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -56,14 +58,56 @@ export default async function ChannelLayout({
     where: { channelId: channel.id, published: true },
   });
 
+  const canReceiveGifts =
+    channel.stripeChargesEnabled && channel.stripePayoutsEnabled;
   const tabs: ChannelTab[] = [
     { slug: "", label: "Home" },
     ...(channel._count.contentItems > 0 ? [{ slug: "videos", label: "Videos" }] : []),
     ...(bookCount > 0 ? [{ slug: "books", label: "Books" }] : []),
-    // Coming as the features land — same list, new entries:
-    // { slug: "shop", label: "Shop" }, { slug: "campaigns", label: "Campaigns" },
-    // { slug: "support", label: "Support" } (giving — §9 machinery, phase 7)
+    ...(canReceiveGifts ? [{ slug: "support", label: "Support" }] : []),
+    // Coming as the features land: { slug: "shop" }, { slug: "campaigns" }
   ];
+
+  // The visible signature (§5): show the statement badge only when the
+  // owner has affirmed the current published statement in full.
+  let affirmedStatement: {
+    version: number;
+    title: string;
+    preamble: string;
+    clauses: { key: string; title: string; text: string }[];
+    affirmedOn: string;
+  } | null = null;
+  const statement = await db.statementVersion.findFirst({
+    where: { publishedAt: { not: null } },
+    orderBy: { version: "desc" },
+    include: { clauses: { orderBy: { sortOrder: "asc" } } },
+  });
+  if (statement) {
+    const affirmations = await db.affirmationRecord.findMany({
+      where: { userId: channel.ownerId, statementVersionId: statement.id },
+      select: { affirmedAt: true, clause: { select: { key: true } } },
+    });
+    const check = affirmationComplete(
+      statement.clauses.map((c) => c.key),
+      affirmations.map((a) => a.clause.key),
+    );
+    if (check.complete && affirmations.length > 0) {
+      const latest = affirmations.reduce((max, a) =>
+        a.affirmedAt > max.affirmedAt ? a : max,
+      );
+      affirmedStatement = {
+        version: statement.version,
+        title: statement.title,
+        preamble: statement.preamble,
+        clauses: statement.clauses.map(({ key, title, text }) => ({ key, title, text })),
+        affirmedOn: latest.affirmedAt.toISOString(),
+      };
+    }
+  }
+
+  const badge = affirmedStatement ? (
+    <StatementBadge channelName={channel.name} {...affirmedStatement} />
+  ) : null;
 
   const following = await isFollowing(channel.id);
   const initials = channel.name
@@ -75,12 +119,29 @@ export default async function ChannelLayout({
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
       <header>
+        {channel.bannerUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={channel.bannerUrl}
+            alt=""
+            className="-mx-4 mb-5 aspect-[4/1] w-[calc(100%+2rem)] max-w-none object-cover sm:mx-0 sm:w-full sm:rounded-2xl"
+          />
+        )}
         {/* Mobile: link-in-bio hero (the Maltivas mobile pattern, CF amber) */}
         <div className="flex flex-col items-center text-center sm:hidden">
-          <div className="rounded-full bg-linear-to-br from-amber-500 to-orange-600 p-1 shadow-lg shadow-amber-500/20">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white text-2xl font-bold text-amber-600 dark:bg-neutral-950 dark:text-amber-400">
-              {initials}
-            </div>
+          <div className={`rounded-full bg-linear-to-br from-amber-500 to-orange-600 p-1 shadow-lg shadow-amber-500/20 ${channel.bannerUrl ? "-mt-14" : ""}`}>
+            {channel.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={channel.avatarUrl}
+                alt=""
+                className="h-20 w-20 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white text-2xl font-bold text-amber-600 dark:bg-neutral-950 dark:text-amber-400">
+                {initials}
+              </div>
+            )}
           </div>
           <h1 className="mt-3 text-2xl font-semibold">{channel.name}</h1>
           <p className="mt-1 text-sm text-neutral-500">
@@ -98,17 +159,29 @@ export default async function ChannelLayout({
               initialFollowers={channel._count.followers}
             />
           </div>
+          {badge && <div className="mt-3">{badge}</div>}
         </div>
 
         {/* Desktop: the full header */}
         <div className="hidden sm:block">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
+            <div className="flex items-center gap-4">
+              {channel.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={channel.avatarUrl}
+                  alt=""
+                  className={`h-16 w-16 shrink-0 rounded-full object-cover ring-2 ring-amber-500/60 ${channel.bannerUrl ? "-mt-10 h-20 w-20 ring-4 ring-white dark:ring-neutral-950" : ""}`}
+                />
+              ) : null}
+              <div>
               <h1 className="text-3xl font-semibold">{channel.name}</h1>
               <p className="mt-1 text-sm text-neutral-500">
                 @{channel.handle} · {channel._count.contentItems} items
                 {bookCount > 0 && <> · {bookCount} books</>}
               </p>
+              {badge && <div className="mt-2">{badge}</div>}
+              </div>
             </div>
             <FollowButton
               channelId={channel.id}
