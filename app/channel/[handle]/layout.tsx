@@ -70,7 +70,7 @@ export default async function ChannelLayout({
       <header>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold">{channel.name}</h1>
+            <h1 className="text-2xl font-semibold sm:text-3xl">{channel.name}</h1>
             <p className="mt-1 text-sm text-neutral-500">
               @{channel.handle} · {channel._count.contentItems} items
               {bookCount > 0 && <> · {bookCount} books</>}

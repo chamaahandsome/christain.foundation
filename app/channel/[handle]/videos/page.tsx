@@ -91,7 +91,7 @@ export default async function ChannelVideosPage({
               key={item.id}
               href={`/watch/${item.id}`}
               className={`group block shrink-0 snap-start ${
-                shelf.short ? "w-32 sm:w-40" : "w-56 sm:w-64"
+                shelf.short ? "w-32 sm:w-40" : "w-44 sm:w-64"
               }`}
             >
               {item.youtubeVideoId && (

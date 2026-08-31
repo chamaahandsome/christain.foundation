@@ -46,7 +46,7 @@ export function VideoRow({
             </span>
           )}
         </h2>
-        <div className="flex gap-2">
+        <div className="hidden gap-2 sm:flex">
           <button
             aria-label={`Scroll ${title} back`}
             onClick={() => slide(-1)}

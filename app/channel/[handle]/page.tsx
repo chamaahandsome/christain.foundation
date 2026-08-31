@@ -84,7 +84,7 @@ export default async function ChannelHomePage({
             <Link
               key={item.id}
               href={`/watch/${item.id}`}
-              className="group block w-56 shrink-0 snap-start sm:w-64"
+              className="group block w-44 shrink-0 snap-start sm:w-64"
             >
               {item.youtubeVideoId && (
                 // eslint-disable-next-line @next/next/no-img-element
