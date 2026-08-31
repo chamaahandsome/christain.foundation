@@ -12,8 +12,10 @@ const nextConfig: NextConfig = {
     return {
       beforeFiles: [
         // Public channel identity is /@handle (folder names can't start
-        // with @ — that's the parallel-routes convention).
+        // with @ — that's the parallel-routes convention). Tabs are real
+        // sub-routes: /@handle/videos, /@handle/books, later /shop etc.
         { source: "/@:handle", destination: "/channel/:handle" },
+        { source: "/@:handle/:tab", destination: "/channel/:handle/:tab" },
       ],
       afterFiles: [],
       fallback: [],

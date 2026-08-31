@@ -325,6 +325,12 @@ function BookEditor({
           Paid books need Stripe payouts ready (Payments tab) before publishing.
         </p>
       )}
+      {!book.published && book.chapters.length > 0 && (!paid || payoutsReady) && (
+        <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+          This draft isn't visible on your channel yet — hit Publish when it's
+          ready.
+        </p>
+      )}
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
