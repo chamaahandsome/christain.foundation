@@ -65,45 +65,81 @@ export default async function ChannelLayout({
     // { slug: "support", label: "Support" } (giving — §9 machinery, phase 7)
   ];
 
+  const following = await isFollowing(channel.id);
+  const initials = channel.name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word.charAt(0).toUpperCase())
+    .join("");
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
       <header>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold sm:text-3xl">{channel.name}</h1>
-            <p className="mt-1 text-sm text-neutral-500">
-              @{channel.handle} · {channel._count.contentItems} items
-              {bookCount > 0 && <> · {bookCount} books</>}
-            </p>
+        {/* Mobile: link-in-bio hero (the Maltivas mobile pattern, CF amber) */}
+        <div className="flex flex-col items-center text-center sm:hidden">
+          <div className="rounded-full bg-linear-to-br from-amber-500 to-orange-600 p-1 shadow-lg shadow-amber-500/20">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white text-2xl font-bold text-amber-600 dark:bg-neutral-950 dark:text-amber-400">
+              {initials}
+            </div>
           </div>
-          <FollowButton
-            channelId={channel.id}
-            initialFollowing={await isFollowing(channel.id)}
-            initialFollowers={channel._count.followers}
-          />
+          <h1 className="mt-3 text-2xl font-semibold">{channel.name}</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            @{channel.handle} · {channel._count.followers} followers
+          </p>
+          {channel.bio && (
+            <p className="mt-2 line-clamp-3 max-w-xs text-sm leading-6 text-neutral-600 dark:text-neutral-400">
+              {channel.bio}
+            </p>
+          )}
+          <div className="mt-4">
+            <FollowButton
+              channelId={channel.id}
+              initialFollowing={following}
+              initialFollowers={channel._count.followers}
+            />
+          </div>
         </div>
-        {channel.bio && (
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-400">
-            {channel.bio}
-          </p>
-        )}
-        {channel.links != null && Object.keys(channel.links).length > 0 && (
-          <p className="mt-3 flex flex-wrap gap-3 text-sm">
-            {Object.entries(channel.links as Record<string, string>).map(
-              ([key, url]) => (
-                <a
-                  key={key}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="capitalize text-neutral-500 underline-offset-2 hover:text-amber-600 hover:underline"
-                >
-                  {key}
-                </a>
-              ),
-            )}
-          </p>
-        )}
+
+        {/* Desktop: the full header */}
+        <div className="hidden sm:block">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-semibold">{channel.name}</h1>
+              <p className="mt-1 text-sm text-neutral-500">
+                @{channel.handle} · {channel._count.contentItems} items
+                {bookCount > 0 && <> · {bookCount} books</>}
+              </p>
+            </div>
+            <FollowButton
+              channelId={channel.id}
+              initialFollowing={following}
+              initialFollowers={channel._count.followers}
+            />
+          </div>
+          {channel.bio && (
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-400">
+              {channel.bio}
+            </p>
+          )}
+          {channel.links != null && Object.keys(channel.links).length > 0 && (
+            <p className="mt-3 flex flex-wrap gap-3 text-sm">
+              {Object.entries(channel.links as Record<string, string>).map(
+                ([key, url]) => (
+                  <a
+                    key={key}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="capitalize text-neutral-500 underline-offset-2 hover:text-amber-600 hover:underline"
+                  >
+                    {key}
+                  </a>
+                ),
+              )}
+            </p>
+          )}
+        </div>
+
         {tabs.length > 1 && <ChannelTabs handle={channel.handle} tabs={tabs} />}
       </header>
 

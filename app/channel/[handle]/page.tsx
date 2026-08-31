@@ -8,6 +8,33 @@ import { VideoRow } from "@/components/VideoRow";
 
 export const dynamic = "force-dynamic";
 
+// Stack icons: clean stroke SVGs (lucide-style), amber on the tile.
+const STACK_ICONS: Record<string, React.ReactNode> = {
+  play: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+      <polygon points="6 3 20 12 6 21 6 3" />
+    </svg>
+  ),
+  videos: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+      <rect x="2" y="7" width="20" height="15" rx="2" />
+      <path d="m17 2-5 5-5-5" />
+    </svg>
+  ),
+  book: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+    </svg>
+  ),
+  link: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </svg>
+  ),
+};
+
+
 // Home tab: the channel at a glance — latest teaching, Shorts, books.
 // Featured products / campaigns / support join here as they land.
 export default async function ChannelHomePage({
@@ -18,7 +45,7 @@ export default async function ChannelHomePage({
   const { handle } = await params;
   const channel = await db.channel.findUnique({
     where: { handle },
-    select: { id: true, status: true },
+    select: { id: true, status: true, links: true },
   });
   if (!channel || channel.status !== "APPROVED") notFound();
 
@@ -50,13 +77,94 @@ export default async function ChannelHomePage({
 
   const latest = items.filter((i) => i.format === "STANDARD").slice(0, 12);
   const shorts = items.filter((i) => i.format === "SHORT").slice(0, 12);
+  const videoCount = await db.contentItem.count({
+    where: {
+      channelId: channel.id,
+      visibility: Visibility.PUBLIC,
+      unavailableAt: null,
+      youtubeVideoId: { not: null },
+    },
+  });
+  const links = (channel.links as Record<string, string> | null) ?? {};
 
   if (items.length === 0 && books.length === 0) {
     return <p className="text-sm text-neutral-500">No content yet.</p>;
   }
 
+  // Mobile: link-in-bio stack — full-width tappable rows. Shop, Campaigns,
+  // and Support rows join this list as those features land.
+  const stack: {
+    href: string;
+    icon: string;
+    label: string;
+    sub?: string;
+    external?: boolean;
+  }[] = [
+    ...(latest[0]
+      ? [{
+          href: `/watch/${latest[0].id}`,
+          icon: "play",
+          label: "Latest teaching",
+          sub: latest[0].title,
+        }]
+      : []),
+    ...(videoCount > 0
+      ? [{
+          href: `/@${handle}/videos`,
+          icon: "videos",
+          label: "Videos",
+          sub: `${videoCount} teachings, Shorts, and live streams`,
+        }]
+      : []),
+    ...(books.length > 0
+      ? [{
+          href: `/@${handle}/books`,
+          icon: "book",
+          label: "Books",
+          sub: books.map((b) => b.title).slice(0, 2).join(" · "),
+        }]
+      : []),
+    ...Object.entries(links).map(([key, url]) => ({
+      href: url,
+      icon: "link",
+      label: key.charAt(0).toUpperCase() + key.slice(1),
+      external: true,
+    })),
+  ];
+
   return (
     <>
+      {/* Mobile: the stack */}
+      <div className="space-y-3 sm:hidden">
+        {stack.map((row) => (
+          <Link
+            key={row.href}
+            href={row.href}
+            {...(row.external
+              ? { target: "_blank", rel: "noopener noreferrer" }
+              : {})}
+            className="flex w-full items-center gap-4 rounded-2xl border border-neutral-200 p-4 shadow-sm transition-colors active:bg-amber-50 dark:border-neutral-800 dark:active:bg-amber-950/30"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+              {STACK_ICONS[row.icon]}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-medium">{row.label}</span>
+              {row.sub && (
+                <span className="block truncate text-xs text-neutral-500">
+                  {row.sub}
+                </span>
+              )}
+            </span>
+            <span aria-hidden className="text-neutral-400">
+              →
+            </span>
+          </Link>
+        ))}
+      </div>
+
+      {/* Desktop: rows and sliders */}
+      <div className="hidden sm:block">
       {books.length > 0 && (
         <section className="mb-10">
           <div className="mb-3 flex items-center justify-between">
@@ -136,6 +244,7 @@ export default async function ChannelHomePage({
           </Link>
         </p>
       )}
+      </div>
     </>
   );
 }

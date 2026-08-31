@@ -22,11 +22,25 @@ export function ChannelTabs({
 }) {
   const pathname = usePathname();
   const base = `/@${handle}`;
+  const onHome = pathname === base || pathname === `/channel/${handle}`;
 
   return (
-    <nav
+    <>
+      {!onHome && (
+        <Link
+          href={base}
+          className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-amber-700 hover:underline sm:hidden dark:text-amber-400"
+        >
+          <span aria-hidden>←</span> Back to @{handle}
+        </Link>
+      )}
+      <nav
       aria-label="Channel sections"
-      className="mt-6 flex gap-2 overflow-x-auto border-b border-neutral-200 pb-3 [scrollbar-width:none] dark:border-neutral-800 [&::-webkit-scrollbar]:hidden"
+      // On mobile the Home stack is the navigation (Linktree-style), so the
+      // tab bar only appears on subpages there; desktop always shows it.
+      className={`mt-6 gap-2 overflow-x-auto border-b border-neutral-200 pb-3 scrollbar-none dark:border-neutral-800 [&::-webkit-scrollbar]:hidden ${
+        onHome ? "hidden sm:flex" : "flex"
+      }`}
     >
       {tabs.map((tab) => {
         const href = tab.slug ? `${base}/${tab.slug}` : base;
@@ -48,6 +62,7 @@ export function ChannelTabs({
           </Link>
         );
       })}
-    </nav>
+      </nav>
+    </>
   );
 }

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { Visibility } from "@prisma/client";
 import { Comments } from "@/components/Comments";
+import { MobileWatchPanels } from "@/components/MobileWatchPanels";
 import { ReportTeachingButton } from "@/components/ReportTeachingButton";
 import { YouTubeEmbed } from "@/components/YouTubeEmbed";
 import { db } from "@/lib/db";
@@ -86,15 +87,47 @@ export default async function WatchPage({
 
   const refs = (item.scriptureRefs as ScriptureRef[] | null) ?? [];
 
+  const relatedList = (
+    <div>
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+        More from {item.channel.name}
+      </h2>
+      <ul className="space-y-3">
+        {related.map((video) => (
+          <li key={video.id}>
+            <Link href={`/watch/${video.id}`} className="group flex gap-3">
+              {video.youtubeVideoId && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={thumbnailUrl(video.youtubeVideoId, "mqdefault")}
+                  alt=""
+                  className="h-16 w-28 shrink-0 rounded-md object-cover"
+                />
+              )}
+              <span className="line-clamp-3 text-sm group-hover:underline">
+                {video.title}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+
   return (
-    <main className="mx-auto grid max-w-6xl gap-8 px-4 py-8 lg:grid-cols-[1fr_320px]">
+    <main className="mx-auto max-w-6xl pb-8 lg:grid lg:grid-cols-[1fr_320px] lg:gap-8 lg:px-4 lg:py-8">
       <div>
-        <YouTubeEmbed
-          videoId={item.youtubeVideoId}
-          contentItemId={item.id}
-          startSec={startSec}
-          title={item.title}
-        />
+        {/* Mobile: full-bleed player pinned under the site header — content
+            scrolls beneath it, YouTube-app style. Desktop: in-flow. */}
+        <div className="sticky top-14 z-30 bg-black lg:static lg:z-auto lg:rounded-none lg:bg-transparent">
+          <YouTubeEmbed
+            videoId={item.youtubeVideoId}
+            contentItemId={item.id}
+            startSec={startSec}
+            title={item.title}
+          />
+        </div>
+        <div className="px-4 lg:px-0">
         <h1 className="mt-4 text-2xl font-semibold">{item.title}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-neutral-500">
           <Link
@@ -123,33 +156,23 @@ export default async function WatchPage({
           </p>
         )}
         <ReportTeachingButton contentItemId={item.id} />
-        <Comments contentItemId={item.id} />
+
+        {/* Mobile: comments swap in over the videos list, YT-app style */}
+        <div className="lg:hidden">
+          <MobileWatchPanels
+            related={relatedList}
+            comments={<Comments contentItemId={item.id} />}
+          />
+        </div>
+
+        {/* Desktop: comments inline under the description */}
+        <div className="hidden lg:block">
+          <Comments contentItemId={item.id} />
+        </div>
+        </div>
       </div>
 
-      <aside>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-          More from {item.channel.name}
-        </h2>
-        <ul className="space-y-3">
-          {related.map((video) => (
-            <li key={video.id}>
-              <Link href={`/watch/${video.id}`} className="group flex gap-3">
-                {video.youtubeVideoId && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={thumbnailUrl(video.youtubeVideoId, "mqdefault")}
-                    alt=""
-                    className="h-16 w-28 shrink-0 rounded-md object-cover"
-                  />
-                )}
-                <span className="line-clamp-3 text-sm group-hover:underline">
-                  {video.title}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </aside>
+      <aside className="hidden lg:block">{relatedList}</aside>
     </main>
   );
 }
