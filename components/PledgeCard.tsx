@@ -19,6 +19,8 @@ interface Reward {
   maxBackers: number | null;
   backersCount: number;
   active: boolean;
+  imageUrl: string | null;
+  deliveryType: string;
 }
 
 const PRESETS = [1000, 2500, 5000, 10000];
@@ -124,19 +126,38 @@ export function PledgeCard({
                     : "border-neutral-200 hover:border-amber-300 dark:border-neutral-700"
                 }`}
               >
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="font-medium">
-                    ${(r.amountCents / 100).toFixed(0)}+ — {r.title}
-                  </span>
-                  <span className="shrink-0 text-xs text-neutral-500">
-                    {available
-                      ? r.maxBackers
-                        ? `${r.maxBackers - r.backersCount} left`
-                        : `${r.backersCount} claimed`
-                      : "fully claimed"}
-                  </span>
+                <div className="flex items-start gap-3">
+                  {r.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={r.imageUrl}
+                      alt=""
+                      className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="font-medium">
+                        ${(r.amountCents / 100).toFixed(0)}+ — {r.title}
+                      </span>
+                      <span className="shrink-0 text-xs text-neutral-500">
+                        {available
+                          ? r.maxBackers
+                            ? `${r.maxBackers - r.backersCount} left`
+                            : `${r.backersCount} claimed`
+                          : "fully claimed"}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs leading-5 text-neutral-500">
+                      {r.description}
+                      {r.deliveryType === "physical" && (
+                        <span className="ml-1 text-neutral-400">
+                          · 📦 ships to you — address collected at checkout
+                        </span>
+                      )}
+                    </p>
+                  </div>
                 </div>
-                <p className="mt-0.5 text-xs leading-5 text-neutral-500">{r.description}</p>
               </button>
             );
           })}

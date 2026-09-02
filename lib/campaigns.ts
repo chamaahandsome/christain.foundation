@@ -121,11 +121,29 @@ export function pledgeDisclosure(category: string, channelName: string): string 
   if (category === "MISSION") {
     return (
       `This is a personal gift supporting ${channelName}'s mission, received by them directly. ` +
-      `It is not tax-deductible. Christian Foundation keeps a 5% platform fee; the rest is ${channelName}'s.`
+      `It is not tax-deductible.`
     );
   }
   return (
     `You are backing ${channelName}'s stated deliverable. This is a purchase-style pledge, not a donation, ` +
-    `and it is not tax-deductible. Christian Foundation keeps a 5% platform fee.`
+    `and it is not tax-deductible.`
   );
 }
+
+/** Kickstarter-style reward liability line — shown on the campaign page
+ * and appended in checkout when a reward is claimed. */
+export function rewardDisclaimer(channelName: string): string {
+  return (
+    `Rewards are offered and fulfilled by ${channelName}, who is solely responsible for delivering them. ` +
+    `Backing a campaign is support for the work, not a store purchase — rewards are not guaranteed, ` +
+    `and Christian Foundation is not liable for undelivered or late rewards.`
+  );
+}
+
+/** Countries Stripe Checkout may collect a shipping address for. */
+export const SHIPPING_COUNTRIES = [
+  "US", "CA", "GB", "IE", "AU", "NZ",
+  "KE", "NG", "GH", "ZA", "UG", "TZ", "RW", "ET", "ZM", "MW", "BW",
+  "DE", "FR", "NL", "SE", "NO", "DK", "FI", "ES", "IT", "PT", "AT", "BE", "CH", "PL",
+  "BR", "MX", "IN", "PH", "SG", "KR", "JP",
+] as const;

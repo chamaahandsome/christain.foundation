@@ -18,6 +18,21 @@ interface Reward {
   maxBackers: number | null;
   backersCount: number;
   active: boolean;
+  imageUrl: string | null;
+  deliveryType: string;
+}
+
+interface Backer {
+  id: string;
+  name: string;
+  amountCents: number;
+  rewardTitle: string | null;
+  message: string | null;
+  anonymous: boolean;
+  shipping: string | null; // preformatted address block
+  date: string;
+  provider: string;
+  refundable: boolean;
 }
 
 interface Campaign {
@@ -36,6 +51,7 @@ interface Campaign {
   deliverable: string | null;
   deliveryTimeline: string | null;
   rewards: Reward[];
+  backers: Backer[];
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -50,11 +66,13 @@ export function CampaignsManager({
   channelId,
   campaigns,
   canEdit,
+  isOwner,
   payoutsReady,
 }: {
   channelId: string;
   campaigns: Campaign[];
   canEdit: boolean;
+  isOwner: boolean;
   payoutsReady: boolean;
 }) {
   const router = useRouter();
@@ -90,6 +108,11 @@ export function CampaignsManager({
           <h2 className="text-lg font-semibold">Campaigns</h2>
           <p className="mt-0.5 text-sm text-neutral-500">
             Mission &amp; Creative crowdfunding — pledges pay you directly.
+          </p>
+          <p className="mt-1 max-w-xl text-xs leading-5 text-amber-700 dark:text-amber-500">
+            ⚠ You are personally responsible for delivering what a campaign
+            promises — including every reward. Campaigns or rewards that
+            don&apos;t deliver lead to removal from the platform.
           </p>
         </div>
         {canEdit && (
@@ -132,6 +155,7 @@ export function CampaignsManager({
             campaign={c}
             channelId={channelId}
             canEdit={canEdit}
+            isOwner={isOwner}
             payoutsReady={payoutsReady}
             busy={busy}
             call={call}
@@ -313,6 +337,7 @@ function CampaignCard({
   campaign: c,
   channelId,
   canEdit,
+  isOwner,
   payoutsReady,
   busy,
   call,
@@ -320,6 +345,7 @@ function CampaignCard({
   campaign: Campaign;
   channelId: string;
   canEdit: boolean;
+  isOwner: boolean;
   payoutsReady: boolean;
   busy: boolean;
   call: (url: string, method: string, body?: unknown) => Promise<boolean>;
@@ -328,6 +354,8 @@ function CampaignCard({
     "launch" | "cancel" | "delete" | "cover" | "reactivate" | null
   >(null);
   const [showRewards, setShowRewards] = useState(false);
+  const [showBackers, setShowBackers] = useState(false);
+  const [refunding, setRefunding] = useState<Backer | null>(null);
   const [showUpdate, setShowUpdate] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const pct = progressPercent(c.raisedCents, c.goalCents);
@@ -447,16 +475,87 @@ function CampaignCard({
       </div>
 
       {canEdit && (
-        <button
-          onClick={() => setShowRewards((v) => !v)}
-          className="mt-3 text-xs font-medium text-neutral-500 hover:text-amber-700 dark:hover:text-amber-400"
-        >
-          {showRewards ? "Hide rewards" : `Rewards (${c.rewards.length})`}
-        </button>
+        <div className="mt-3 flex gap-4">
+          <button
+            onClick={() => setShowRewards((v) => !v)}
+            className="text-xs font-medium text-neutral-500 hover:text-amber-700 dark:hover:text-amber-400"
+          >
+            {showRewards ? "Hide rewards" : `Rewards (${c.rewards.length})`}
+          </button>
+          <button
+            onClick={() => setShowBackers((v) => !v)}
+            className="text-xs font-medium text-neutral-500 hover:text-amber-700 dark:hover:text-amber-400"
+          >
+            {showBackers ? "Hide backers" : `Backers (${c.backers.length})`}
+          </button>
+        </div>
       )}
       {showRewards && (
-        <RewardsEditor campaignId={c.id} rewards={c.rewards} busy={busy} call={call} />
+        <RewardsEditor
+          campaignId={c.id}
+          channelId={channelId}
+          rewards={c.rewards}
+          busy={busy}
+          call={call}
+        />
       )}
+      {showBackers && (
+        <div className="mt-2 space-y-2 rounded-xl bg-neutral-50 p-4 text-sm dark:bg-neutral-900/60">
+          {c.backers.length === 0 && (
+            <p className="text-xs text-neutral-500">No backers yet.</p>
+          )}
+          {c.backers.map((b) => (
+            <div
+              key={b.id}
+              className="flex flex-wrap items-start justify-between gap-2 border-b border-neutral-200 pb-2 last:border-0 last:pb-0 dark:border-neutral-800"
+            >
+              <div className="min-w-0">
+                <span className="font-medium">
+                  {b.anonymous ? "Anonymous" : b.name}
+                </span>{" "}
+                <span className="text-neutral-500">
+                  · ${(b.amountCents / 100).toFixed(2)}
+                  {b.rewardTitle ? ` · ${b.rewardTitle}` : ""} · {b.date}
+                </span>
+                {b.message && (
+                  <p className="mt-0.5 text-xs italic text-neutral-500">“{b.message}”</p>
+                )}
+                {b.shipping && (
+                  <p className="mt-0.5 whitespace-pre-line text-xs text-neutral-500">
+                    📦 {b.shipping}
+                  </p>
+                )}
+              </div>
+              {isOwner && b.refundable && (
+                <button
+                  disabled={busy}
+                  onClick={() => setRefunding(b)}
+                  className="shrink-0 text-xs text-neutral-500 hover:text-red-600 dark:hover:text-red-400"
+                >
+                  Refund
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      <ConfirmDialog
+        open={refunding !== null}
+        title={`Refund ${refunding?.anonymous ? "this backer" : (refunding?.name ?? "")}?`}
+        body={`$${((refunding?.amountCents ?? 0) / 100).toFixed(2)} goes back to the backer in full, your platform fee is returned, and the campaign total steps down. This can't be undone.`}
+        confirmLabel="Refund pledge"
+        destructive
+        onConfirm={() => {
+          const b = refunding;
+          setRefunding(null);
+          if (b) {
+            void call(`/api/studio/campaigns/${c.id}/refund`, "POST", {
+              pledgeId: b.id,
+            });
+          }
+        }}
+        onCancel={() => setRefunding(null)}
+      />
       {showEdit && (
         <EditForm
           campaign={c}
@@ -480,7 +579,7 @@ function CampaignCard({
       <ConfirmDialog
         open={dialog === "launch"}
         title="Launch this campaign?"
-        body="It goes live at its public link and starts taking pledges. Goal and end date lock at launch."
+        body="It goes live at its public link and starts taking pledges. Goal and end date lock at launch. By launching you commit to delivering what the campaign and its rewards promise — undelivered promises lead to removal from the platform."
         confirmLabel="Launch"
         onConfirm={() => {
           setDialog(null);
@@ -540,11 +639,13 @@ function CampaignCard({
 
 function RewardsEditor({
   campaignId,
+  channelId,
   rewards,
   busy,
   call,
 }: {
   campaignId: string;
+  channelId: string;
   rewards: Reward[];
   busy: boolean;
   call: (url: string, method: string, body?: unknown) => Promise<boolean>;
@@ -553,6 +654,8 @@ function RewardsEditor({
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("25");
   const [max, setMax] = useState("");
+  const [physical, setPhysical] = useState(false);
+  const [imageFor, setImageFor] = useState<string | null>(null);
   const base = `/api/studio/campaigns/${campaignId}/rewards`;
   const input =
     "rounded-lg border border-neutral-300 px-3 py-1.5 text-sm outline-none focus:border-amber-500 dark:border-neutral-700 dark:bg-neutral-900";
@@ -561,17 +664,48 @@ function RewardsEditor({
     <div className="mt-2 space-y-2 rounded-xl bg-neutral-50 p-4 dark:bg-neutral-900/60">
       {rewards.map((r) => (
         <div key={r.id} className="flex items-center justify-between gap-3 text-sm">
-          <div className="min-w-0">
-            <span className={r.active ? "" : "line-through opacity-60"}>
-              <span className="font-medium">${(r.amountCents / 100).toFixed(0)}</span> —{" "}
-              {r.title}
-            </span>
-            <span className="ml-2 text-xs text-neutral-500">
-              {r.backersCount}
-              {r.maxBackers ? `/${r.maxBackers}` : ""} claimed
-            </span>
+          <div className="flex min-w-0 items-center gap-2">
+            {r.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={r.imageUrl}
+                alt=""
+                className="h-9 w-9 shrink-0 rounded-md object-cover"
+              />
+            )}
+            <div className="min-w-0">
+              <span className={r.active ? "" : "line-through opacity-60"}>
+                <span className="font-medium">${(r.amountCents / 100).toFixed(0)}</span> —{" "}
+                {r.title}
+              </span>
+              <span className="ml-2 text-xs text-neutral-500">
+                {r.backersCount}
+                {r.maxBackers ? `/${r.maxBackers}` : ""} claimed
+                {r.deliveryType === "physical" && " · 📦 ships"}
+              </span>
+            </div>
           </div>
           <div className="flex shrink-0 gap-2">
+            <button
+              disabled={busy}
+              onClick={() => setImageFor(r.id)}
+              className="text-xs text-neutral-500 hover:text-amber-700 dark:hover:text-amber-400"
+            >
+              {r.imageUrl ? "Image ✓" : "Image"}
+            </button>
+            <button
+              disabled={busy}
+              onClick={() =>
+                void call(base, "PATCH", {
+                  rewardId: r.id,
+                  deliveryType: r.deliveryType === "physical" ? "digital" : "physical",
+                })
+              }
+              title="Physical rewards collect a mailing address at checkout"
+              className="text-xs text-neutral-500 hover:text-amber-700 dark:hover:text-amber-400"
+            >
+              {r.deliveryType === "physical" ? "Physical ✓" : "Digital"}
+            </button>
             <button
               disabled={busy}
               onClick={() => void call(base, "PATCH", { rewardId: r.id, active: !r.active })}
@@ -591,6 +725,18 @@ function RewardsEditor({
           </div>
         </div>
       ))}
+      <ImageUploadDialog
+        open={imageFor !== null}
+        title="Reward image"
+        channelId={channelId}
+        aspect={1}
+        onCancel={() => setImageFor(null)}
+        onDone={(url) => {
+          const rewardId = imageFor;
+          setImageFor(null);
+          if (rewardId) void call(base, "PATCH", { rewardId, imageUrl: url });
+        }}
+      />
       <div className="flex flex-wrap items-center gap-2 pt-1">
         <input
           value={title}
@@ -623,6 +769,18 @@ function RewardsEditor({
           title="Max backers (blank = unlimited)"
           className={`${input} w-20`}
         />
+        <label
+          title="Physical rewards collect a mailing address at checkout"
+          className="flex items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400"
+        >
+          <input
+            type="checkbox"
+            checked={physical}
+            onChange={(e) => setPhysical(e.target.checked)}
+            className="h-3.5 w-3.5 accent-amber-600"
+          />
+          📦 physical
+        </label>
         <button
           disabled={busy || !title.trim() || !description.trim()}
           onClick={() => {
@@ -630,12 +788,14 @@ function RewardsEditor({
               title,
               description,
               amountCents: Math.round(Number(amount) * 100),
+              deliveryType: physical ? "physical" : "digital",
               ...(max ? { maxBackers: Number(max) } : {}),
             }).then((ok) => {
               if (ok) {
                 setTitle("");
                 setDescription("");
                 setMax("");
+                setPhysical(false);
               }
             });
           }}

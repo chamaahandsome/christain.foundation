@@ -109,6 +109,7 @@ export async function POST(req: Request) {
         break;
       }
       if (meta.cfKind === "pledge" && meta.cfPledgeId && session.payment_status === "paid") {
+        const shipping = session.collected_information?.shipping_details ?? null;
         await fulfillPledge({
           pledgeId: meta.cfPledgeId,
           provider: "stripe",
@@ -116,6 +117,7 @@ export async function POST(req: Request) {
             typeof session.payment_intent === "string" ? session.payment_intent : session.id
           }`,
           feeCents: calcPlatformFee(session.amount_total ?? 0, "campaign", "stripe"),
+          ...(shipping ? { shippingAddress: shipping } : {}),
         });
         break;
       }

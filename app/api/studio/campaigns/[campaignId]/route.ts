@@ -115,6 +115,12 @@ export async function PATCH(
       deliverable: campaign.deliverable,
     });
     if (invalid) return NextResponse.json({ error: invalid }, { status: 422 });
+    if (!campaign.coverImageUrl) {
+      return NextResponse.json(
+        { error: "Add a cover image before launching — it's the face of the campaign." },
+        { status: 422 },
+      );
+    }
 
     await db.campaign.update({
       where: { id: campaign.id },

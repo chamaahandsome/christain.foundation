@@ -124,6 +124,8 @@ export async function fulfillPledge(input: {
   provider: "stripe" | "trickl";
   providerRef: string;
   feeCents: number;
+  /** Stripe-collected mailing details for physical rewards. */
+  shippingAddress?: unknown;
 }): Promise<void> {
   const pledge = await db.campaignPledge.findUnique({
     where: { id: input.pledgeId },
@@ -155,6 +157,9 @@ export async function fulfillPledge(input: {
       provider: input.provider,
       providerRef: input.providerRef,
       feeCents: input.feeCents,
+      ...(input.shippingAddress
+        ? { shippingAddress: input.shippingAddress as object }
+        : {}),
     },
   });
   if (count === 0) return; // raced a concurrent delivery
@@ -171,10 +176,24 @@ export async function fulfillPledge(input: {
     },
   });
   if (pledge.rewardId) {
-    await db.campaignReward.update({
-      where: { id: pledge.rewardId },
-      data: { backersCount: { increment: 1 } },
-    });
+    // Atomic claim (the Maltivas pattern): the cap is re-validated at
+    // increment time so concurrent fulfillments can't silently oversell.
+    const claimed = await db.$executeRaw`
+      UPDATE CampaignReward
+      SET backersCount = backersCount + 1
+      WHERE id = ${pledge.rewardId}
+        AND (maxBackers IS NULL OR backersCount < maxBackers)`;
+    if (claimed !== 1) {
+      // The backer already paid for this tier — honor it and let the cap
+      // overshoot by the race, loudly, rather than take money for nothing.
+      await db.campaignReward.update({
+        where: { id: pledge.rewardId },
+        data: { backersCount: { increment: 1 } },
+      });
+      console.error(
+        `fulfillment: reward ${pledge.rewardId} cap overshot by concurrent pledges — creator should honor or refund`,
+      );
+    }
   }
 
   try {

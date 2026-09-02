@@ -5,9 +5,11 @@ import { db } from "@/lib/db";
 import {
   PLEDGE_TRICKL_MAX_CENTS,
   PLEDGE_TRICKL_MIN_CENTS,
+  SHIPPING_COUNTRIES,
   campaignOpen,
   pledgeDisclosure,
   rewardAvailable,
+  rewardDisclaimer,
   validatePledgeAmount,
 } from "@/lib/campaigns";
 import { calcPlatformFee } from "@/lib/platform-fees";
@@ -184,6 +186,19 @@ export async function POST(req: Request) {
   }
 
   const fee = calcPlatformFee(amountCents, "campaign", "stripe");
+  // Physical rewards: Stripe collects the mailing address in checkout; the
+  // webhook stores it on the pledge for the creator to ship against.
+  const collectShipping = reward?.deliveryType === "physical";
+  const shippingParams = collectShipping
+    ? {
+        shipping_address_collection: {
+          allowed_countries: [...SHIPPING_COUNTRIES],
+        },
+      }
+    : {};
+  const disclosureText = reward
+    ? `${pledgeDisclosure(campaign.category, campaign.channel.name)} ${rewardDisclaimer(campaign.channel.name)}`.slice(0, 1150)
+    : pledgeDisclosure(campaign.category, campaign.channel.name);
   const lineItem = {
     quantity: 1,
     price_data: {
@@ -207,8 +222,9 @@ export async function POST(req: Request) {
               mode: "payment",
               line_items: [lineItem],
               payment_intent_data: { application_fee_amount: fee },
+              ...shippingParams,
               custom_text: {
-                submit: { message: pledgeDisclosure("MISSION", campaign.channel.name) },
+                submit: { message: disclosureText },
               },
               metadata,
               success_url: `${campaignUrl}?thanks=1`,
@@ -224,8 +240,9 @@ export async function POST(req: Request) {
               application_fee_amount: fee,
               transfer_data: { destination: campaign.channel.stripeAccountId },
             },
+            ...shippingParams,
             custom_text: {
-              submit: { message: pledgeDisclosure("CREATIVE", campaign.channel.name) },
+              submit: { message: disclosureText },
             },
             metadata,
             success_url: `${campaignUrl}?thanks=1`,

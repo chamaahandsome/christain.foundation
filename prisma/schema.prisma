@@ -823,6 +823,10 @@ model CampaignReward {
   campaign     Campaign @relation(fields: [campaignId], references: [id])
   title        String
   description  String   @db.Text
+  imageUrl     String?  @db.Text
+  // digital | physical — physical rewards collect a shipping address in
+  // checkout so the creator can actually deliver.
+  deliveryType String   @default("digital")
   amountCents  Int // minimum pledge to claim this reward
   maxBackers   Int? // null = unlimited
   backersCount Int      @default(0)
@@ -837,21 +841,24 @@ model CampaignReward {
 }
 
 model CampaignPledge {
-  id          String            @id @default(cuid())
-  campaignId  String
-  campaign    Campaign          @relation(fields: [campaignId], references: [id])
-  rewardId    String? // null = no-reward pledge
-  reward      CampaignReward?   @relation(fields: [rewardId], references: [id])
-  userId      String
-  amountCents Int
-  feeCents    Int               @default(0) // CF's cut, mirrors the Transaction row
-  provider    String            @default("stripe") // stripe | trickl
-  providerRef String?           @unique // payment intent / trickl goal
-  status      TransactionStatus @default(PENDING)
-  anonymous   Boolean           @default(false)
-  message     String?           @db.Text // word of encouragement, shown to the creator
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id              String            @id @default(cuid())
+  campaignId      String
+  campaign        Campaign          @relation(fields: [campaignId], references: [id])
+  rewardId        String? // null = no-reward pledge
+  reward          CampaignReward?   @relation(fields: [rewardId], references: [id])
+  userId          String
+  amountCents     Int
+  feeCents        Int               @default(0) // CF's cut, mirrors the Transaction row
+  provider        String            @default("stripe") // stripe | trickl
+  providerRef     String?           @unique // payment intent / trickl goal
+  status          TransactionStatus @default(PENDING)
+  anonymous       Boolean           @default(false)
+  message         String?           @db.Text // word of encouragement, shown to the creator
+  // Shipping details captured by Stripe Checkout for physical rewards —
+  // {name, address:{line1,line2,city,state,postal_code,country}}.
+  shippingAddress Json?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   @@index([campaignId, status])
   @@index([rewardId])

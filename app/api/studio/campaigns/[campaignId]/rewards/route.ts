@@ -31,6 +31,8 @@ const CreateSchema = z.object({
   amountCents: z.number().int().min(100),
   maxBackers: z.number().int().min(1).nullable().optional(),
   sortOrder: z.number().int().optional(),
+  imageUrl: z.string().url().max(500).nullable().optional(),
+  deliveryType: z.enum(["digital", "physical"]).optional(),
 });
 
 const PatchSchema = CreateSchema.partial().extend({
@@ -61,6 +63,8 @@ export async function POST(
       amountCents: body.amountCents,
       maxBackers: body.maxBackers ?? null,
       sortOrder: body.sortOrder ?? 0,
+      imageUrl: body.imageUrl ?? null,
+      deliveryType: body.deliveryType ?? "digital",
     },
   });
   return NextResponse.json({ reward });
@@ -93,6 +97,8 @@ export async function PATCH(
       ...(body.amountCents !== undefined ? { amountCents: body.amountCents } : {}),
       ...(body.maxBackers !== undefined ? { maxBackers: body.maxBackers } : {}),
       ...(body.sortOrder !== undefined ? { sortOrder: body.sortOrder } : {}),
+      ...(body.imageUrl !== undefined ? { imageUrl: body.imageUrl } : {}),
+      ...(body.deliveryType !== undefined ? { deliveryType: body.deliveryType } : {}),
       ...(body.active !== undefined ? { active: body.active } : {}),
     },
   });

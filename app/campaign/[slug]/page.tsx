@@ -4,7 +4,13 @@ import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { TransactionStatus } from "@prisma/client";
 import { db } from "@/lib/db";
-import { campaignOpen, daysLeft, pledgeDisclosure, progressPercent } from "@/lib/campaigns";
+import {
+  campaignOpen,
+  daysLeft,
+  pledgeDisclosure,
+  progressPercent,
+  rewardDisclaimer,
+} from "@/lib/campaigns";
 import { sanitizeRichHtml } from "@/lib/sanitize-html";
 import { PledgeCard } from "@/components/PledgeCard";
 import { CampaignTabs } from "@/components/CampaignTabs";
@@ -176,6 +182,8 @@ export default async function CampaignPage({
               maxBackers: r.maxBackers,
               backersCount: r.backersCount,
               active: r.active,
+              imageUrl: r.imageUrl,
+              deliveryType: r.deliveryType,
             }))}
           />
         ) : (
@@ -188,6 +196,9 @@ export default async function CampaignPage({
 
       <p className="mt-4 text-xs leading-5 text-neutral-500">
         {pledgeDisclosure(campaign.category, campaign.channel.name)}
+        {campaign.rewards.some((r) => r.active) && (
+          <> {rewardDisclaimer(campaign.channel.name)}</>
+        )}
       </p>
 
       <CampaignTabs
