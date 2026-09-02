@@ -24,17 +24,27 @@ export default async function ChannelStudioLayout({
   if (!access.channel || !access.authorized) notFound();
   const fa = access.featureAccess;
 
+  // Analytics, Team, and Payments live as sub-tabs under Settings.
+  const settingsChildren: StudioTab[] = [
+    hasFeatureAccess(fa, FEATURES.SETTINGS, ACCESS_LEVELS.MANAGER) && {
+      slug: "settings",
+      label: "General",
+    },
+    hasFeatureAccess(fa, FEATURES.ANALYTICS) && { slug: "analytics", label: "Analytics" },
+    hasFeatureAccess(fa, FEATURES.TEAM) && { slug: "team", label: "Team" },
+    // Money is owner-only — delegated staff never see payouts.
+    access.isOwner && { slug: "payments", label: "Payments" },
+  ].filter((tab): tab is StudioTab => Boolean(tab));
+
   const tabs: StudioTab[] = [
     hasFeatureAccess(fa, FEATURES.LIBRARY) && { slug: "library", label: "Library" },
     hasFeatureAccess(fa, FEATURES.LIBRARY) && { slug: "books", label: "Books" },
-    hasFeatureAccess(fa, FEATURES.ANALYTICS) && { slug: "analytics", label: "Analytics" },
-    hasFeatureAccess(fa, FEATURES.TEAM) && { slug: "team", label: "Team" },
-    hasFeatureAccess(fa, FEATURES.SETTINGS, ACCESS_LEVELS.MANAGER) && {
-      slug: "settings",
+    hasFeatureAccess(fa, FEATURES.LIBRARY) && { slug: "campaigns", label: "Campaigns" },
+    settingsChildren.length > 0 && {
+      slug: settingsChildren[0].slug,
       label: "Settings",
+      children: settingsChildren,
     },
-    // Money is owner-only — delegated staff never see payouts.
-    access.isOwner && { slug: "payments", label: "Payments" },
   ].filter((tab): tab is StudioTab => Boolean(tab));
 
   return (

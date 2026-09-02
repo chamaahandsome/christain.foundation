@@ -37,6 +37,12 @@ const STACK_ICONS: Record<string, React.ReactNode> = {
       <path d="M12 2.69 6.34 8.34a8 8 0 1 0 11.32 0Z" />
     </svg>
   ),
+  flag: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+      <line x1="4" y1="22" x2="4" y2="15" />
+    </svg>
+  ),
 };
 
 
@@ -60,7 +66,7 @@ export default async function ChannelHomePage({
   });
   if (!channel || channel.status !== "APPROVED") notFound();
 
-  const [items, books] = await Promise.all([
+  const [items, books, campaigns] = await Promise.all([
     db.contentItem.findMany({
       where: {
         channelId: channel.id,
@@ -82,6 +88,21 @@ export default async function ChannelHomePage({
         author: true,
         coverImageUrl: true,
         priceCents: true,
+      },
+    }),
+    db.campaign.findMany({
+      where: { channelId: channel.id, status: { in: ["LIVE", "FUNDED"] } },
+      orderBy: { publishedAt: "desc" },
+      take: 6,
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        category: true,
+        coverImageUrl: true,
+        goalCents: true,
+        raisedCents: true,
+        backersCount: true,
       },
     }),
   ]);
@@ -133,6 +154,17 @@ export default async function ChannelHomePage({
           icon: "book",
           label: "Books",
           sub: books.map((b) => b.title).slice(0, 2).join(" · "),
+        }]
+      : []),
+    ...(campaigns.length > 0
+      ? [{
+          href: `/@${handle}/campaigns`,
+          icon: "flag",
+          label: campaigns.length === 1 ? campaigns[0].title : "Campaigns",
+          sub:
+            campaigns.length === 1
+              ? `$${(campaigns[0].raisedCents / 100).toLocaleString()} raised of $${(campaigns[0].goalCents / 100).toLocaleString()}`
+              : `${campaigns.length} campaigns taking pledges`,
         }]
       : []),
     ...(channel.stripeChargesEnabled && channel.stripePayoutsEnabled
@@ -201,6 +233,60 @@ export default async function ChannelHomePage({
             {books.map((book) => (
               <BookCard key={book.id} book={book} className="w-32 shrink-0 sm:w-36" />
             ))}
+          </div>
+        </section>
+      )}
+
+      {campaigns.length > 0 && (
+        <section className="mb-10">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+              Campaigns
+            </h2>
+            <Link
+              href={`/@${handle}/campaigns`}
+              className="text-sm text-amber-700 hover:underline dark:text-amber-400"
+            >
+              See all →
+            </Link>
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden">
+            {campaigns.map((c) => {
+              const pct = Math.min(100, Math.floor((c.raisedCents / c.goalCents) * 100));
+              return (
+                <Link
+                  key={c.id}
+                  href={`/campaign/${c.slug}`}
+                  className="group w-64 shrink-0 overflow-hidden rounded-xl border border-neutral-200 transition-colors hover:border-amber-400 dark:border-neutral-800 dark:hover:border-amber-600"
+                >
+                  <div className="aspect-video bg-neutral-100 dark:bg-neutral-800">
+                    {c.coverImageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={c.coverImageUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-amber-100 to-orange-100 text-3xl dark:from-amber-950 dark:to-orange-950">
+                        {c.category === "MISSION" ? "🌍" : "🎬"}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <p className="line-clamp-1 text-sm font-medium group-hover:text-amber-700 dark:group-hover:text-amber-400">
+                      {c.title}
+                    </p>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
+                      <div
+                        className="h-full rounded-full bg-linear-to-r from-amber-500 to-orange-600"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <p className="mt-1.5 text-xs text-neutral-500">
+                      ${(c.raisedCents / 100).toLocaleString()} of $
+                      {(c.goalCents / 100).toLocaleString()} · {c.backersCount} backers
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}

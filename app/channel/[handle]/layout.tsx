@@ -54,9 +54,12 @@ export default async function ChannelLayout({
   const channel = await getChannel(handle).catch(() => null);
   if (!channel || channel.status !== "APPROVED") notFound();
 
-  const bookCount = await db.ebook.count({
-    where: { channelId: channel.id, published: true },
-  });
+  const [bookCount, campaignCount] = await Promise.all([
+    db.ebook.count({ where: { channelId: channel.id, published: true } }),
+    db.campaign.count({
+      where: { channelId: channel.id, status: { in: ["LIVE", "FUNDED"] } },
+    }),
+  ]);
 
   const canReceiveGifts =
     channel.stripeChargesEnabled && channel.stripePayoutsEnabled;
@@ -64,8 +67,9 @@ export default async function ChannelLayout({
     { slug: "", label: "Home" },
     ...(channel._count.contentItems > 0 ? [{ slug: "videos", label: "Videos" }] : []),
     ...(bookCount > 0 ? [{ slug: "books", label: "Books" }] : []),
+    ...(campaignCount > 0 ? [{ slug: "campaigns", label: "Campaigns" }] : []),
     ...(canReceiveGifts ? [{ slug: "support", label: "Support" }] : []),
-    // Coming as the features land: { slug: "shop" }, { slug: "campaigns" }
+    // Coming as the features land: { slug: "shop" }
   ];
 
   // The visible signature (§5): show the statement badge only when the
