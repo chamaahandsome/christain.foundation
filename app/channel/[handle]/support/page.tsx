@@ -13,10 +13,10 @@ export default async function ChannelSupportPage({
   searchParams,
 }: {
   params: Promise<{ handle: string }>;
-  searchParams: Promise<{ thanks?: string }>;
+  searchParams: Promise<{ thanks?: string; trickl?: string }>;
 }) {
   const { handle } = await params;
-  const { thanks } = await searchParams;
+  const { thanks, trickl } = await searchParams;
   const channel = await db.channel.findUnique({
     where: { handle },
     select: {
@@ -25,6 +25,7 @@ export default async function ChannelSupportPage({
       status: true,
       stripeChargesEnabled: true,
       stripePayoutsEnabled: true,
+      tricklProviderLinkCode: true,
     },
   });
   if (!channel || channel.status !== "APPROVED") notFound();
@@ -43,6 +44,12 @@ export default async function ChannelSupportPage({
 
   return (
     <div className="mx-auto max-w-xl">
+      {trickl === "started" && (
+        <div className="mb-6 rounded-xl border border-teal-300 bg-teal-50 p-4 text-sm leading-6 text-teal-900 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-200">
+          💧 Your Trickl gift is set up — spare change will make its way to{" "}
+          {channel.name} in small chunks. Thank you.
+        </div>
+      )}
       {thanks && (
         <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
           💧 Your cup of cold water is on its way to {channel.name}. “He will
@@ -70,6 +77,7 @@ export default async function ChannelSupportPage({
           channelId={channel.id}
           channelName={channel.name}
           signedIn={Boolean(userId)}
+          tricklEnabled={Boolean(channel.tricklProviderLinkCode)}
         />
       </div>
 

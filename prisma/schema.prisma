@@ -82,39 +82,41 @@ enum ChannelStatus {
 }
 
 model Channel {
-  id               String        @id @default(cuid())
-  handle           String        @unique // /@handle
-  name             String
-  kind             ChannelKind
-  status           ChannelStatus @default(PENDING)
-  bio              String?       @db.Text
-  links            Json?
-  avatarUrl        String?       @db.Text // profile picture (S3)
-  bannerUrl        String?       @db.Text // page header image (S3)
-  youtubeChannelId String?       @unique
+  id                     String        @id @default(cuid())
+  handle                 String        @unique // /@handle
+  name                   String
+  kind                   ChannelKind
+  status                 ChannelStatus @default(PENDING)
+  bio                    String?       @db.Text
+  links                  Json?
+  avatarUrl              String?       @db.Text // profile picture (S3)
+  bannerUrl              String?       @db.Text // page header image (S3)
+  youtubeChannelId       String?       @unique
   // Ownership proof for the linked YouTube channel. Two paths: "google"
   // (Clerk Google OAuth token → channels?mine=true match) or "description"
   // (one-time token pasted into the channel description, read back via the
   // Data API). Importing requires it (admins excepted). Reset on relink.
-  youtubeVerifyToken String?
-  youtubeVerifiedAt  DateTime?
-  youtubeVerifiedVia String? // "google" | "description"
+  youtubeVerifyToken     String?
+  youtubeVerifiedAt      DateTime?
+  youtubeVerifiedVia     String? // "google" | "description"
   // Stripe Connect (Express) — commerce spine (PLAN §10 phase 6). A channel
   // that can't be paid out must not publish revenue surfaces (§9.4).
-  stripeAccountId      String?   @unique
-  stripeChargesEnabled Boolean   @default(false)
-  stripePayoutsEnabled Boolean   @default(false)
-  stripeOnboardedAt    DateTime?
-  // Trickl save-to-buy (api.trickl.app): provider registration rides the
-  // channel's Stripe Connect account — Trickl pays the provider directly,
-  // CF is never in the money flow. Webhook secret is per-provider HMAC.
-  tricklProviderLinkCode String?   @unique
+  stripeAccountId        String?       @unique
+  stripeChargesEnabled   Boolean       @default(false)
+  stripePayoutsEnabled   Boolean       @default(false)
+  stripeOnboardedAt      DateTime?
+  // Trickl micro-payments (api.trickl.app): provider registration rides the
+  // channel's Stripe Connect account. Chunks are destination charges into
+  // CF's partner Stripe balance (Trickl can't pay accounts on CF's
+  // platform); CF forwards the net per chunk — see TricklChunk. Webhook
+  // secret is per-provider HMAC.
+  tricklProviderLinkCode String?       @unique
   tricklWebhookSecret    String?
   tricklEnabledAt        DateTime?
-  ownerId          String
-  owner            User          @relation(fields: [ownerId], references: [id])
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  ownerId                String
+  owner                  User          @relation(fields: [ownerId], references: [id])
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
 
   contentItems ContentItem[]
   series       Series[]
@@ -124,6 +126,7 @@ model Channel {
   teamMembers  TeamMember[]
   transactions Transaction[]
   ebooks       Ebook[]
+  campaigns    Campaign[]
 
   @@index([ownerId])
   @@index([status])
@@ -244,31 +247,31 @@ enum ApplicationStatus {
 }
 
 model CreatorApplication {
-  id               String            @id @default(cuid())
-  userId           String
-  user             User              @relation(fields: [userId], references: [id])
-  status           ApplicationStatus @default(DRAFT)
+  id                String            @id @default(cuid())
+  userId            String
+  user              User              @relation(fields: [userId], references: [id])
+  status            ApplicationStatus @default(DRAFT)
   // proposed channel
-  proposedHandle   String
-  proposedName     String
-  proposedKind     ChannelKind
+  proposedHandle    String
+  proposedName      String
+  proposedKind      ChannelKind
   // Where reviewers verify the applicant's teaching — at least one is
   // required to apply (any platform; YouTube also feeds library ingestion).
-  youtubeChannelId String?
-  instagramHandle  String?
-  tiktokHandle     String?
-  xHandle          String?
-  ministryStatement String           @db.Text // who they are, what they teach
-  conductAgreedAt  DateTime? // §5.3 conduct standard, standing obligation
-  inviteCodeId     String? // founding-cohort invitation, if redeemed
-  inviteCode       InviteCode?       @relation(fields: [inviteCodeId], references: [id])
-  submittedAt      DateTime?
-  decidedAt        DateTime?
-  decidedById      String? // admin user id
-  decisionNote     String?           @db.Text
-  createdChannelId String? // set on approval
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  youtubeChannelId  String?
+  instagramHandle   String?
+  tiktokHandle      String?
+  xHandle           String?
+  ministryStatement String            @db.Text // who they are, what they teach
+  conductAgreedAt   DateTime? // §5.3 conduct standard, standing obligation
+  inviteCodeId      String? // founding-cohort invitation, if redeemed
+  inviteCode        InviteCode?       @relation(fields: [inviteCodeId], references: [id])
+  submittedAt       DateTime?
+  decidedAt         DateTime?
+  decidedById       String? // admin user id
+  decisionNote      String?           @db.Text
+  createdChannelId  String? // set on approval
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   vouches Vouch[]
 
@@ -346,6 +349,7 @@ enum TransactionType {
   PURCHASE // commerce: ebooks, products, films
   TICKET
   GIFT // partner giving (phase 7)
+  PLEDGE // crowdfunding (concept §7b)
 }
 
 enum TransactionStatus {
@@ -353,6 +357,38 @@ enum TransactionStatus {
   SUCCEEDED
   FAILED
   REFUNDED
+}
+
+// Trickl partner distribution: chunks land in CF's Stripe balance (Trickl
+// cannot pay creators onboarded on CF's platform), and CF forwards the net
+// onward, keeping its fee. One row per movement of money, keyed on Trickl's
+// chunkId — the idempotency key across webhook deliveries and reversals.
+enum TricklChunkStatus {
+  RECEIVED // chunk landed in CF's balance, not yet forwarded
+  FORWARDED // net transferred to the creator's connected account
+  FORWARD_FAILED // transfer failed (usually balance timing) — cron retries
+  REVERSED // Trickl clawed the chunk back (ACH return / dispute)
+}
+
+model TricklChunk {
+  id         String            @id @default(cuid())
+  chunkId    String            @unique // Trickl's per-money-movement id
+  goalId     String
+  channelId  String
+  kind       String // round_up | deposit | cycle
+  cfKind     String // tip | ebook | …
+  grossCents Int // what landed in CF's balance (post-Trickl-fee gross)
+  feeCents   Int // CF's cut, kept on forwarding
+  netCents   Int // forwarded to the creator
+  status     TricklChunkStatus @default(RECEIVED)
+  transferId String? // CF's onward Stripe transfer id
+  lastError  String?           @db.Text
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@index([channelId])
+  @@index([goalId])
+  @@index([status])
 }
 
 model Transaction {
@@ -488,34 +524,34 @@ model Series {
 }
 
 model ContentItem {
-  id            String        @id @default(cuid())
-  channelId     String
-  channel       Channel       @relation(fields: [channelId], references: [id])
-  seriesId      String?
-  series        Series?       @relation(fields: [seriesId], references: [id])
-  source        ContentSource
-  kind          ContentKind
-  title         String
-  description   String?       @db.Text
+  id             String        @id @default(cuid())
+  channelId      String
+  channel        Channel       @relation(fields: [channelId], references: [id])
+  seriesId       String?
+  series         Series?       @relation(fields: [seriesId], references: [id])
+  source         ContentSource
+  kind           ContentKind
+  title          String
+  description    String?       @db.Text
   // EMBEDDED_YOUTUBE
   youtubeVideoId String?
   // NATIVE_MUX
-  muxAssetId    String?
-  muxPlaybackId String?
+  muxAssetId     String?
+  muxPlaybackId  String?
   // DOCUMENT
-  fileKey       String?
-  audioOnly     Boolean       @default(false)
-  durationSec   Int?
-  format        ContentFormat @default(STANDARD)
-  visibility    Visibility    @default(PUBLIC)
-  scriptureRefs Json? // normalized refs, see lib/scripture.ts
-  searchText    String?       @db.Text // tags now; transcripts once owner-OAuth captions land
+  fileKey        String?
+  audioOnly      Boolean       @default(false)
+  durationSec    Int?
+  format         ContentFormat @default(STANDARD)
+  visibility     Visibility    @default(PUBLIC)
+  scriptureRefs  Json? // normalized refs, see lib/scripture.ts
+  searchText     String?       @db.Text // tags now; transcripts once owner-OAuth captions land
   // Set by the dead-embed cron when the source video vanishes from YouTube;
   // public surfaces filter it out, the row stays for the creator to see.
-  unavailableAt DateTime?
-  publishedAt   DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  unavailableAt  DateTime?
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   watchProgress WatchProgress[]
   likes         Like[]
@@ -538,9 +574,9 @@ model ContentItem {
 model WatchProgress {
   userId        String
   contentItemId String
-  positionSec   Int       @default(0)
+  positionSec   Int         @default(0)
   completedAt   DateTime?
-  updatedAt     DateTime  @updatedAt
+  updatedAt     DateTime    @updatedAt
   user          User        @relation(fields: [userId], references: [id])
   contentItem   ContentItem @relation(fields: [contentItemId], references: [id])
 
@@ -723,4 +759,115 @@ model ShelfItem {
 
   @@index([shelfId])
   @@index([contentItemId])
+}
+
+// ---------- crowdfunding (concept §7b, ported from Maltivas minus DAO) ----------
+// Direct-support model: pledges are charged at payment time and routed to
+// the creator immediately (MISSION = §9 gift-shaped direct charge on the
+// creator's account; CREATIVE = commerce-shaped destination charge with a
+// stated deliverable). No funds are ever held; the completion cron only
+// flips status when the end date passes. RESEARCH (qualification workflow)
+// and NEED (voucher + fraud review) are reserved in the enum, gated off.
+
+enum CampaignCategory {
+  MISSION // inherits §9 in full — Mode B disclosure per pledge
+  CREATIVE // CF-vetted creator, stated deliverable + timeline
+  RESEARCH // ships later — qualification record required
+  NEED // ships last — voucher + strictest review
+}
+
+enum CampaignStatus {
+  DRAFT
+  LIVE
+  FUNDED // goal met (set live or at completion)
+  COMPLETED // ended without meeting goal — pledges already with the creator
+  CANCELLED
+}
+
+model Campaign {
+  id               String           @id @default(cuid())
+  channelId        String
+  channel          Channel          @relation(fields: [channelId], references: [id])
+  category         CampaignCategory
+  status           CampaignStatus   @default(DRAFT)
+  title            String
+  slug             String           @unique
+  shortDescription String           @db.Text
+  story            String?          @db.Text
+  coverImageUrl    String?          @db.Text
+  goalCents        Int
+  raisedCents      Int              @default(0)
+  backersCount     Int              @default(0)
+  endsAt           DateTime?
+  // CREATIVE campaigns state what backers are funding and when it lands.
+  deliverable      String?          @db.Text
+  deliveryTimeline String?
+  publishedAt      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  rewards CampaignReward[]
+  pledges CampaignPledge[]
+  updates CampaignUpdate[]
+
+  @@index([channelId])
+  @@index([status])
+  @@index([category])
+  @@index([endsAt])
+  @@fulltext([title, shortDescription])
+}
+
+model CampaignReward {
+  id           String   @id @default(cuid())
+  campaignId   String
+  campaign     Campaign @relation(fields: [campaignId], references: [id])
+  title        String
+  description  String   @db.Text
+  amountCents  Int // minimum pledge to claim this reward
+  maxBackers   Int? // null = unlimited
+  backersCount Int      @default(0)
+  sortOrder    Int      @default(0)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  pledges CampaignPledge[]
+
+  @@index([campaignId])
+}
+
+model CampaignPledge {
+  id          String            @id @default(cuid())
+  campaignId  String
+  campaign    Campaign          @relation(fields: [campaignId], references: [id])
+  rewardId    String? // null = no-reward pledge
+  reward      CampaignReward?   @relation(fields: [rewardId], references: [id])
+  userId      String
+  amountCents Int
+  feeCents    Int               @default(0) // CF's cut, mirrors the Transaction row
+  provider    String            @default("stripe") // stripe | trickl
+  providerRef String?           @unique // payment intent / trickl goal
+  status      TransactionStatus @default(PENDING)
+  anonymous   Boolean           @default(false)
+  message     String?           @db.Text // word of encouragement, shown to the creator
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([campaignId, status])
+  @@index([rewardId])
+  @@index([userId])
+}
+
+model CampaignUpdate {
+  id            String   @id @default(cuid())
+  campaignId    String
+  campaign      Campaign @relation(fields: [campaignId], references: [id])
+  title         String
+  body          String   @db.Text
+  backersOnly   Boolean  @default(false)
+  notifyBackers Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([campaignId, createdAt])
 }

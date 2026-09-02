@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { NotificationType, TransactionStatus, TransactionType } from "@prisma/client";
 import { db } from "@/lib/db";
-import { grantEbookPurchase } from "@/lib/fulfillment";
+import { fulfillPledge, grantEbookPurchase, recordGift } from "@/lib/fulfillment";
 import { calcGiftFee } from "@/lib/giving";
 import { calcPlatformFee } from "@/lib/platform-fees";
 import { stripeClient, syncAccountStatus } from "@/lib/stripe";
@@ -59,6 +58,29 @@ export async function POST(req: Request) {
     case "account.updated":
       await syncAccountStatus(event.data.object);
       break;
+    case "invoice.paid": {
+      // Monthly cup of cold water: one gift per billing cycle. Metadata
+      // rides the subscription and is snapshotted onto each invoice.
+      const invoice = event.data.object;
+      const meta = invoice.parent?.subscription_details?.metadata ?? {};
+      if (
+        meta.cfKind === "tip" &&
+        meta.cfChannelId &&
+        meta.cfUserId &&
+        invoice.amount_paid > 0
+      ) {
+        await recordGift({
+          channelId: meta.cfChannelId,
+          userId: meta.cfUserId,
+          amountCents: invoice.amount_paid,
+          feeCents: calcGiftFee(invoice.amount_paid),
+          provider: "stripe",
+          providerRef: `${event.account ?? "acct"}_${invoice.id}`,
+          note: meta.cfNote || undefined,
+        });
+      }
+      break;
+    }
     case "checkout.session.completed": {
       const session = event.data.object;
       const meta = session.metadata ?? {};
@@ -68,51 +90,33 @@ export async function POST(req: Request) {
         meta.cfKind === "tip" &&
         meta.cfChannelId &&
         meta.cfUserId &&
-        session.payment_status === "paid"
+        session.payment_status === "paid" &&
+        // Monthly cups ledger per cycle via invoice.paid — never here, or
+        // the first month would be recorded twice.
+        session.mode !== "subscription"
       ) {
-        const providerRef = `${event.account ?? "acct"}_${
-          typeof session.payment_intent === "string" ? session.payment_intent : session.id
-        }`;
-        try {
-          await db.transaction.create({
-            data: {
-              channelId: meta.cfChannelId,
-              userId: meta.cfUserId,
-              type: TransactionType.GIFT,
-              status: TransactionStatus.SUCCEEDED,
-              amountCents: session.amount_total ?? 0,
-              feeCents: calcGiftFee(session.amount_total ?? 0),
-              provider: "stripe",
-              providerRef,
-              description: meta.cfNote ? `Cup of cold water: ${meta.cfNote}` : "Cup of cold water",
-            },
-          });
-        } catch (err) {
-          if ((err as { code?: string }).code === "P2002") break; // duplicate delivery
-          throw err;
-        }
-        const [channel, supporter] = await Promise.all([
-          db.channel.findUnique({
-            where: { id: meta.cfChannelId },
-            select: { ownerId: true },
-          }),
-          db.user.findUnique({
-            where: { id: meta.cfUserId },
-            select: { name: true },
-          }),
-        ]);
-        if (channel) {
-          const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
-          await db.notification.create({
-            data: {
-              userId: channel.ownerId,
-              type: NotificationType.SYSTEM,
-              title: `💧 ${supporter?.name ?? "Someone"} sent a cup of cold water — $${amount}`,
-              body: meta.cfNote ?? "He will by no means lose his reward. (Matt 10:42)",
-              url: "/studio",
-            },
-          });
-        }
+        await recordGift({
+          channelId: meta.cfChannelId,
+          userId: meta.cfUserId,
+          amountCents: session.amount_total ?? 0,
+          feeCents: calcGiftFee(session.amount_total ?? 0),
+          provider: "stripe",
+          providerRef: `${event.account ?? "acct"}_${
+            typeof session.payment_intent === "string" ? session.payment_intent : session.id
+          }`,
+          note: meta.cfNote || undefined,
+        });
+        break;
+      }
+      if (meta.cfKind === "pledge" && meta.cfPledgeId && session.payment_status === "paid") {
+        await fulfillPledge({
+          pledgeId: meta.cfPledgeId,
+          provider: "stripe",
+          providerRef: `${event.account ?? "platform"}_${
+            typeof session.payment_intent === "string" ? session.payment_intent : session.id
+          }`,
+          feeCents: calcPlatformFee(session.amount_total ?? 0, "campaign", "stripe"),
+        });
         break;
       }
       if (

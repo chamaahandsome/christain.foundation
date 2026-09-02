@@ -61,12 +61,28 @@ describe("computeTricklDeadline", () => {
 describe("verifyTricklSignature", () => {
   const secret = "whsec_test";
   const body = JSON.stringify({ id: "evt_1", type: "goal.completed" });
-  const good = crypto.createHmac("sha256", secret).update(body).digest("hex");
+  const now = new Date("2026-09-01T12:00:00Z");
+  const ts = String(Math.floor(now.getTime() / 1000));
+  const good = crypto
+    .createHmac("sha256", secret)
+    .update(`${ts}.${body}`)
+    .digest("hex");
 
-  it("accepts the matching HMAC and rejects everything else", () => {
-    expect(verifyTricklSignature(body, good, secret)).toBe(true);
-    expect(verifyTricklSignature(body, good, "other-secret")).toBe(false);
-    expect(verifyTricklSignature(body + " ", good, secret)).toBe(false);
-    expect(verifyTricklSignature(body, "deadbeef", secret)).toBe(false);
+  it("accepts the timestamp-bound HMAC and rejects everything else", () => {
+    expect(verifyTricklSignature(body, good, secret, ts, now)).toBe(true);
+    expect(verifyTricklSignature(body, good, "other-secret", ts, now)).toBe(false);
+    expect(verifyTricklSignature(body + " ", good, secret, ts, now)).toBe(false);
+    expect(verifyTricklSignature(body, "deadbeef", secret, ts, now)).toBe(false);
+    expect(verifyTricklSignature(body, good, secret, String(Number(ts) - 1), now)).toBe(false);
+  });
+
+  it("rejects stale timestamps (replay window)", () => {
+    const staleTs = String(Math.floor(now.getTime() / 1000) - 600);
+    const staleSig = crypto
+      .createHmac("sha256", secret)
+      .update(`${staleTs}.${body}`)
+      .digest("hex");
+    expect(verifyTricklSignature(body, staleSig, secret, staleTs, now)).toBe(false);
+    expect(verifyTricklSignature(body, good, secret, "garbage", now)).toBe(false);
   });
 });

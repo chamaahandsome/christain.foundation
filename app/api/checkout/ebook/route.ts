@@ -108,6 +108,8 @@ export async function POST(req: Request) {
           cfEbookId: ebook.id,
           cfUserId: userId,
           cfChannelId: ebook.channel.id,
+          // Authoritative amount for the webhook — Trickl reports dollars.
+          cfAmountCents: String(ebook.priceCents),
         },
         callbackUrl: `${bookUrl}?trickl=started`,
         cancelUrl: bookUrl,

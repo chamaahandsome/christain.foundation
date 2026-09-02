@@ -13,7 +13,16 @@
 export const CUP_PRESETS_CENTS = [300, 500, 1000, 2500] as const;
 export const CUP_MIN_CENTS = 100; // $1
 export const CUP_MAX_CENTS = 50_000; // $500 — beyond this, partner giving is the right tool
-export const GIFT_FEE_RATE = 0.05; // 5% keeps the lights on
+// 5% keeps the lights on — both rails. On Stripe it rides the charge as
+// application_fee_amount; on Trickl the chunks land in CF's partner balance
+// and CF keeps the fee when forwarding (lib/trickl-distribution, founder
+// directive 2026-09-01).
+export const GIFT_FEE_RATE = 0.05;
+
+// Client-safe Trickl bounds for the tip UI (server re-validates with the
+// full window rules in lib/trickl): $3 minimum chunk, $40 default window.
+export const TIP_TRICKL_MIN_CENTS = 300;
+export const TIP_TRICKL_MAX_CENTS = 4000;
 
 /** CF's platform fee for a gift, in cents. */
 export function calcGiftFee(amountCents: number): number {

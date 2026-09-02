@@ -139,7 +139,6 @@ export function PaymentsCard({
             <> Enabled {new Date(tricklEnabledAt).toLocaleDateString()}.</>
           )}
         </p>
-        <TricklDemo />
         {!tricklOn && (
           <button
             onClick={() => void enableTrickl()}
@@ -157,6 +156,7 @@ export function PaymentsCard({
         {tricklError && (
           <p className="mt-2 text-sm text-red-600 dark:text-red-400">{tricklError}</p>
         )}
+        <TricklDemo />
       </div>
     </div>
   );

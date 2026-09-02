@@ -6,23 +6,27 @@
 // set by the concept note, and no giving codepath may reuse commerce fees
 // by accident.
 
+// The trickl column is CF's cut of each chunk, kept when CF forwards the
+// chunk from its partner balance to the creator (lib/trickl-distribution).
+// Trickl's own 2% is already gone before the money reaches CF.
 export const PLATFORM_FEES = {
   // 2% — event ticket sales (organizers do the selling work)
-  ticket: { stripe: 0.02, paystack: 0.02 },
+  ticket: { stripe: 0.02, paystack: 0.02, trickl: 0.02 },
 
   // 5% — marketplace sales (creator delivers a good)
-  product: { stripe: 0.05, paystack: 0.05 },
-  ebook: { stripe: 0.05, paystack: 0.05 },
-  booking: { stripe: 0.05, paystack: 0.05 },
+  product: { stripe: 0.05, paystack: 0.05, trickl: 0.05 },
+  campaign: { stripe: 0.05, paystack: 0.05, trickl: 0.05 },
+  ebook: { stripe: 0.05, paystack: 0.05, trickl: 0.05 },
+  booking: { stripe: 0.05, paystack: 0.05, trickl: 0.05 },
 
   // 10% — catalog content with hosting attached
-  course: { stripe: 0.1, paystack: 0.1 },
-  film: { stripe: 0.1, paystack: 0.1 },
-  premiere: { stripe: 0.1, paystack: 0.1 },
+  course: { stripe: 0.1, paystack: 0.1, trickl: 0.1 },
+  film: { stripe: 0.1, paystack: 0.1, trickl: 0.1 },
+  premiere: { stripe: 0.1, paystack: 0.1, trickl: 0.1 },
 } as const;
 
 export type Offering = keyof typeof PLATFORM_FEES;
-export type Provider = "stripe" | "paystack";
+export type Provider = "stripe" | "paystack" | "trickl";
 
 /** Platform's cut as a multiplier (e.g. 0.05). */
 export const feeRate = (offering: Offering, provider: Provider): number =>

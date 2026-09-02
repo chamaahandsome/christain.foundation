@@ -92,12 +92,27 @@ export function checkTricklAmount(
 
 // ── Webhook signature (pure, tested) ────────────────────────────────────────
 
+// Trickl signs HMAC-SHA256 over `${timestamp}.${body}` (X-Trickl-Timestamp
+// header), with a five-minute replay window — verified against the Trickl
+// backend source (services/webhookService.ts).
+export const TRICKL_TIMESTAMP_TOLERANCE_SEC = 300;
+
 export function verifyTricklSignature(
   rawBody: string,
   signature: string,
   secret: string,
+  timestamp: string,
+  now: Date = new Date(),
 ): boolean {
-  const expected = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+  const ts = Number(timestamp);
+  if (!Number.isFinite(ts)) return false;
+  if (Math.abs(now.getTime() / 1000 - ts) > TRICKL_TIMESTAMP_TOLERANCE_SEC) {
+    return false; // replay protection
+  }
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(`${timestamp}.${rawBody}`)
+    .digest("hex");
   const a = Buffer.from(expected);
   const b = Buffer.from(signature);
   return a.length === b.length && crypto.timingSafeEqual(a, b);

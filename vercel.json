@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/check-embeds",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/reconcile-trickl",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/campaign-completion",
+      "schedule": "30 4 * * *"
     }
   ]
 }
