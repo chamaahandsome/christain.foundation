@@ -5,7 +5,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { affirmationComplete } from "@/lib/gate";
 import { ChannelTabs, type ChannelTab } from "@/components/ChannelTabs";
-import { FollowButton } from "@/components/FollowButton";
+import { FOLLOWER_COUNT_FLOOR, FollowButton } from "@/components/FollowButton";
 import { StatementBadge } from "@/components/StatementBadge";
 
 export const dynamic = "force-dynamic";
@@ -149,7 +149,9 @@ export default async function ChannelLayout({
           </div>
           <h1 className="mt-3 text-2xl font-semibold">{channel.name}</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            @{channel.handle} · {channel._count.followers} followers
+            @{channel.handle}
+            {channel._count.followers >= FOLLOWER_COUNT_FLOOR &&
+              ` · ${channel._count.followers} followers`}
           </p>
           {channel.bio && (
             <p className="mt-2 line-clamp-3 max-w-xs text-sm leading-6 text-neutral-600 dark:text-neutral-400">

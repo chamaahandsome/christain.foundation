@@ -1,5 +1,9 @@
 "use client";
 
+// Social-proof floor: tiny follower counts read as emptiness, not traction —
+// hidden until a channel crosses this (founder call, 2026-09-01).
+export const FOLLOWER_COUNT_FLOOR = 100;
+
 import { useState } from "react";
 import { SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 
@@ -58,7 +62,9 @@ export function FollowButton({
           </button>
         </SignInButton>
       </SignedOut>
-      <span className="text-sm text-neutral-500">{followers} followers</span>
+      {followers >= FOLLOWER_COUNT_FLOOR && (
+        <span className="text-sm text-neutral-500">{followers} followers</span>
+      )}
     </span>
   );
 }

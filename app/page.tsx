@@ -111,7 +111,11 @@ export default async function Home() {
         />
         <div className="mx-auto max-w-4xl px-4 pb-16 pt-20 text-center sm:pt-28">
           <p className="mx-auto mb-5 w-fit rounded-full border border-neutral-200 px-4 py-1.5 text-[11px] uppercase tracking-[0.18em] text-neutral-500 sm:text-xs dark:border-neutral-800">
-            In essentials, <span className="font-bold text-neutral-800 dark:text-neutral-200">unity</span> · In non-essentials, liberty · In all things, charity
+            In essentials,{" "}
+            <span className="font-bold text-neutral-800 dark:text-neutral-200">
+              unity
+            </span>{" "}
+            · In non-essentials, liberty · In all things, charity
           </p>
           <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-6xl">
             A home for sound doctrine —{" "}
@@ -147,8 +151,10 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Featured creators — real once the platform fills */}
-      {channels.length > 0 && (
+      {/* Featured creators — hidden until the platform has real breadth
+          (founder call 2026-09-01: one lonely card reads as emptiness).
+          Same threshold thinking as the 20-creator homepage-variety rule. */}
+      {channels.length >= 10 && (
         <section className="mx-auto max-w-6xl px-4 py-12">
           <h2 className="mb-6 text-xl font-semibold">On the platform</h2>
           <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
@@ -172,8 +178,9 @@ export default async function Home() {
                       {channel.name}
                     </span>
                     <span className="mt-0.5 block text-xs text-neutral-500">
-                      {channel.kind.charAt(0) + channel.kind.slice(1).toLowerCase()} ·{" "}
-                      {channel._count.contentItems} items
+                      {channel.kind.charAt(0) +
+                        channel.kind.slice(1).toLowerCase()}{" "}
+                      · {channel._count.contentItems} items
                     </span>
                   </span>
                 </Link>
@@ -183,8 +190,10 @@ export default async function Home() {
         </section>
       )}
 
-      {/* Latest from the library */}
-      {latest.length > 0 && (
+      {/* Latest from the library — returns once the creator base is broad
+          enough to look like a platform (the same 20-creator rule as the
+          marquee handover). */}
+      {approvedCreators >= MARQUEE_MIN_CREATORS && latest.length > 0 && (
         <section className="mx-auto max-w-6xl px-4 py-12">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-xl font-semibold">Fresh from the library</h2>
@@ -207,7 +216,9 @@ export default async function Home() {
                   <p className="mt-2 line-clamp-2 text-sm group-hover:underline">
                     {item.title}
                   </p>
-                  <p className="text-xs text-neutral-500">{item.channel.name}</p>
+                  <p className="text-xs text-neutral-500">
+                    {item.channel.name}
+                  </p>
                 </Link>
               </li>
             ))}
@@ -259,8 +270,8 @@ export default async function Home() {
               Honesty where the faithful disagree
             </h3>
             <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
-              Baptism, end times, spiritual gifts — the strongest case for
-              each view, side by side, and what's actually at stake.
+              Baptism, end times, spiritual gifts — the strongest case for each
+              view, side by side, and what's actually at stake.
             </p>
           </Link>
         </div>
@@ -277,8 +288,8 @@ export default async function Home() {
             <h3 className="font-semibold">We affirm the Nicene Creed</h3>
             <p className="mt-1.5 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
               In its plain, historic sense: one God in three persons; Jesus
-              Christ true God and true man, crucified, bodily raised,
-              returning to judge.
+              Christ true God and true man, crucified, bodily raised, returning
+              to judge.
             </p>
           </li>
           <li className="rounded-2xl border border-neutral-200 p-6 dark:border-neutral-800">
@@ -291,23 +302,26 @@ export default async function Home() {
           <li className="rounded-2xl border border-neutral-200 p-6 dark:border-neutral-800">
             <h3 className="font-semibold">Certainty on the essentials</h3>
             <p className="mt-1.5 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
-              Where Christians cannot disagree, you'll find one confident
-              answer — no "perspectives," no both-sides framing.
+              Where Christians cannot disagree, you'll find one confident answer
+              — no "perspectives," no both-sides framing.
             </p>
           </li>
           <li className="rounded-2xl border border-neutral-200 p-6 dark:border-neutral-800">
             <h3 className="font-semibold">Honest liberty on the rest</h3>
             <p className="mt-1.5 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
-              Baptism, end times, spiritual gifts — where the faithful
-              disagree, we show each view at its strongest and say what's
-              actually at stake.
+              Baptism, end times, spiritual gifts — where the faithful disagree,
+              we show each view at its strongest and say what's actually at
+              stake.
             </p>
           </li>
         </ul>
         <p className="mt-4 text-sm text-neutral-500">
-          Every teacher here has affirmed this — vetted by what they affirm,
-          not what label they wear.{" "}
-          <Link href="/map" className="underline hover:text-neutral-800 dark:hover:text-neutral-200">
+          Every teacher here has affirmed this — vetted by what they affirm, not
+          what label they wear.{" "}
+          <Link
+            href="/map"
+            className="underline hover:text-neutral-800 dark:hover:text-neutral-200"
+          >
             See the map of what's settled and what's open →
           </Link>
         </p>
@@ -316,7 +330,9 @@ export default async function Home() {
       {/* Creator CTA */}
       <section className="mx-auto max-w-6xl px-4 py-12">
         <div className="rounded-3xl bg-linear-to-br from-neutral-900 to-neutral-700 p-10 text-center text-white dark:from-neutral-100 dark:to-neutral-300 dark:text-neutral-900">
-          <h2 className="text-2xl font-semibold">Do you teach, sing, or serve?</h2>
+          <h2 className="text-2xl font-semibold">
+            Do you teach, sing, or serve?
+          </h2>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 opacity-80">
             Keep your YouTube — bring your people home. Your library, your
             audience, and everything that sustains the work, in one place you
