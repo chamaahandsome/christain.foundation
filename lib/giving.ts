@@ -35,7 +35,7 @@ export const CUP_VERSE_REF = "Matthew 10:42";
 
 /** The Mode B disclosure, shown on the page and inside checkout. */
 export function tipDisclosure(channelName: string): string {
-  return `This is a personal gift to ${channelName}, who receives it directly. It is not tax-deductible. Christian Foundation keeps a 5% platform fee; the rest is ${channelName}'s.`;
+  return `This is a personal gift to ${channelName}, who receives it directly. It is not tax-deductible.`;
 }
 
 export interface TipAmountCheck {

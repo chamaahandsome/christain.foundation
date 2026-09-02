@@ -42,7 +42,6 @@ describe("§9 posture", () => {
     const text = tipDisclosure("Grace Chapel");
     expect(text).toContain("Grace Chapel");
     expect(text).toMatch(/not tax-deductible/);
-    expect(text).toMatch(/5% platform fee/);
     expect(text).toMatch(/receives it directly/);
   });
 });
