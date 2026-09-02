@@ -114,9 +114,9 @@ export default async function Home() {
             In essentials, <span className="font-bold text-neutral-800 dark:text-neutral-200">unity</span> · In non-essentials, liberty · In all things, charity
           </p>
           <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-6xl">
-            A home for sound teaching —{" "}
+            A home for sound doctrine —{" "}
             <span className="bg-linear-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">
-              and for the people who teach it.
+              taught, sung, and lived.
             </span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-7 text-neutral-600 dark:text-neutral-400">

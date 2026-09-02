@@ -4,7 +4,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
 
 const description =
-  "A home for sound teaching — and for the people who teach it. In essentials, UNITY. In non-essentials, liberty. In all things, charity.";
+  "A home for sound doctrine — taught, sung, and lived. In essentials, UNITY. In non-essentials, liberty. In all things, charity.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.thechristian.foundation"),
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     title: "Christian Foundation",
     description,
     url: "/",
-    images: [{ url: "/og.jpg", width: 1200, height: 630, alt: "Christian Foundation — a home for sound teaching" }],
+    images: [{ url: "/og.jpg", width: 1200, height: 630, alt: "Christian Foundation — a home for sound doctrine" }],
   },
   twitter: {
     card: "summary_large_image",
