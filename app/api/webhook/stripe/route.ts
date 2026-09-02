@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { db } from "@/lib/db";
-import { fulfillPledge, grantEbookPurchase, recordGift } from "@/lib/fulfillment";
+import {
+  fulfillPledge,
+  grantEbookPurchase,
+  recordGift,
+  recordMembershipCycle,
+} from "@/lib/fulfillment";
 import { calcGiftFee } from "@/lib/giving";
 import { calcPlatformFee } from "@/lib/platform-fees";
 import { stripeClient, syncAccountStatus } from "@/lib/stripe";
@@ -59,16 +64,13 @@ export async function POST(req: Request) {
       await syncAccountStatus(event.data.object);
       break;
     case "invoice.paid": {
-      // Monthly cup of cold water: one gift per billing cycle. Metadata
-      // rides the subscription and is snapshotted onto each invoice.
+      // Subscription cycles: monthly cups and memberships. Metadata rides
+      // the subscription and is snapshotted onto each invoice.
       const invoice = event.data.object;
-      const meta = invoice.parent?.subscription_details?.metadata ?? {};
-      if (
-        meta.cfKind === "tip" &&
-        meta.cfChannelId &&
-        meta.cfUserId &&
-        invoice.amount_paid > 0
-      ) {
+      const details = invoice.parent?.subscription_details;
+      const meta = details?.metadata ?? {};
+      if (invoice.amount_paid <= 0) break;
+      if (meta.cfKind === "tip" && meta.cfChannelId && meta.cfUserId) {
         await recordGift({
           channelId: meta.cfChannelId,
           userId: meta.cfUserId,
@@ -77,6 +79,44 @@ export async function POST(req: Request) {
           provider: "stripe",
           providerRef: `${event.account ?? "acct"}_${invoice.id}`,
           note: meta.cfNote || undefined,
+        });
+      } else if (
+        meta.cfKind === "membership" &&
+        meta.cfChannelId &&
+        meta.cfTierId &&
+        meta.cfUserId
+      ) {
+        const subscriptionId =
+          typeof details?.subscription === "string"
+            ? details.subscription
+            : details?.subscription?.id;
+        if (!subscriptionId) break;
+        const periodEnd = invoice.lines?.data?.[0]?.period?.end ?? null;
+        await recordMembershipCycle({
+          channelId: meta.cfChannelId,
+          tierId: meta.cfTierId,
+          userId: meta.cfUserId,
+          subscriptionId,
+          amountCents: invoice.amount_paid,
+          feeCents: calcPlatformFee(invoice.amount_paid, "membership", "stripe"),
+          providerRef: `${event.account ?? "acct"}_${invoice.id}`,
+          currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
+        });
+      }
+      break;
+    }
+    case "customer.subscription.deleted": {
+      // A membership ended (member cancelled, or dunning gave up). Cups
+      // have no standing row to update — only memberships care.
+      const sub = event.data.object;
+      const { count } = await db.channelMembership.updateMany({
+        where: { stripeSubscriptionId: sub.id, status: { not: "CANCELLED" } },
+        data: { status: "CANCELLED" },
+      });
+      if (count > 0 && sub.metadata?.cfTierId) {
+        await db.membershipTier.updateMany({
+          where: { id: sub.metadata.cfTierId, membersCount: { gt: 0 } },
+          data: { membersCount: { decrement: 1 } },
         });
       }
       break;

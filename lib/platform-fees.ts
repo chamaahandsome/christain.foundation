@@ -20,6 +20,7 @@ export const PLATFORM_FEES = {
   booking: { stripe: 0.05, paystack: 0.05, trickl: 0.05 },
 
   // 10% — catalog content with hosting attached
+  membership: { stripe: 0.1, paystack: 0.1, trickl: 0.1 },
   course: { stripe: 0.1, paystack: 0.1, trickl: 0.1 },
   film: { stripe: 0.1, paystack: 0.1, trickl: 0.1 },
   premiere: { stripe: 0.1, paystack: 0.1, trickl: 0.1 },

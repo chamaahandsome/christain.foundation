@@ -138,6 +138,24 @@ NEED      — voucher (CF creator or church), strictest fraud review, Mode B
 ```
 Research campaigns inherit the Mode A/B branch too (university/foundation = Mode A-shaped; independent = Mode B). Archaeology: season = campaign unit (one campaign → season footage → report → ticketed site tours).
 
+### Memberships & courses (Patreon-shaped, mapped 2026-09-01)
+```
+MembershipTier    — channel-defined tier: name, monthly priceCents, perks text,
+                    active, membersCount
+ChannelMembership — user × channel × tier; status ACTIVE|PAST_DUE|CANCELLED,
+                    stripeSubscriptionId, currentPeriodEnd
+Course/Lesson/Enrollment — courses ride the Mux pipeline (phase 8 native
+                    hosting); lessons are ContentItems with visibility gates
+```
+Membership is COMMERCE, not giving: access in exchange for a recurring
+subscription (direct charge on the creator's connected account, CF fee as
+application_fee_percent — the monthly-cup rail). No Mode B disclosure needed;
+§9.4 payout gate applies. `ContentItem.visibility = MEMBERS` is enforced at
+the watch surface for active members. Gating applies to NATIVE and text
+content only — embedded YouTube stays public (the video is public on YouTube;
+paywalling our chrome over it reads badly). Tiers ship before Mux by gating
+ebooks/updates; courses land with native hosting.
+
 ### Commerce & events (ported/adapted)
 ```
 Product/Variant/Order/ShippingAddress/RegionalPrice · EBook* (reader + anti-piracy)

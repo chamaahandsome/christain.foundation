@@ -2,7 +2,12 @@
 // Safe to run twice: the purchase upserts on (userId, ebookId) and the
 // ledger row dedupes on providerRef.
 
-import { NotificationType, TransactionStatus, TransactionType } from "@prisma/client";
+import {
+  MembershipStatus,
+  NotificationType,
+  TransactionStatus,
+  TransactionType,
+} from "@prisma/client";
 import { db } from "@/lib/db";
 
 /** Ledger a cup of cold water and tell the creator. Idempotent on
@@ -228,4 +233,104 @@ export async function fulfillPledge(input: {
       url: `/campaign/${pledge.campaign.slug}`,
     },
   });
+}
+
+/** Ledger one membership billing cycle and keep the membership row
+ * current. Idempotent: the Transaction dedupes on providerRef, and the
+ * membership upserts on the Stripe subscription id. The first cycle
+ * creates the membership, bumps the tier's member count, and tells the
+ * creator. */
+export async function recordMembershipCycle(input: {
+  channelId: string;
+  tierId: string;
+  userId: string;
+  subscriptionId: string;
+  amountCents: number;
+  feeCents: number;
+  providerRef: string;
+  currentPeriodEnd: Date | null;
+}): Promise<void> {
+  const existing = await db.channelMembership.findUnique({
+    where: { stripeSubscriptionId: input.subscriptionId },
+    select: { id: true },
+  });
+
+  if (existing) {
+    await db.channelMembership.update({
+      where: { id: existing.id },
+      data: {
+        status: MembershipStatus.ACTIVE,
+        currentPeriodEnd: input.currentPeriodEnd,
+      },
+    });
+  } else {
+    try {
+      await db.channelMembership.create({
+        data: {
+          channelId: input.channelId,
+          tierId: input.tierId,
+          userId: input.userId,
+          status: MembershipStatus.ACTIVE,
+          stripeSubscriptionId: input.subscriptionId,
+          currentPeriodEnd: input.currentPeriodEnd,
+        },
+      });
+      await db.membershipTier.update({
+        where: { id: input.tierId },
+        data: { membersCount: { increment: 1 } },
+      });
+      const [channel, member, tier] = await Promise.all([
+        db.channel.findUnique({
+          where: { id: input.channelId },
+          select: { ownerId: true },
+        }),
+        db.user.findUnique({ where: { id: input.userId }, select: { name: true } }),
+        db.membershipTier.findUnique({
+          where: { id: input.tierId },
+          select: { name: true },
+        }),
+      ]);
+      if (channel) {
+        await db.notification.create({
+          data: {
+            userId: channel.ownerId,
+            type: NotificationType.SYSTEM,
+            title: `⭐ ${member?.name ?? "Someone"} became a member — ${tier?.name ?? "a tier"} · $${(
+              input.amountCents / 100
+            ).toFixed(2)}/mo`,
+            url: "/studio",
+          },
+        });
+      }
+    } catch (err) {
+      // Unique (channelId,userId) or subscription raced — another delivery
+      // created it; the cycle ledger below still applies.
+      if ((err as { code?: string }).code !== "P2002") throw err;
+      await db.channelMembership.updateMany({
+        where: { stripeSubscriptionId: input.subscriptionId },
+        data: {
+          status: MembershipStatus.ACTIVE,
+          currentPeriodEnd: input.currentPeriodEnd,
+        },
+      });
+    }
+  }
+
+  try {
+    await db.transaction.create({
+      data: {
+        channelId: input.channelId,
+        userId: input.userId,
+        type: TransactionType.MEMBERSHIP,
+        status: TransactionStatus.SUCCEEDED,
+        amountCents: input.amountCents,
+        feeCents: input.feeCents,
+        provider: "stripe",
+        providerRef: input.providerRef,
+        description: "Membership cycle",
+      },
+    });
+  } catch (err) {
+    if ((err as { code?: string }).code !== "P2002") throw err;
+  }
 }

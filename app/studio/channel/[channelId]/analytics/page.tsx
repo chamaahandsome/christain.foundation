@@ -45,7 +45,7 @@ export default async function AnalyticsTab({
       }),
     ]);
 
-  const [txByType, giftGivers, publishedBooks, bookSales, freeSales, campaigns, tricklForwarded] =
+  const [txByType, giftGivers, publishedBooks, bookSales, freeSales, campaigns, tricklForwarded, activeMembers] =
     await Promise.all([
       db.transaction.groupBy({
         by: ["type"],
@@ -77,6 +77,7 @@ export default async function AnalyticsTab({
         where: { channelId, status: "FORWARDED" },
         _sum: { netCents: true },
       }),
+      db.channelMembership.count({ where: { channelId, status: "ACTIVE" } }),
     ]);
 
   // Whole-dollar amounts drop the cents — $1,875 reads better than $1,875.00.
@@ -89,8 +90,10 @@ export default async function AnalyticsTab({
   const sumOf = (type: string) => byType.get(type as never)?._sum.amountCents ?? 0;
   const feeOf = (type: string) => byType.get(type as never)?._sum.feeCents ?? 0;
   const countOf = (type: string) => byType.get(type as never)?._count._all ?? 0;
-  const grossCents = sumOf("PURCHASE") + sumOf("GIFT") + sumOf("PLEDGE") + sumOf("TICKET");
-  const feesCents = feeOf("PURCHASE") + feeOf("GIFT") + feeOf("PLEDGE") + feeOf("TICKET");
+  const grossCents =
+    sumOf("PURCHASE") + sumOf("GIFT") + sumOf("PLEDGE") + sumOf("TICKET") + sumOf("MEMBERSHIP");
+  const feesCents =
+    feeOf("PURCHASE") + feeOf("GIFT") + feeOf("PLEDGE") + feeOf("TICKET") + feeOf("MEMBERSHIP");
   const netCents = grossCents - feesCents;
 
   const topItems =
@@ -121,6 +124,11 @@ export default async function AnalyticsTab({
     { label: "Book sales", cents: sumOf("PURCHASE") - feeOf("PURCHASE"), count: countOf("PURCHASE") },
     { label: "Cups of cold water", cents: sumOf("GIFT") - feeOf("GIFT"), count: countOf("GIFT") },
     { label: "Campaign pledges", cents: sumOf("PLEDGE") - feeOf("PLEDGE"), count: countOf("PLEDGE") },
+    {
+      label: "Membership cycles",
+      cents: sumOf("MEMBERSHIP") - feeOf("MEMBERSHIP"),
+      count: countOf("MEMBERSHIP"),
+    },
   ].filter((r) => r.count > 0);
 
   return (
@@ -183,6 +191,11 @@ export default async function AnalyticsTab({
                       <dt className="text-neutral-600 dark:text-neutral-400">of which via Trickl</dt>
                       <dd className="font-medium">{money(tricklForwarded._sum.netCents ?? 0)}</dd>
                     </div>
+                  )}
+                  {activeMembers > 0 && (
+                    <p className="pt-1 text-xs text-neutral-400 dark:text-neutral-500">
+                      {activeMembers} active member{activeMembers === 1 ? "" : "s"}
+                    </p>
                   )}
                   {giftGivers.length > 0 && (
                     <p className="pt-1 text-xs text-neutral-400 dark:text-neutral-500">

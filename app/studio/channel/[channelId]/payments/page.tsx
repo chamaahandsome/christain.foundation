@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getChannelAccess } from "@/lib/team-authorization";
 import { PaymentsCard } from "@/components/PaymentsCard";
+import { MembershipTiersCard } from "@/components/MembershipTiersCard";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Payments" };
@@ -20,6 +21,18 @@ export default async function PaymentsTab({
   const access = await getChannelAccess(userId, channelId);
   if (!access.channel || !access.isOwner) notFound();
 
+  const tiers = await db.membershipTier.findMany({
+    where: { channelId },
+    orderBy: [{ sortOrder: "asc" }, { priceCents: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      priceCents: true,
+      active: true,
+      membersCount: true,
+    },
+  });
   const channel = await db.channel.findUniqueOrThrow({
     where: { id: channelId },
     select: {
@@ -47,6 +60,11 @@ export default async function PaymentsTab({
         onboardedAt={channel.stripeOnboardedAt?.toISOString() ?? null}
         tricklEnabled={Boolean(channel.tricklProviderLinkCode)}
         tricklEnabledAt={channel.tricklEnabledAt?.toISOString() ?? null}
+      />
+      <MembershipTiersCard
+        channelId={channelId}
+        tiers={tiers}
+        ready={channel.stripeChargesEnabled && channel.stripePayoutsEnabled}
       />
     </section>
   );

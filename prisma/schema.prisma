@@ -118,15 +118,17 @@ model Channel {
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
 
-  contentItems ContentItem[]
-  series       Series[]
-  followers    Follow[]
-  vouchesGiven Vouch[]
-  reviewCases  DoctrineReviewCase[]
-  teamMembers  TeamMember[]
-  transactions Transaction[]
-  ebooks       Ebook[]
-  campaigns    Campaign[]
+  contentItems    ContentItem[]
+  series          Series[]
+  followers       Follow[]
+  vouchesGiven    Vouch[]
+  reviewCases     DoctrineReviewCase[]
+  teamMembers     TeamMember[]
+  transactions    Transaction[]
+  ebooks          Ebook[]
+  campaigns       Campaign[]
+  membershipTiers MembershipTier[]
+  memberships     ChannelMembership[]
 
   @@index([ownerId])
   @@index([status])
@@ -350,6 +352,7 @@ enum TransactionType {
   TICKET
   GIFT // partner giving (phase 7)
   PLEDGE // crowdfunding (concept §7b)
+  MEMBERSHIP // recurring member subscription cycles
 }
 
 enum TransactionStatus {
@@ -877,4 +880,52 @@ model CampaignUpdate {
   updatedAt     DateTime @updatedAt
 
   @@index([campaignId, createdAt])
+}
+
+// ---------- memberships (Patreon-shaped commerce, PLAN §7) ----------
+// A tier buys access: recurring subscription on the creator's connected
+// account (the monthly-cup rail), CF fee per cycle, MEMBERS-visibility
+// content unlocked while ACTIVE.
+
+enum MembershipStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
+model MembershipTier {
+  id           String   @id @default(cuid())
+  channelId    String
+  channel      Channel  @relation(fields: [channelId], references: [id])
+  name         String
+  description  String   @db.Text // what members get, in the creator's words
+  priceCents   Int // per month
+  active       Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  membersCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships ChannelMembership[]
+
+  @@index([channelId])
+}
+
+model ChannelMembership {
+  id                   String           @id @default(cuid())
+  channelId            String
+  channel              Channel          @relation(fields: [channelId], references: [id])
+  tierId               String
+  tier                 MembershipTier   @relation(fields: [tierId], references: [id])
+  userId               String
+  status               MembershipStatus @default(ACTIVE)
+  stripeSubscriptionId String           @unique
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@unique([channelId, userId])
+  @@index([userId])
+  @@index([tierId])
+  @@index([channelId, status])
 }

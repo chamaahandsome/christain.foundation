@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { Visibility } from "@prisma/client";
+import { isActiveMember } from "@/lib/membership";
 import { Comments } from "@/components/Comments";
 import { MobileWatchPanels } from "@/components/MobileWatchPanels";
 import { PinnedPlayer } from "@/components/PinnedPlayer";
@@ -18,7 +19,7 @@ async function getItem(id: string) {
   return db.contentItem.findUnique({
     where: { id },
     include: {
-      channel: { select: { id: true, handle: true, name: true, status: true } },
+      channel: { select: { id: true, handle: true, name: true, status: true, ownerId: true } },
       series: { select: { id: true, title: true } },
     },
   });
@@ -52,12 +53,43 @@ export default async function WatchPage({
   const item = await getItem(id).catch(() => null);
   if (
     !item ||
-    item.visibility !== Visibility.PUBLIC ||
+    (item.visibility !== Visibility.PUBLIC &&
+      item.visibility !== Visibility.MEMBERS) ||
     item.unavailableAt !== null ||
     item.channel.status !== "APPROVED" ||
     !item.youtubeVideoId
   ) {
     notFound();
+  }
+
+  // MEMBERS content: active members (and the channel's own team) watch;
+  // everyone else meets a join gate, not a 404.
+  if (item.visibility === Visibility.MEMBERS) {
+    const { userId: viewerId } = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+      ? await auth()
+      : { userId: null };
+    const allowed =
+      viewerId !== null &&
+      (viewerId === item.channel.ownerId ||
+        (await isActiveMember(item.channel.id, viewerId)));
+    if (!allowed) {
+      return (
+        <main className="mx-auto max-w-xl px-4 py-20 text-center">
+          <p className="text-4xl">⭐</p>
+          <h1 className="mt-4 text-2xl font-semibold">{item.title}</h1>
+          <p className="mt-3 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
+            This is members-only content from {item.channel.name}. Join to
+            unlock it — memberships support the work directly.
+          </p>
+          <Link
+            href={`/@${item.channel.handle}/support`}
+            className="mt-6 inline-block rounded-xl bg-linear-to-r from-amber-500 to-orange-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:from-amber-400 hover:to-orange-500"
+          >
+            Become a member
+          </Link>
+        </main>
+      );
+    }
   }
 
   let startSec: number | undefined;
