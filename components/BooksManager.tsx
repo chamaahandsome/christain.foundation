@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ImageUploadDialog } from "@/components/ImageUploadDialog";
+import { RichEditor } from "@/components/RichEditor";
 import { InputDialog } from "@/components/InputDialog";
 
 interface Chapter {
@@ -426,13 +427,15 @@ function BookEditor({
                 placeholder="Chapter title"
                 className="mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
               />
-              <textarea
-                value={chapterHtml}
-                onChange={(e) => setChapterHtml(e.target.value)}
-                rows={8}
-                placeholder="Chapter content — plain text or HTML (<h2>, <p>, <blockquote>, <img>…)"
-                className="mt-2 w-full rounded-lg border border-neutral-300 px-3 py-2 font-mono text-xs dark:border-neutral-700 dark:bg-neutral-900"
-              />
+              <div className="mt-2">
+                <RichEditor
+                  value={chapterHtml}
+                  onChange={setChapterHtml}
+                  minHeight={200}
+                  channelId={channelId}
+                  placeholder="Chapter content — write here, or import a file below"
+                />
+              </div>
               <label className="mt-2 block text-xs text-neutral-500">
                 …or import a file (.txt, .html, .md) — it fills the editor
                 above; the text is stored as chapters, never as a

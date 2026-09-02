@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { canReadChapter } from "@/lib/ebooks";
-import { sanitizeChapterHtml } from "@/lib/sanitize-html";
+import { sanitizeRichHtml } from "@/lib/sanitize-html";
 import { FEATURES } from "@/lib/team";
 import { getChannelAccess } from "@/lib/team-authorization";
 import { ReaderShell } from "@/components/ReaderShell";
@@ -90,7 +90,7 @@ export default async function ReaderPage({
           className="prose-reader mt-6 text-[15px] leading-7"
           // Sanitized server-side (lib/sanitize-html) — no active content.
           dangerouslySetInnerHTML={{
-            __html: sanitizeChapterHtml(chapter.htmlContent ?? "<p>(empty chapter)</p>"),
+            __html: sanitizeRichHtml(chapter.htmlContent ?? "<p>(empty chapter)</p>"),
           }}
         />
       </ReaderShell>

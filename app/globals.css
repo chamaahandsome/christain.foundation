@@ -73,3 +73,26 @@ body {
 .prose-reader img { max-width: 100%; border-radius: 0.5rem; margin: 1.2em 0; }
 .prose-reader a { text-decoration: underline; text-underline-offset: 2px; }
 .prose-reader hr { margin: 2em 0; border-color: currentColor; opacity: 0.15; }
+
+/* TipTap editor (components/RichEditor) */
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--color-neutral-400, #a3a3a3);
+}
+
+/* YouTube embeds inside rich text (editor and rendered pages) */
+.prose-reader [data-youtube-video],
+.tiptap [data-youtube-video] {
+  margin: 1.2em 0;
+}
+.prose-reader [data-youtube-video] iframe,
+.tiptap [data-youtube-video] iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  border: 0;
+  border-radius: 0.75rem;
+}
