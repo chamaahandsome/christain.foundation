@@ -8,12 +8,11 @@ import {
   campaignOpen,
   daysLeft,
   pledgeDisclosure,
-  progressPercent,
   rewardDisclaimer,
 } from "@/lib/campaigns";
 import { sanitizeRichHtml } from "@/lib/sanitize-html";
-import { PledgeCard } from "@/components/PledgeCard";
-import { CampaignTabs } from "@/components/CampaignTabs";
+import { CampaignDetail } from "@/components/CampaignDetail";
+import { extractYouTubeId } from "@/components/CampaignLivePreviewCF";
 
 export const dynamic = "force-dynamic";
 
@@ -86,16 +85,33 @@ export default async function CampaignPage({
       })) !== null
     : false;
 
+  const recentPledges = await db.campaignPledge.findMany({
+    where: { campaignId: campaign.id, status: TransactionStatus.SUCCEEDED },
+    orderBy: { createdAt: "desc" },
+    take: 12,
+    select: { id: true, userId: true, amountCents: true, anonymous: true, createdAt: true },
+  });
+  const backerNames = new Map(
+    (
+      await db.user.findMany({
+        where: { id: { in: [...new Set(recentPledges.map((p) => p.userId))] } },
+        select: { id: true, name: true },
+      })
+    ).map((u) => [u.id, u.name ?? "Supporter"]),
+  );
+
   const open = campaignOpen(campaign);
-  const pct = progressPercent(campaign.raisedCents, campaign.goalCents);
   const left = daysLeft(campaign.endsAt);
   const visibleUpdates = campaign.updates.filter((u) => !u.backersOnly || isBacker);
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8">
+    <main className="mx-auto max-w-6xl px-4 py-8">
       {thanks && (
         <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-          🤝 Your pledge is in — thank you for standing with {campaign.channel.name}.
+          🤝 Your pledge is in — thank you for standing with {campaign.channel.name}.{" "}
+          <Link href="/backed" className="underline">
+            See everything you've backed →
+          </Link>
         </div>
       )}
       {trickl === "started" && (
@@ -120,89 +136,20 @@ export default async function CampaignPage({
         </Link>
       </p>
 
-      {campaign.coverImageUrl && (
-        <div className="mt-6 overflow-hidden rounded-2xl">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={campaign.coverImageUrl} alt="" className="w-full object-cover" />
-        </div>
-      )}
-
-      <div className="mt-6 rounded-2xl border border-neutral-200 p-5 dark:border-neutral-800">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <span className="text-2xl font-semibold">
-            ${(campaign.raisedCents / 100).toLocaleString()}
-            <span className="ml-1 text-sm font-normal text-neutral-500">
-              raised of ${(campaign.goalCents / 100).toLocaleString()}
-            </span>
-          </span>
-          <span className="text-sm text-neutral-500">
-            {campaign.backersCount} backer{campaign.backersCount === 1 ? "" : "s"}
-            {left !== null && ` · ${left} day${left === 1 ? "" : "s"} left`}
-          </span>
-        </div>
-        <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800">
-          <div
-            className="h-full rounded-full bg-linear-to-r from-amber-500 to-orange-600"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-      </div>
-
-      <p className="mt-6 text-base leading-7 text-neutral-700 dark:text-neutral-300">
-        {campaign.shortDescription}
-      </p>
-
-      {campaign.category === "CREATIVE" && campaign.deliverable && (
-        <div className="mt-4 rounded-xl bg-neutral-50 p-4 text-sm leading-6 dark:bg-neutral-900/60">
-          <p className="font-medium">What backers are funding</p>
-          <p className="mt-1 text-neutral-600 dark:text-neutral-400">
-            {campaign.deliverable}
-          </p>
-          {campaign.deliveryTimeline && (
-            <p className="mt-1 text-xs text-neutral-500">
-              Timeline: {campaign.deliveryTimeline}
-            </p>
-          )}
-        </div>
-      )}
-
-      <div className="mt-6">
-        {open ? (
-          <PledgeCard
-            campaignId={campaign.id}
-            category={campaign.category}
-            channelName={campaign.channel.name}
-            signedIn={Boolean(userId)}
-            tricklEnabled={Boolean(campaign.channel.tricklProviderLinkCode)}
-            rewards={campaign.rewards.map((r) => ({
-              id: r.id,
-              title: r.title,
-              description: r.description,
-              amountCents: r.amountCents,
-              maxBackers: r.maxBackers,
-              backersCount: r.backersCount,
-              active: r.active,
-              imageUrl: r.imageUrl,
-              deliveryType: r.deliveryType,
-            }))}
-          />
-        ) : (
-          <p className="rounded-xl border border-neutral-200 p-5 text-sm text-neutral-500 dark:border-neutral-800">
-            This campaign has ended.
-            {campaign.status === "FUNDED" && " It reached its goal — thank you."}
-          </p>
-        )}
-      </div>
-
-      <p className="mt-4 text-xs leading-5 text-neutral-500">
-        {pledgeDisclosure(campaign.category, campaign.channel.name)}
-        {campaign.rewards.some((r) => r.active) && (
-          <> {rewardDisclaimer(campaign.channel.name)}</>
-        )}
-      </p>
-
-      <CampaignTabs
+      <CampaignDetail
+        campaignId={campaign.id}
+        category={campaign.category}
+        channelName={campaign.channel.name}
+        signedIn={Boolean(userId)}
+        tricklEnabled={Boolean(campaign.channel.tricklProviderLinkCode)}
+        open={open}
         storyHtml={campaign.story ? sanitizeRichHtml(campaign.story) : null}
+        videoId={campaign.videoUrl ? extractYouTubeId(campaign.videoUrl) : null}
+        coverImageUrl={campaign.coverImageUrl}
+        raisedCents={campaign.raisedCents}
+        goalCents={campaign.goalCents}
+        backersCount={campaign.backersCount}
+        daysLeft={left}
         updates={visibleUpdates.map((u) => ({
           id: u.id,
           title: u.title,
@@ -210,7 +157,31 @@ export default async function CampaignPage({
           date: u.createdAt.toLocaleDateString(),
           backersOnly: u.backersOnly,
         }))}
+        backers={recentPledges.map((pl) => ({
+          id: pl.id,
+          name: pl.anonymous ? "Anonymous" : (backerNames.get(pl.userId) ?? "Supporter"),
+          amountCents: pl.amountCents,
+          date: pl.createdAt.toLocaleDateString(),
+        }))}
+        rewards={campaign.rewards.map((r) => ({
+          id: r.id,
+          title: r.title,
+          description: r.description,
+          amountCents: r.amountCents,
+          maxBackers: r.maxBackers,
+          backersCount: r.backersCount,
+          active: r.active,
+          imageUrl: r.imageUrl,
+          deliveryType: r.deliveryType,
+        }))}
       />
+
+      <p className="mt-6 text-xs leading-5 text-neutral-500">
+        {pledgeDisclosure(campaign.category, campaign.channel.name)}
+        {campaign.rewards.some((r) => r.active) && (
+          <> {rewardDisclaimer(campaign.channel.name)}</>
+        )}
+      </p>
 
     </main>
   );

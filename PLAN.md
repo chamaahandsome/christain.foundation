@@ -156,6 +156,36 @@ content only — embedded YouTube stays public (the video is public on YouTube;
 paywalling our chrome over it reads badly). Tiers ship before Mux by gating
 ebooks/updates; courses land with native hosting.
 
+### Business (Do-Biz rebuilt faithfully 2026-09-01 — flows and layouts mirror Maltivas, CF-skinned)
+```
+Contract/ContractSignature/ContractSignToken/ContractActivity — as before
+BusinessTemplate — category, data-field content, fields manifest, isDefault
+BookableService  — hire services: category, rate+unit, requirements,
+                   weekly availableDays, visible/active
+BookingRequest   — public request (serviceId?) → quote or contract
+Quote            — QUO-### · token page · accept mints the contract
+Invoice          — INV-### · token page · send/markPaid/void (collection later)
+Channel          — digitalSignature(+Name), businessInitializedAt, bookingEnabled
+```
+The studio Business tab (top-level, owner-only) is the Do-Biz dashboard:
+**Overview** (stat cards + recent activity + Create-agreement) · **Bookings**
+(Services / Requests sub-tabs; requests → Send quote, Accept→contract, or
+decline) · **Quotes** · **Contracts** (TemplateModal — search/filters/
+categories left, card grid with hover previews right; selecting creates the
+contract and opens the **editor page**: header bar with inline title/status
+dot/save pill/Save/Send, paper canvas with lock banner once sent, details
+sidebar with client/value/signature/activity) · **Invoices**. First visit
+seeds the ministry template library (7 agreements with highlighted
+`data-field` fill-ins, preserved in TipTap by the FieldMark extension) and
+opens the signature modal (generated-cursive-from-name or drawn; stored
+once, signs every send). Public surfaces: `/@handle/book` (service cards
+with rates/days → request), `/sign/[token]`, `/verify/[id]`,
+`/quote/[token]` (accept→contract), `/invoice/[token]`. SES emails ride
+every leg (signing links, signed confirmations, booking requests/decisions,
+quotes, invoices) via `EMAIL_DOMAIN`. Still to port when needed: inline
+signature bubbles (multi-signer field placement), bulk sends/batches,
+sequential signing, PDF pipeline, reminders, invoice payment collection.
+
 ### Commerce & events (ported/adapted)
 ```
 Product/Variant/Order/ShippingAddress/RegionalPrice · EBook* (reader + anti-piracy)
@@ -217,6 +247,8 @@ Not ported: conventions/festivals full stacks, awards, Do-Biz, comics, Tolkoin, 
 **Trickl distribution engine shipped 2026-09-01 (CF's cut on the Trickl rail):** the Trickl-backend review revealed partner routing — chunks for CF-registered creators land as destination charges in CF's OWN partner Stripe balance (Trickl keeps 2%; it cannot pay accounts on CF's platform), and the partner is expected to distribute onward per chunk. Built: `TricklChunk` model (idempotent on Trickl's chunkId), `lib/trickl-distribution` (forward net-of-fee via Stripe transfer with idempotency keys, reversal unwinds via transfer reversal, `retryFailedForwards` for balance-timing), webhook cases `goal.deposit_paid`/`goal.round_up_collected`/`goal.payment_failed(reversal)`, `reconcile-trickl` cron (daily, vercel.json), trickl column in `lib/platform-fees`, real `feeCents` on Trickl ledger rows (5% gifts via calcGiftFee). Chunk lifecycle smoke-tested live (forward attempted against Stripe, dedup on redelivery, reversal final; 5% splits exact). Ops to go live: connect CF's own Stripe account as the PlatformPartner owner-provider on Trickl, and fund/settle awareness for the transfer balance. Support page also gained the tappable water-glass (tap = +$1, water level tracks the amount).
 
 **Crowdfunding shipped 2026-09-01 (MISSION + CREATIVE, ported from Maltivas' direct-support model):** Campaign/CampaignReward/CampaignPledge/CampaignUpdate models (minus DAO/governance/multi-currency/guest checkout; cents Ints; RESEARCH/NEED reserved in the enum, gated off), studio Campaigns tab (draft → launch with §9.4 payout gate; goal/end-date lock at launch; reward tiers with limits + deactivate-not-delete once backed; updates with backers-only visibility + backer notifications; 16:9 cover upload; cancel/delete with modals), public `/campaigns` browse + `/campaign/[slug]` (progress, reward picker, story, updates, per-transaction disclosure). Payments follow the §9 branch: MISSION pledges are Mode B gifts (DIRECT charge on the creator's connected account + 5% application fee), CREATIVE pledges are commerce (destination charge + 5%); Trickl pledges on both categories (no reward, $3–$40; CREATIVE enabled by founder decision 2026-09-01) — chunks ride the existing distribution engine. Fulfillment via idempotent `fulfillPledge` (PENDING→SUCCEEDED guard, counters, FUNDED flip, `PLEDGE` ledger row, creator notification) from both webhooks; `campaign-completion` cron flips status at end date (direct-support: nothing to settle). 268 unit tests green.
+
+**Campaign frontend rebuilt faithfully (2026-09-01):** the earlier CF-original screens were replaced with the Maltivas campaign UX, CF-skinned. Creator side: card-grid campaigns list → **Start a campaign** builder (rules card, About/Category/Funding/Media sections, YouTube videoUrl, **sticky live preview** that mirrors the public page as you type) → per-campaign **workspace with edit tabs** Overview (stats + launch checklist) | Rewards (full AddRewardForm shape with images/limits/physical) | Updates (rich composer) | Backers (amounts, messages, shipping, refunds) | Edit (form + live preview; goal/date locked when live) | Settings (cancel/reactivate/delete). Public: `/campaign/[slug]` is the Maltivas two-column layout — video/cover atop **Story | Updates | Backers** tabs on the left, sticky sidebar (raised, stat grid, **Back-this-campaign button opening the pledge modal**, reward tiers) on the right. Supporter side: `/backed` lists everything a user has pledged to with live progress and their own pledge (incl. refunds). Campaign comments and the per-campaign analytics dashboard remain deliberately unported.
 
 **Crowdfunding bases-check vs Maltivas (2026-09-01):** closed after review — atomic reward-slot claim at fulfillment (cap re-validated on increment; a lost race honors the paid reward and overshoots loudly), creator-initiated full refunds (owner-only; MISSION refunds on the connected account, CREATIVE with reverse_transfer, both returning CF's fee; counters/ledger/notification unwound), cover-image-required-at-launch, physical rewards (deliveryType) collecting a mailing address via Stripe Checkout `shipping_address_collection` stored on the pledge, reward images, a studio Backers panel (name/amount/reward/message/shipping/refund), Kickstarter-style reward liability disclosure on page + in checkout, and a creator accountability warning (studio banner + launch dialog: undelivered promises → removal). Deliberately NOT ported: guest checkout + email double-opt-in (CF is signed-in only), FraudDetector heuristics (creator gate + per-pledge cap instead; revisit at scale), campaign comments/view analytics (defer), event-reward tickets/RSVP (events phase), DAO/governance (never), partial refunds (full only, v1).
 

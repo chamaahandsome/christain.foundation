@@ -21,6 +21,7 @@ const CreateSchema = z.object({
   deliverable: z.string().max(2000).optional(),
   deliveryTimeline: z.string().max(200).optional(),
   coverImageUrl: z.string().url().max(500).optional(),
+  videoUrl: z.string().url().max(500).optional(),
 });
 
 export async function POST(req: Request) {
@@ -75,6 +76,7 @@ export async function POST(req: Request) {
       deliverable: body.deliverable?.trim() || null,
       deliveryTimeline: body.deliveryTimeline?.trim() || null,
       coverImageUrl: body.coverImageUrl ?? null,
+      videoUrl: body.videoUrl ?? null,
     },
   });
   return NextResponse.json({ campaign });

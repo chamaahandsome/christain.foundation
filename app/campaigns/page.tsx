@@ -22,7 +22,15 @@ export default async function CampaignsPage() {
       <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">
         Crowdfunding
       </p>
-      <h1 className="mt-2 text-2xl font-semibold">Campaigns</h1>
+      <div className="mt-2 flex flex-wrap items-baseline justify-between gap-3">
+        <h1 className="text-2xl font-semibold">Campaigns</h1>
+        <Link
+          href="/backed"
+          className="text-sm text-amber-700 hover:underline dark:text-amber-400"
+        >
+          Campaigns you've backed →
+        </Link>
+      </div>
       <p className="mt-1 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-400">
         Missions to stand behind and creative work to bring into being. Every
         pledge goes straight to the creator — nothing is held along the way.

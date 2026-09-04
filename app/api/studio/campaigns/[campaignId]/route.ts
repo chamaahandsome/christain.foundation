@@ -36,6 +36,7 @@ const PatchSchema = z.object({
   deliverable: z.string().max(2000).nullable().optional(),
   deliveryTimeline: z.string().max(200).nullable().optional(),
   coverImageUrl: z.string().url().max(500).nullable().optional(),
+  videoUrl: z.string().url().max(500).nullable().optional(),
 });
 
 export async function PATCH(
@@ -152,6 +153,7 @@ export async function PATCH(
       ? { deliveryTimeline: body.deliveryTimeline?.trim() || null }
       : {}),
     ...(body.coverImageUrl !== undefined ? { coverImageUrl: body.coverImageUrl } : {}),
+    ...(body.videoUrl !== undefined ? { videoUrl: body.videoUrl } : {}),
     ...(!live && body.goalCents !== undefined ? { goalCents: body.goalCents } : {}),
     ...(!live && body.endsAt !== undefined
       ? { endsAt: body.endsAt ? new Date(body.endsAt) : null }
