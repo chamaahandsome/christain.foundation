@@ -4,6 +4,7 @@ import { VideoMarquee, type MarqueeItem } from "@/components/VideoMarquee";
 import { db } from "@/lib/db";
 import { thumbnailUrl } from "@/lib/youtube";
 import showcase from "@/lib/showcase.json";
+import showcaseMusic from "@/lib/showcase-music.json";
 
 export const dynamic = "force-dynamic";
 
@@ -145,9 +146,14 @@ export default async function Home() {
           </div>
         </div>
 
-        {/* The moving shop window — teaching scrolling by */}
+        {/* The moving shop window — teaching scrolling by, music underneath */}
         <div className="pb-16">
-          <VideoMarquee items={marqueeItems} />
+          <VideoMarquee
+            items={marqueeItems}
+            musicRow={
+              showcaseMusic as { videoId: string; title: string; channel: string }[]
+            }
+          />
         </div>
       </section>
 

@@ -183,15 +183,26 @@ function Row({
   );
 }
 
-export function VideoMarquee({ items }: { items: MarqueeItem[] }) {
+export function VideoMarquee({
+  items,
+  musicRow = [],
+}: {
+  items: MarqueeItem[];
+  /** Rendered as its own final row — worship and CHH scrolling under the
+   * teaching (sound doctrine: taught, sung). */
+  musicRow?: MarqueeItem[];
+}) {
   const [playing, setPlaying] = useState<MarqueeItem | null>(null);
 
   if (items.length < 4) return null;
 
-  // Split into up to three rows with alternating directions and speeds.
-  const rowCount = items.length >= 12 ? 3 : 2;
+  // Split into rows with alternating directions and speeds; when a music
+  // row rides along it takes the last slot.
+  const hasMusic = musicRow.length >= 4;
+  const rowCount = hasMusic ? 2 : items.length >= 12 ? 3 : 2;
   const rows: MarqueeItem[][] = Array.from({ length: rowCount }, () => []);
   items.forEach((item, i) => rows[i % rowCount].push(item));
+  if (hasMusic) rows.push(musicRow);
 
   return (
     <div className="space-y-4">
