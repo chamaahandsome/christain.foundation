@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/campaign-completion",
       "schedule": "30 4 * * *"
+    },
+    {
+      "path": "/api/cron/sync-channels",
+      "schedule": "0 5 * * *"
     }
   ]
 }

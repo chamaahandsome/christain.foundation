@@ -10,8 +10,25 @@ export const metadata = {
 };
 
 export default async function MapPage() {
+  // A question appears on the map only once real teaching is placed on it
+  // (directly, or on one of its positions) — an empty question page reads
+  // as an empty platform. Placement happens in /admin/curation.
+  const visiblePlacement = {
+    contentItem: {
+      visibility: "PUBLIC" as const,
+      unavailableAt: null,
+      youtubeVideoId: { not: null },
+      channel: { status: "APPROVED" as const },
+    },
+  };
   const questions = await db.question
     .findMany({
+      where: {
+        OR: [
+          { placements: { some: visiblePlacement } },
+          { positions: { some: { placements: { some: visiblePlacement } } } },
+        ],
+      },
       orderBy: [{ sortOrder: "asc" }],
       include: {
         topic: { select: { name: true } },
@@ -22,6 +39,22 @@ export default async function MapPage() {
 
   const spine = questions.filter((q) => q.tier === QuestionTier.SPINE);
   const disputed = questions.filter((q) => q.tier === QuestionTier.DISPUTED);
+
+  if (questions.length === 0) {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-20 text-center">
+        <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">
+          The Map
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold">Being charted</h1>
+        <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-neutral-600 dark:text-neutral-400">
+          The essentials of the faith, held with certainty — and the disputed
+          questions, presented honestly. We&apos;re placing the strongest
+          teaching on each question now; the map opens as it fills.
+        </p>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10">

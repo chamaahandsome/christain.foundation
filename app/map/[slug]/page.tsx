@@ -120,6 +120,12 @@ export default async function QuestionPage({
   const questionContent = question.placements
     .map((p) => p.contentItem)
     .filter(visible);
+  const positionContent = question.positions.flatMap((pos) =>
+    pos.placements.map((p) => p.contentItem).filter(visible),
+  );
+  // Nothing placed yet → the page doesn't exist yet (matches the map
+  // index filter — no bare "content is being gathered" pages).
+  if (questionContent.length + positionContent.length === 0) notFound();
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10">
