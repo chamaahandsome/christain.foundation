@@ -4,6 +4,7 @@ import { NavLink } from "@/components/NavLink";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { isAdminUser } from "@/lib/admin";
+import { AdminMenu } from "@/components/AdminMenu";
 
 const hasClerkKeys = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
@@ -42,14 +43,7 @@ export async function SiteHeader() {
                 <NavLink href="/feed">Feed</NavLink>
                 <NavLink href="/books">Books</NavLink>
                 <NavLink href="/studio">Studio</NavLink>
-                {admin && (
-                  <Link
-                    href="/admin/applications"
-                    className="rounded-lg px-3 py-1.5 font-medium text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/40"
-                  >
-                    Admin
-                  </Link>
-                )}
+                {admin && <AdminMenu />}
                 <NotificationsBell />
                 <UserButton afterSignOutUrl="/" />
               </SignedIn>

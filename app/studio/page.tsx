@@ -57,6 +57,22 @@ export default async function StudioPage() {
         })
       : [];
 
+  // One approved channel and nothing demanding attention → straight into
+  // the workspace (its Library tab carries Import from YouTube). The picker
+  // only appears for multi-channel owners, team staff, applicants, or when
+  // a re-affirmation or doctrine case needs the creator's eyes.
+  const needsAttention =
+    needsReaffirmation ||
+    reviewCases.some((c) => ["OPEN", "IN_REVIEW", "UPHELD"].includes(c.status));
+  if (
+    channels.length === 1 &&
+    managing.length === 0 &&
+    channels[0].status === "APPROVED" &&
+    !needsAttention
+  ) {
+    redirect(`/studio/channel/${channels[0].id}`);
+  }
+
   if (channels.length === 0 && managing.length === 0) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-10">
