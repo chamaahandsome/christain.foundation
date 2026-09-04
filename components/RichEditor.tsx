@@ -10,6 +10,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Image from "@tiptap/extension-image";
 import Youtube from "@tiptap/extension-youtube";
+import { FieldMark } from "@/components/field-mark";
 
 function ToolbarButton({
   active,
@@ -238,6 +239,7 @@ export function RichEditor({
       }),
       Image,
       Youtube.configure({ nocookie: true, width: 640, height: 360 }),
+      FieldMark,
       Placeholder.configure({ placeholder: placeholder ?? "Write…" }),
     ],
     content: value,

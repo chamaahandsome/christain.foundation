@@ -96,3 +96,12 @@ body {
   border: 0;
   border-radius: 0.75rem;
 }
+
+/* Do-Biz template input sections — <span data-field> fill-in fields */
+.tiptap [data-field],
+.prose-reader [data-field] {
+  background: color-mix(in srgb, #f59e0b 14%, transparent);
+  border-bottom: 1px dashed #d97706;
+  border-radius: 0.2rem;
+  padding: 0 0.15em;
+}

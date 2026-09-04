@@ -37,6 +37,14 @@ const STACK_ICONS: Record<string, React.ReactNode> = {
       <path d="M12 2.69 6.34 8.34a8 8 0 1 0 11.32 0Z" />
     </svg>
   ),
+  calendar: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  ),
   flag: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
       <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
@@ -60,8 +68,10 @@ export default async function ChannelHomePage({
       id: true,
       status: true,
       links: true,
+      name: true,
       stripeChargesEnabled: true,
       stripePayoutsEnabled: true,
+      bookingEnabled: true,
     },
   });
   if (!channel || channel.status !== "APPROVED") notFound();
@@ -165,6 +175,14 @@ export default async function ChannelHomePage({
             campaigns.length === 1
               ? `$${(campaigns[0].raisedCents / 100).toLocaleString()} raised of $${(campaigns[0].goalCents / 100).toLocaleString()}`
               : `${campaigns.length} campaigns taking pledges`,
+        }]
+      : []),
+    ...(channel.bookingEnabled
+      ? [{
+          href: `/@${handle}/book`,
+          icon: "calendar",
+          label: `Book ${channel.name}`,
+          sub: "Speaking, teaching, worship — invite them",
         }]
       : []),
     ...(channel.stripeChargesEnabled && channel.stripePayoutsEnabled

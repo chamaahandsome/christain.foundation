@@ -113,22 +113,37 @@ model Channel {
   tricklProviderLinkCode String?       @unique
   tricklWebhookSecret    String?
   tricklEnabledAt        DateTime?
+  // Do-Biz bookings: when on, the public channel page carries a
+  // "Book {name}" surface that files BookingRequests into the studio.
+  bookingEnabled         Boolean       @default(false)
+  // Do-Biz signature: created once in the first-visit modal (generated
+  // cursive or drawn), stored as a PNG data-URL, reused on every contract.
+  digitalSignature       String?       @db.Text
+  digitalSignatureName   String?
+  // First Business visit seeds the default template library.
+  businessInitializedAt  DateTime?
   ownerId                String
   owner                  User          @relation(fields: [ownerId], references: [id])
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
 
-  contentItems    ContentItem[]
-  series          Series[]
-  followers       Follow[]
-  vouchesGiven    Vouch[]
-  reviewCases     DoctrineReviewCase[]
-  teamMembers     TeamMember[]
-  transactions    Transaction[]
-  ebooks          Ebook[]
-  campaigns       Campaign[]
-  membershipTiers MembershipTier[]
-  memberships     ChannelMembership[]
+  contentItems      ContentItem[]
+  series            Series[]
+  followers         Follow[]
+  vouchesGiven      Vouch[]
+  reviewCases       DoctrineReviewCase[]
+  teamMembers       TeamMember[]
+  transactions      Transaction[]
+  ebooks            Ebook[]
+  campaigns         Campaign[]
+  membershipTiers   MembershipTier[]
+  memberships       ChannelMembership[]
+  contracts         Contract[]
+  bookingRequests   BookingRequest[]
+  businessTemplates BusinessTemplate[]
+  bookableServices  BookableService[]
+  quotes            Quote[]
+  invoices          Invoice[]
 
   @@index([ownerId])
   @@index([status])
@@ -798,6 +813,7 @@ model Campaign {
   shortDescription String           @db.Text
   story            String?          @db.Text
   coverImageUrl    String?          @db.Text
+  videoUrl         String?          @db.Text // YouTube — embedded atop the story
   goalCents        Int
   raisedCents      Int              @default(0)
   backersCount     Int              @default(0)
@@ -927,5 +943,229 @@ model ChannelMembership {
   @@unique([channelId, userId])
   @@index([userId])
   @@index([tierId])
+  @@index([channelId, status])
+}
+
+// ---------- contracts (the Maltivas Do-Biz core, ministry-shaped) ----------
+// Speaking engagements, licensing, event agreements: a creator drafts the
+// document (rich text), signs, and sends a tokenized link; the counterparty
+// signs (typed or drawn) with IP/user-agent recorded; the signed content is
+// hashed for integrity and publicly verifiable. v1 keeps parallel signing,
+// no invoices/milestones/bulk — those follow if Do-Biz usage justifies them.
+
+enum ContractStatus {
+  DRAFT
+  SENT
+  VIEWED
+  SIGNED
+  DECLINED
+  EXPIRED
+  CANCELLED
+}
+
+model Contract {
+  id             String         @id @default(cuid())
+  channelId      String
+  channel        Channel        @relation(fields: [channelId], references: [id])
+  contractNumber String // CON-001 …, unique per channel
+  title          String
+  clientName     String
+  clientEmail    String
+  clientCompany  String?
+  amountCents    Int? // optional — not every agreement carries money
+  currency       String         @default("usd")
+  content        String         @db.Text // rich HTML, sanitized on write
+  signedContent  String?        @db.Text // frozen copy at completion
+  documentHash   String? // SHA-256 of signedContent
+  status         ContractStatus @default(DRAFT)
+  sentAt         DateTime?
+  viewedAt       DateTime?
+  signedAt       DateTime?
+  expiresAt      DateTime?
+  declinedAt     DateTime?
+  declineReason  String?        @db.Text
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  signatures ContractSignature[]
+  signTokens ContractSignToken[]
+  activities ContractActivity[]
+
+  @@unique([channelId, contractNumber])
+  @@index([channelId, status])
+  @@index([clientEmail])
+}
+
+model ContractSignature {
+  id            String    @id @default(cuid())
+  contractId    String
+  contract      Contract  @relation(fields: [contractId], references: [id])
+  signerRole    String // "creator" | "client"
+  signerName    String
+  signerEmail   String
+  signatureType String? // "typed" | "drawn"
+  signature     String?   @db.Text // typed name, or data-URL of the drawing
+  signerIp      String?
+  userAgent     String?   @db.Text
+  signedAt      DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@unique([contractId, signerRole])
+  @@index([contractId])
+}
+
+model ContractSignToken {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  contractId  String
+  contract    Contract  @relation(fields: [contractId], references: [id])
+  signerEmail String
+  signerName  String
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([contractId])
+}
+
+model ContractActivity {
+  id          String   @id @default(cuid())
+  contractId  String
+  contract    Contract @relation(fields: [contractId], references: [id])
+  type        String // created | sent | viewed | signed | declined | cancelled | updated
+  description String
+  createdAt   DateTime @default(now())
+
+  @@index([contractId, createdAt])
+}
+
+// ---------- bookings & templates (Do-Biz, continued) ----------
+// The public books the creator (speaking, ministry visits, sessions);
+// the creator accepts into a prefilled contract draft, and the existing
+// signing flow takes it from there. Templates make repeat agreements a
+// one-click start.
+
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model BookingRequest {
+  id             String        @id @default(cuid())
+  channelId      String
+  channel        Channel       @relation(fields: [channelId], references: [id])
+  serviceId      String? // which bookable service, when chosen
+  userId         String // signed-in requester
+  requesterName  String
+  requesterEmail String
+  organization   String?
+  eventDate      DateTime?
+  location       String?
+  budgetCents    Int?
+  message        String        @db.Text
+  status         BookingStatus @default(PENDING)
+  decisionNote   String?       @db.Text
+  contractId     String? // draft minted on accept
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([channelId, status])
+  @@index([userId])
+}
+
+model BusinessTemplate {
+  id          String   @id @default(cuid())
+  channelId   String
+  channel     Channel  @relation(fields: [channelId], references: [id])
+  name        String
+  category    String   @default("Custom") // Ministry | Creative | Legal | Custom …
+  description String?
+  // Rich HTML with <span data-field="key">placeholder</span> input sections
+  // the editor highlights for fill-in (the Maltivas template pattern).
+  content     String   @db.Text
+  fields      Json? // ordered field keys, informational
+  isDefault   Boolean  @default(false) // seeded library vs creator-saved
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([channelId])
+}
+
+// The creator's hire services (the Maltivas Event/hire_service shape,
+// trimmed): what can be booked, at what rate, on which days, and whether
+// it shows on the public page.
+model BookableService {
+  id            String   @id @default(cuid())
+  channelId     String
+  channel       Channel  @relation(fields: [channelId], references: [id])
+  title         String // "Sunday preaching", "Worship set", "Conference keynote"
+  category      String   @default("speaking") // speaking | teaching | worship | other
+  description   String   @db.Text
+  rateCents     Int? // null = "let's talk"
+  rateUnit      String   @default("event") // hour | day | event | project
+  requirements  String?  @db.Text // what the host provides
+  // Weekly availability: array of day codes ["SUN","FRI","SAT"] — empty or
+  // null means "ask" (no fixed days).
+  availableDays Json?
+  visible       Boolean  @default(true) // shown on the public book page
+  active        Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([channelId])
+}
+
+// Quotes & invoices (Do-Biz workflow legs): booking request → quote →
+// contract → invoice. Light v1 — public token pages, manual payment
+// marking; Stripe collection joins later.
+model Quote {
+  id               String    @id @default(cuid())
+  channelId        String
+  channel          Channel   @relation(fields: [channelId], references: [id])
+  quoteNumber      String // QUO-001 … per channel
+  bookingRequestId String?
+  clientName       String
+  clientEmail      String
+  title            String
+  description      String?   @db.Text
+  amountCents      Int
+  status           String    @default("draft") // draft|sent|viewed|accepted|declined|expired
+  token            String    @unique // public view/accept link
+  sentAt           DateTime?
+  viewedAt         DateTime?
+  acceptedAt       DateTime?
+  declinedAt       DateTime?
+  expiresAt        DateTime?
+  contractId       String? // minted on acceptance
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([channelId, quoteNumber])
+  @@index([channelId, status])
+}
+
+model Invoice {
+  id            String    @id @default(cuid())
+  channelId     String
+  channel       Channel   @relation(fields: [channelId], references: [id])
+  invoiceNumber String // INV-001 … per channel
+  contractId    String?
+  clientName    String
+  clientEmail   String
+  title         String
+  description   String?   @db.Text
+  amountCents   Int
+  status        String    @default("draft") // draft|sent|viewed|paid|void
+  token         String    @unique // public view link
+  dueAt         DateTime?
+  sentAt        DateTime?
+  viewedAt      DateTime?
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([channelId, invoiceNumber])
   @@index([channelId, status])
 }

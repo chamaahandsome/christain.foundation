@@ -68,6 +68,7 @@ export default async function ChannelLayout({
     ...(channel._count.contentItems > 0 ? [{ slug: "videos", label: "Videos" }] : []),
     ...(bookCount > 0 ? [{ slug: "books", label: "Books" }] : []),
     ...(campaignCount > 0 ? [{ slug: "campaigns", label: "Campaigns" }] : []),
+    ...(channel.bookingEnabled ? [{ slug: "book", label: "Book" }] : []),
     ...(canReceiveGifts ? [{ slug: "support", label: "Support" }] : []),
     // Coming as the features land: { slug: "shop" }
   ];

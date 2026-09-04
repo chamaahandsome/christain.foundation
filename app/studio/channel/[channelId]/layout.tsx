@@ -36,10 +36,13 @@ export default async function ChannelStudioLayout({
     access.isOwner && { slug: "payments", label: "Payments" },
   ].filter((tab): tab is StudioTab => Boolean(tab));
 
+
   const tabs: StudioTab[] = [
     hasFeatureAccess(fa, FEATURES.LIBRARY) && { slug: "library", label: "Library" },
     hasFeatureAccess(fa, FEATURES.LIBRARY) && { slug: "books", label: "Books" },
     hasFeatureAccess(fa, FEATURES.LIBRARY) && { slug: "campaigns", label: "Campaigns" },
+    // Do-Biz: the business dashboard (its tabs live inside the page).
+    access.isOwner && { slug: "business", label: "Business" },
     settingsChildren.length > 0 && {
       slug: settingsChildren[0].slug,
       label: "Settings",
