@@ -14,7 +14,7 @@ async function requireLibraryManager(userId: string, channelId: string) {
   const access = await getChannelAccess(
     userId,
     channelId,
-    FEATURES.LIBRARY,
+    FEATURES.BOOKS,
     ACCESS_LEVELS.MANAGER,
   );
   if (!access.channel) return { error: "Channel not found", status: 404 } as const;

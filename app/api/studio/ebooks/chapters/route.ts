@@ -17,7 +17,7 @@ async function gateByEbook(userId: string, ebookId: string) {
   const access = await getChannelAccess(
     userId,
     ebook.channelId,
-    FEATURES.LIBRARY,
+    FEATURES.BOOKS,
     ACCESS_LEVELS.MANAGER,
   );
   if (!access.authorized) return { error: "Forbidden", status: 403 } as const;

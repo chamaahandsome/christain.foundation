@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   const access = await getChannelAccess(
     userId,
     ebook.channelId,
-    FEATURES.LIBRARY,
+    FEATURES.BOOKS,
     ACCESS_LEVELS.MANAGER,
   );
   if (!access.authorized) {
