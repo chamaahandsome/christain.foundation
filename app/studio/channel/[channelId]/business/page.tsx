@@ -2,7 +2,9 @@ import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getChannelAccess } from "@/lib/team-authorization";
+import { ACCESS_LEVELS, FEATURES } from "@/lib/team";
 import { DEFAULT_TEMPLATES } from "@/lib/default-templates";
+import { countSignatureFields } from "@/lib/contract-fields";
 import { BusinessDashboard } from "@/components/BusinessDashboard";
 
 export const dynamic = "force-dynamic";
@@ -18,8 +20,13 @@ export default async function BusinessTab({
   const { userId } = await auth();
   if (!userId) redirect("/signin");
   const { channelId } = await params;
-  const access = await getChannelAccess(userId, channelId);
-  if (!access.channel || !access.isOwner) notFound();
+  const access = await getChannelAccess(
+    userId,
+    channelId,
+    FEATURES.BUSINESS,
+    ACCESS_LEVELS.MANAGER,
+  );
+  if (!access.channel || !access.authorized) notFound();
 
   // First visit: seed the default template library.
   const channel = await db.channel.findUniqueOrThrow({
@@ -48,6 +55,39 @@ export default async function BusinessTab({
       where: { id: channelId },
       data: { businessInitializedAt: new Date() },
     });
+  } else {
+    // Keep the seeded library current: defaults are read-only (creator
+    // saves become new rows), so upgraded bodies can replace them safely.
+    const existing = await db.businessTemplate.findMany({
+      where: { channelId, isDefault: true },
+      select: { id: true, name: true, content: true },
+    });
+    for (const tpl of DEFAULT_TEMPLATES) {
+      const match = existing.find((t) => t.name === tpl.name);
+      if (!match) {
+        await db.businessTemplate.create({
+          data: {
+            channelId,
+            name: tpl.name,
+            category: tpl.category,
+            description: tpl.description,
+            content: tpl.content,
+            fields: tpl.fields,
+            isDefault: true,
+          },
+        });
+      } else if (match.content !== tpl.content) {
+        await db.businessTemplate.update({
+          where: { id: match.id },
+          data: {
+            content: tpl.content,
+            category: tpl.category,
+            description: tpl.description,
+            fields: tpl.fields,
+          },
+        });
+      }
+    }
   }
 
   const [templates, contracts, bookings, services, quotes, invoices] =
@@ -60,7 +100,10 @@ export default async function BusinessTab({
       db.contract.findMany({
         where: { channelId },
         orderBy: { updatedAt: "desc" },
-        include: { activities: { orderBy: { createdAt: "desc" }, take: 1 } },
+        include: {
+          activities: { orderBy: { createdAt: "desc" }, take: 1 },
+          signatures: { select: { signerRole: true, signedAt: true } },
+        },
       }),
       db.bookingRequest.findMany({
         where: { channelId },
@@ -84,17 +127,24 @@ export default async function BusinessTab({
       bookingEnabled={channel.bookingEnabled}
       hasSignature={Boolean(channel.digitalSignature)}
       templates={templates}
-      contracts={contracts.map((c) => ({
-        id: c.id,
-        contractNumber: c.contractNumber,
-        title: c.title,
-        clientName: c.clientName,
-        status: c.status,
-        preview: strip(c.content).slice(0, 160),
-        signedAt: c.signedAt?.toLocaleDateString() ?? null,
-        date: c.createdAt.toLocaleDateString(),
-        lastActivity: c.activities[0]?.description ?? null,
-      }))}
+      contracts={contracts.map((c) => {
+        const sigFields = countSignatureFields(c.content);
+        // Chip-less documents still collect two signatures at send/sign.
+        const sigTotal = Math.max(sigFields.creator + sigFields.client, 2);
+        return {
+          id: c.id,
+          contractNumber: c.contractNumber,
+          title: c.title,
+          clientName: c.clientName,
+          status: c.status,
+          preview: strip(c.content).slice(0, 420),
+          signedAt: c.signedAt?.toLocaleDateString() ?? null,
+          date: c.createdAt.toLocaleDateString(),
+          lastActivity: c.activities[0]?.description ?? null,
+          sigSigned: c.signatures.filter((s) => s.signedAt).length,
+          sigTotal,
+        };
+      })}
       services={services.map((s) => ({
         id: s.id,
         title: s.title,

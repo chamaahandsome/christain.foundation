@@ -43,7 +43,8 @@ export function validateContractDraft(input: {
   return null;
 }
 
-/** A token is usable while unexpired and unused, on a SENT/VIEWED contract. */
+/** A token is usable while unexpired and unused, on a contract still open
+ * for signing (SENT/VIEWED, or PARTIALLY_SIGNED while co-signers remain). */
 export function tokenUsable(
   t: { expiresAt: Date; usedAt: Date | null },
   contractStatus: string,
@@ -51,7 +52,13 @@ export function tokenUsable(
 ): "ok" | "used" | "expired" | "closed" {
   if (t.usedAt) return "used";
   if (t.expiresAt.getTime() <= now.getTime()) return "expired";
-  if (contractStatus !== "SENT" && contractStatus !== "VIEWED") return "closed";
+  if (
+    contractStatus !== "SENT" &&
+    contractStatus !== "VIEWED" &&
+    contractStatus !== "PARTIALLY_SIGNED"
+  ) {
+    return "closed";
+  }
   return "ok";
 }
 
@@ -117,3 +124,7 @@ export function bookingContractContent(b: {
     `<h3>Terms</h3><ul><li>Cancellation…</li><li>This agreement is governed by…</li></ul>`
   );
 }
+
+// Document field-bubble helpers live in lib/contract-fields (no node
+// imports — client components use them too).
+export * from "./contract-fields";

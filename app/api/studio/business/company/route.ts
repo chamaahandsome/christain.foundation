@@ -5,24 +5,23 @@ import { db } from "@/lib/db";
 import { getChannelAccess } from "@/lib/team-authorization";
 import { ACCESS_LEVELS, FEATURES } from "@/lib/team";
 
-// The creator's stored digital signature (first-visit modal): a PNG
-// data-URL — generated cursive or hand-drawn — reused on every contract.
+// Do-Biz company info — the letterhead details printed on invoices,
+// quotes, and contracts (email + address; the logo has its own route).
 
-const BodySchema = z.object({
+const Schema = z.object({
   channelId: z.string().min(1),
-  name: z.string().min(2).max(200),
-  signature: z.string().startsWith("data:image/png").max(500_000),
+  businessEmail: z.string().email().max(320).nullable().optional(),
+  businessAddress: z.string().max(500).nullable().optional(),
 });
 
 export async function POST(req: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const parsed = BodySchema.safeParse(await req.json().catch(() => null));
+  const parsed = Schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
-  const { channelId, name, signature } = parsed.data;
-
+  const { channelId, businessEmail, businessAddress } = parsed.data;
   const access = await getChannelAccess(
     userId,
     channelId,
@@ -34,7 +33,12 @@ export async function POST(req: Request) {
 
   await db.channel.update({
     where: { id: channelId },
-    data: { digitalSignature: signature, digitalSignatureName: name.trim() },
+    data: {
+      ...(businessEmail !== undefined ? { businessEmail } : {}),
+      ...(businessAddress !== undefined
+        ? { businessAddress: businessAddress?.trim() || null }
+        : {}),
+    },
   });
   return NextResponse.json({ ok: true });
 }

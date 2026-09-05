@@ -19,7 +19,7 @@ async function requireManager(userId: string, campaignId: string) {
   const access = await getChannelAccess(
     userId,
     campaign.channelId,
-    FEATURES.LIBRARY,
+    FEATURES.CAMPAIGNS,
     ACCESS_LEVELS.MANAGER,
   );
   if (!access.authorized) return { error: "Forbidden", status: 403 } as const;

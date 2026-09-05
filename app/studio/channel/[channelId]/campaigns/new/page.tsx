@@ -18,7 +18,7 @@ export default async function NewCampaignPage({
   const access = await getChannelAccess(
     userId,
     channelId,
-    FEATURES.LIBRARY,
+    FEATURES.CAMPAIGNS,
     ACCESS_LEVELS.MANAGER,
   );
   if (!access.channel || !access.authorized) notFound();

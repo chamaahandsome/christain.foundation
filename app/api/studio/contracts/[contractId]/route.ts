@@ -4,11 +4,14 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import {
   SIGN_TOKEN_TTL_DAYS,
+  countUnassignedClientChips,
   generateSignToken,
+  getUniqueRecipients,
   validateContractDraft,
 } from "@/lib/contracts";
 import { sanitizeRichHtml } from "@/lib/sanitize-html";
 import { getChannelAccess } from "@/lib/team-authorization";
+import { ACCESS_LEVELS, FEATURES } from "@/lib/team";
 import { sendContractSigningEmail } from "@/lib/business-emails";
 
 // Per-contract management: edit (drafts only), send (creator signs + a
@@ -20,8 +23,13 @@ async function requireOwner(userId: string, contractId: string) {
     include: { channel: { select: { id: true, ownerId: true, name: true } } },
   });
   if (!contract) return { error: "Contract not found", status: 404 } as const;
-  const access = await getChannelAccess(userId, contract.channelId);
-  if (!access.isOwner) return { error: "Forbidden", status: 403 } as const;
+  const access = await getChannelAccess(
+    userId,
+    contract.channelId,
+    FEATURES.BUSINESS,
+    ACCESS_LEVELS.MANAGER,
+  );
+  if (!access.authorized) return { error: "Forbidden", status: 403 } as const;
   return { contract } as const;
 }
 
@@ -33,6 +41,7 @@ const PatchSchema = z.object({
   clientCompany: z.string().max(200).nullable().optional(),
   amountCents: z.number().int().nullable().optional(),
   content: z.string().min(1).max(200_000).optional(),
+  logoUrl: z.string().url().max(2000).nullable().optional(),
   expiresAt: z.string().datetime().nullable().optional(),
 });
 
@@ -92,8 +101,29 @@ export async function PATCH(
       where: { id: userId },
       select: { email: true, name: true },
     });
-    const token = generateSignToken();
     const expiresAt = new Date(Date.now() + SIGN_TOKEN_TTL_DAYS * 86_400_000);
+
+    // One signing token per unique recipient (the Maltivas multi-signer
+    // flow): every client chip carrying an email is a recipient; chips
+    // without an email — and chip-less documents — fall to clientEmail.
+    const assigned = getUniqueRecipients(contract.content);
+    const needsDefault =
+      assigned.length === 0 || countUnassignedClientChips(contract.content) > 0;
+    const targets = [...assigned];
+    if (
+      needsDefault &&
+      !targets.some((t) => t.email === contract.clientEmail.toLowerCase())
+    ) {
+      targets.push({
+        email: contract.clientEmail.toLowerCase(),
+        name: contract.clientName,
+      });
+    }
+    const tokens = targets.map((target) => ({
+      token: generateSignToken(),
+      signerEmail: target.email,
+      signerName: target.name,
+    }));
 
     await db.$transaction([
       db.contractSignature.create({
@@ -107,14 +137,14 @@ export async function PATCH(
           signedAt: new Date(),
         },
       }),
-      db.contractSignToken.create({
-        data: {
-          token,
+      db.contractSignToken.createMany({
+        data: tokens.map((tk) => ({
+          token: tk.token,
           contractId: contract.id,
-          signerEmail: contract.clientEmail,
-          signerName: contract.clientName,
+          signerEmail: tk.signerEmail,
+          signerName: tk.signerName,
           expiresAt,
-        },
+        })),
       }),
       db.contract.update({
         where: { id: contract.id },
@@ -124,7 +154,12 @@ export async function PATCH(
           activities: {
             create: {
               type: "sent",
-              description: `Signing link created for ${contract.clientName} <${contract.clientEmail}>`,
+              description:
+                tokens.length === 1
+                  ? `Signing link created for ${tokens[0].signerName} <${tokens[0].signerEmail}>`
+                  : `Signing links created for ${tokens.length} recipients: ${tokens
+                      .map((tk) => tk.signerEmail)
+                      .join(", ")}`,
             },
           },
         },
@@ -132,27 +167,36 @@ export async function PATCH(
     ]);
 
     const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "";
-    const emailed = origin
-      ? await sendContractSigningEmail({
-          to: contract.clientEmail,
-          clientName: contract.clientName,
+    let emailedCount = 0;
+    if (origin) {
+      for (const tk of tokens) {
+        const ok = await sendContractSigningEmail({
+          to: tk.signerEmail,
+          clientName: tk.signerName,
           channelName: gate.contract.channel.name,
           contractTitle: contract.title,
           contractNumber: contract.contractNumber,
-          signingUrl: `${origin}/sign/${token}`,
+          signingUrl: `${origin}/sign/${tk.token}`,
           replyTo: user?.email ?? undefined,
-        })
-      : false;
-    if (emailed) {
-      await db.contractActivity.create({
-        data: {
-          contractId: contract.id,
-          type: "sent",
-          description: `Signing link emailed to ${contract.clientEmail}`,
-        },
-      });
+        });
+        if (ok) emailedCount += 1;
+      }
+      if (emailedCount > 0) {
+        await db.contractActivity.create({
+          data: {
+            contractId: contract.id,
+            type: "sent",
+            description: `Signing link emailed to ${emailedCount} of ${tokens.length} recipient${tokens.length > 1 ? "s" : ""}`,
+          },
+        });
+      }
     }
-    return NextResponse.json({ ok: true, token, emailed });
+    return NextResponse.json({
+      ok: true,
+      token: tokens[0].token,
+      recipients: tokens.length,
+      emailed: emailedCount,
+    });
   }
 
   // edit — drafts only
@@ -179,6 +223,7 @@ export async function PATCH(
       ...(body.clientCompany !== undefined
         ? { clientCompany: body.clientCompany?.trim() || null }
         : {}),
+      ...(body.logoUrl !== undefined ? { logoUrl: body.logoUrl } : {}),
       ...(body.expiresAt !== undefined
         ? { expiresAt: body.expiresAt ? new Date(body.expiresAt) : null }
         : {}),

@@ -172,19 +172,75 @@ The studio Business tab (top-level, owner-only) is the Do-Biz dashboard:
 (Services / Requests sub-tabs; requests → Send quote, Accept→contract, or
 decline) · **Quotes** · **Contracts** (TemplateModal — search/filters/
 categories left, card grid with hover previews right; selecting creates the
-contract and opens the **editor page**: header bar with inline title/status
-dot/save pill/Save/Send, paper canvas with lock banner once sent, details
-sidebar with client/value/signature/activity) · **Invoices**. First visit
-seeds the ministry template library (7 agreements with highlighted
-`data-field` fill-ins, preserved in TipTap by the FieldMark extension) and
-opens the signature modal (generated-cursive-from-name or drawn; stored
-once, signs every send). Public surfaces: `/@handle/book` (service cards
-with rates/days → request), `/sign/[token]`, `/verify/[id]`,
-`/quote/[token]` (accept→contract), `/invoice/[token]`. SES emails ride
-every leg (signing links, signed confirmations, booking requests/decisions,
-quotes, invoices) via `EMAIL_DOMAIN`. Still to port when needed: inline
-signature bubbles (multi-signer field placement), bulk sends/batches,
-sequential signing, PDF pipeline, reminders, invoice payment collection.
+contract and opens the **editor page**. 2026-09-04: the editor is the full
+Maltivas experience — `DocEditor` (floating pill toolbar over a paper
+canvas; + menu inserts Table/Rule/Image/**Input field**/**Signature
+field**; paragraph-style dropdown, B/I/U/S, alignment, link, undo/redo)
+with click-to-configure **field bubbles** (Field Settings popover: Filled
+by You now vs Recipient at signing — `data-filled-by="recipient"`) and
+**signature chips** (`data-signature-field` + `data-signer`, You/Client
+toggle). Template picker gained the **Preview step** (document mock +
+legal disclaimer + Agree & Continue). Editor page adds a **Recipients
+panel** (signature-field counts, missing-recipient warnings, signer
+fill-in list) and a **Preview modal** showing the doc as the client sees
+it (creator chip → stored signature). Signing: `/sign/[token]` renders
+the creator's signature in place, collects recipient fill-ins as a form,
+and the sign route freezes `signedContent` with answers + both real
+signatures substituted (all pure helpers in lib/contracts, tested).
+**Quotes & invoices share the same editor**: their create forms embed
+DocEditor seeded with line-item document bodies (DEFAULT_QUOTE_DOC /
+DEFAULT_INVOICE_DOC); descriptions store sanitized HTML rendered on the
+token pages; accepted quotes carry their document into the minted
+contract. Template library rewritten comprehensively (numbered legal
+sections, governing-law/entire-agreement boilerplate, signature chips in
+all 7); seeded defaults refresh on visit since defaults are read-only.
+2026-09-04 (second pass, after a full Maltivas Do-Biz sweep):
+**multi-recipient signing** — client chips carry data-email/
+data-signer-name via the Signature Assignment popover; send mints one
+ContractSignToken per unique email (unassigned chips fall to
+clientEmail); ContractSignature is unique per (contract, role, email);
+partial signs set PARTIALLY_SIGNED, fill recipient fields into content
+so co-signers see them, and the last signature freezes signedContent
+with every party substituted + hash. The public sign page shows a
+signer roster (sender/you/pending per recipient). **Invoice↔contract
+linking**: sidebar picker (invoices PATCH action "link"); a linked
+draft invoice is auto-emailed when the contract completes. **Logos**:
+Channel.businessLogoUrl + businessLogoHistory (3 recents,
+click-to-use), Contract.logoUrl snapshot, letterhead on the editor
+preview/sign/quote/invoice pages. **Tours**: FeatureTour card carousel
+(localStorage first-run + replay) on the Business dashboard (✨ Guide)
+and contract editor (✨ Show/Replay tour). **Teams**: FEATURES grew
+books/campaigns/memberships/business (legacy maps inherit library for
+books/campaigns); all Do-Biz routes accept BUSINESS managers, layout
+tabs follow. Editor page breaks out to full width; contract cards are
+Maltivas mini-page thumbnails (snippet, status, ✍ n/N signature
+count); paragraph menu has the full block-style list. Known unported
+(from the sweep): sequential signing order, reminder cron + expiry
+warnings, PDF export, bulk sends/batches, invoice payment collection,
+partial payments, received-invoices AP inbox, client CRM/metrics,
+per-field signature placement dialogs (CF signs once per signer), i18n.
+2026-09-04 (third pass): **structured quotes & invoices** — the Maltivas
+editor layout: dedicated pages (business/{invoices,quotes}/new and /[id])
+with a form (client, line items qty×rate, tax bps, discount, payment
+terms → due date at send / valid-days, notes/terms) beside a live A4
+preview; BillDocument (pure, RSC-safe) renders the same paper on the
+public token pages; lib/billing (parseLineItems/computeBillTotals/
+dueDateFor, tested); routes gained edit action + computed totals; legacy
+description-HTML rows still render. Template library rewritten
+comprehensively (10 templates incl. Work-for-Hire, Photography/
+Videography, Guest Appearance; recitals, numbered sub-claused sections,
+shared General Provisions with force majeure/notices/severability/
+Matt-18 dispute clause). Contract canvas is sharp paper (3px radius,
+document shadow, page width). FeatureTour got anchored spotlight steps
+(CSS-selector anchors, dimmed backdrop, ring + docked card). Overview
+tab shows Recent-activity contract thumbnail cards.
+First visit seeds the library and opens the signature modal
+(generated-cursive-from-name or drawn; stored once, signs every send).
+Public surfaces: `/@handle/book` (service cards with rates/days →
+request), `/sign/[token]`, `/verify/[id]`, `/quote/[token]`
+(accept→contract), `/invoice/[token]`. SES emails ride every leg via
+`EMAIL_DOMAIN`. Still to port when needed: bulk sends/batches, sequential
+signing, PDF pipeline, reminders, invoice payment collection.
 
 ### Commerce & events (ported/adapted)
 ```
@@ -241,6 +297,21 @@ Not ported: conventions/festivals full stacks, awards, Do-Biz, comics, Tolkoin, 
 **Cross-cutting debts cleared 2026-08-16 (§8):** editorial tooling shipped — `/admin/curation` places library teaching onto topics/questions/positions (the founding-cohort indexing tool) and `/admin/shelves` manages the explore rows; watch-page comments with post-moderation and a safety queue at `/admin/moderation` (distinct from the doctrine audit); dead-embed cron (`/api/cron/check-embeds`, daily via vercel.json, thumbnail-liveness signal — marks `ContentItem.unavailableAt`, public surfaces filter it, recovery is automatic); sitemap + robots; admin nav unified; admin checks accept `ADMIN_EMAILS` (verified addresses) alongside `ADMIN_USER_IDS`. Search now indexes creator tags (`searchText`); **true transcript search still needs owner-OAuth captions.download** — revisit when creators connect Google (the verification flow already establishes that connection).
 
 **Ebooks shipped 2026-08-26 (first purchasable, phase 6):** chapter HTML in the database (the Maltivas model — no file to pirate), studio Books tab (create/price/publish, chapter editor, free previews; paid publishing gated on Stripe payouts per §9.4), public `/book/[id]` with locked chapter list, checkout via Stripe Checkout (destination charge + 5% application fee) or a Trickl micro-payment goal (eligibility from the window rules), webhook fulfillment writing ledger `Transaction` rows + idempotent grants + buyer notification, protected reader at `/read/[ebookId]` (server-side sanitized HTML, watermark/no-select/no-copy chrome), buyer library at `/books`, and a Books shelf on channel pages. Stripe webhook now also needs the `checkout.session.completed` event enabled.
+
+**Ebook frontend rebuilt faithfully (2026-09-04):** the Maltivas ebook
+experience over CF's chapters-in-DB substrate. Creator side: books card grid →
+new-book page (metadata + cover + the entire-book-import vs
+write-chapter-by-chapter choice) → per-book workspace (chapter list with
+locked/free-preview toggles and inline rich editing, EPUB/PDF import, pricing
+card, cover, publish with the §9.4 paid gate, sales stat). Public: `/ebooks`
+store grid across channels (linked from the site nav), and the **reader**
+rebuilt as the EBookReader experience: TOC sidebar, prev/next + arrow keys,
+chapter progress with an amber hairline, typography settings persisted per
+device (size, serif/sans, light/sepia/dark), tiled watermark + copy blockers,
+and the inline paywall when a free preview runs out (buy buttons in place,
+locked chapters never leave the server). Deliberately unported: epub.js file
+rendering (contradicts chapters-in-DB anti-piracy), the email gate (CF is
+signed-in), ebook comments, bookmarks (later).
 
 **Tips shipped 2026-09-01 ("A Cup of Cold Water", §9 Mode B, both rails):** Support tab on channel pages (Matt 10:42 verse, presets $3/$5/$10/$25 + custom, optional note, per-transaction non-deductibility disclosure). Stripe rail: DIRECT charge on the creator's connected account (creator is merchant of record) with CF's 5% as `application_fee_amount`; Connect-endpoint webhook ledgers the GIFT + notifies the creator. Trickl rail (per the 2026-09-01 amendment): a micro-payment goal ($3–$40, CF's 5% kept chunk-by-chunk at forwarding) with an optional **monthly recurring cup** (`frequency: MONTHLY`; each `goal.cycle_paid` ledgers its own GIFT, idempotent on `trickl_{goalId}_c{cycle}`). Trickl-codebase review corrected two transport bugs before launch: webhook signatures are HMAC over `${timestamp}.${body}` (X-Trickl-Timestamp, 5-min replay window), and webhook amounts are DOLLARS while goal creation takes CENTS — CF now stamps `cfAmountCents` into goal metadata as the authoritative figure. Shared idempotent `recordGift()` serves both rails; smoke-tested end-to-end via `scripts/test-trickl-webhook.mjs` (suite + tip modes, 8/8).
 

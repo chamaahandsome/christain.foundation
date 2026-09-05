@@ -21,7 +21,7 @@ export default async function CampaignWorkspace({
   const access = await getChannelAccess(
     userId,
     channelId,
-    FEATURES.LIBRARY,
+    FEATURES.CAMPAIGNS,
     ACCESS_LEVELS.MANAGER,
   );
   if (!access.channel || !access.authorized) notFound();

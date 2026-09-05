@@ -6,6 +6,14 @@
 export const FEATURES = {
   /** Content & YouTube ingestion — everything under the channel's library. */
   LIBRARY: "library",
+  /** Books: authoring, importing, pricing, publishing. */
+  BOOKS: "books",
+  /** Crowdfunding campaigns: create, edit, rewards, backers. */
+  CAMPAIGNS: "campaigns",
+  /** Membership tiers and members-only content. */
+  MEMBERSHIPS: "memberships",
+  /** Do-Biz: contracts, bookings, quotes, invoices. */
+  BUSINESS: "business",
   /** Inviting/removing team members and editing their access. */
   TEAM: "team",
   /** Channel analytics (read-oriented; viewer is enough). */
@@ -49,6 +57,13 @@ export function parseFeatureAccess(raw: unknown): FeatureAccessMap {
     if (known.has(key) && typeof value === "string" && levels.has(value)) {
       map[key as Feature] = value as AccessLevel;
     }
+  }
+  // Legacy maps predate books/campaigns as their own features — both lived
+  // under "library", so an unset value inherits the library level rather
+  // than silently locking existing team members out.
+  if (map.books === undefined && map.library !== undefined) map.books = map.library;
+  if (map.campaigns === undefined && map.library !== undefined) {
+    map.campaigns = map.library;
   }
   return map;
 }

@@ -5,6 +5,7 @@ import { NotificationType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { bookingContractContent, nextContractNumber } from "@/lib/contracts";
 import { getChannelAccess } from "@/lib/team-authorization";
+import { ACCESS_LEVELS, FEATURES } from "@/lib/team";
 import { sendBookingDecisionEmail } from "@/lib/business-emails";
 
 // Studio booking management — owner-only. Accepting a request mints a
@@ -26,9 +27,14 @@ export async function PATCH(req: Request) {
   }
   const body = parsed.data;
 
-  const access = await getChannelAccess(userId, body.channelId);
+  const access = await getChannelAccess(
+    userId,
+    body.channelId,
+    FEATURES.BUSINESS,
+    ACCESS_LEVELS.MANAGER,
+  );
   if (!access.channel) return NextResponse.json({ error: "Channel not found" }, { status: 404 });
-  if (!access.isOwner) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!access.authorized) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   if (body.action === "enable" || body.action === "disable") {
     await db.channel.update({

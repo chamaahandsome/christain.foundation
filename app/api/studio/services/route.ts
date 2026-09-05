@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getChannelAccess } from "@/lib/team-authorization";
+import { ACCESS_LEVELS, FEATURES } from "@/lib/team";
 
 // Bookable services (the Maltivas hire_service shape): what can be booked,
 // at what rate, on which days, and whether it's visible on the public page.
@@ -28,9 +29,14 @@ const PatchSchema = CreateSchema.partial().extend({
 });
 
 async function requireOwner(userId: string, channelId: string) {
-  const access = await getChannelAccess(userId, channelId);
+  const access = await getChannelAccess(
+    userId,
+    channelId,
+    FEATURES.BUSINESS,
+    ACCESS_LEVELS.MANAGER,
+  );
   if (!access.channel) return { error: "Channel not found", status: 404 } as const;
-  if (!access.isOwner) return { error: "Forbidden", status: 403 } as const;
+  if (!access.authorized) return { error: "Forbidden", status: 403 } as const;
   return { ok: true } as const;
 }
 

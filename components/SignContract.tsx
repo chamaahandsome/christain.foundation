@@ -10,12 +10,16 @@ export function SignContract({
   token,
   signerName,
   consentText,
+  fields = [],
 }: {
   token: string;
   signerName: string;
   consentText: string;
+  /** data-filled-by="recipient" fill-ins the signer must answer */
+  fields?: { key: string; label: string }[];
 }) {
   const [name, setName] = useState(signerName);
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [mode, setMode] = useState<"typed" | "drawn">("typed");
   const [drawn, setDrawn] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
@@ -23,9 +27,9 @@ export function SignContract({
   const [declineReason, setDeclineReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<"signed" | "declined" | null>(null);
+  const [done, setDone] = useState<"signed" | "partial" | "declined" | null>(null);
 
-  async function post(body: unknown): Promise<boolean> {
+  async function post(body: unknown): Promise<Record<string, unknown> | null> {
     setBusy(true);
     setError(null);
     try {
@@ -37,9 +41,9 @@ export function SignContract({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error ?? `Failed (${res.status})`);
-        return false;
+        return null;
       }
-      return true;
+      return data;
     } finally {
       setBusy(false);
     }
@@ -48,8 +52,16 @@ export function SignContract({
   if (done === "signed") {
     return (
       <div className="rounded-2xl border border-green-300 bg-green-50 p-6 text-sm leading-6 text-green-900 dark:border-green-800 dark:bg-green-950/40 dark:text-green-200">
-        ✍️ Signed. Both parties now hold a fully executed agreement — keep this
+        ✍️ Signed. All parties now hold a fully executed agreement — keep this
         page's verification link for your records.
+      </div>
+    );
+  }
+  if (done === "partial") {
+    return (
+      <div className="rounded-2xl border border-amber-300 bg-amber-50 p-6 text-sm leading-6 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+        ✍️ Your signature is recorded. The agreement completes once the
+        remaining signer{"(s)"} sign — everyone is emailed the executed copy.
       </div>
     );
   }
@@ -64,6 +76,34 @@ export function SignContract({
   return (
     <div className="rounded-2xl border border-neutral-200 p-6 dark:border-neutral-800">
       <h2 className="font-semibold">Sign this agreement</h2>
+
+      {fields.length > 0 && (
+        <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50/60 p-4 dark:border-sky-900 dark:bg-sky-950/30">
+          <p className="text-xs font-semibold uppercase tracking-widest text-sky-700 dark:text-sky-300">
+            Your details for the agreement
+          </p>
+          <p className="mt-1 text-xs text-neutral-500">
+            These answers are written into the document before it&apos;s signed.
+          </p>
+          <div className="mt-3 space-y-2.5">
+            {fields.map((f) => (
+              <label key={f.key} className="block">
+                <span className="text-xs font-medium capitalize text-neutral-600 dark:text-neutral-300">
+                  {f.key.replace(/-/g, " ")}
+                </span>
+                <input
+                  value={fieldValues[f.key] ?? ""}
+                  onChange={(e) =>
+                    setFieldValues((v) => ({ ...v, [f.key]: e.target.value }))
+                  }
+                  placeholder={f.label}
+                  className="mt-0.5 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-sky-500 dark:border-neutral-700 dark:bg-neutral-900"
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       <label className="mt-4 block text-xs font-medium text-neutral-500">
         Your full legal name
@@ -118,7 +158,8 @@ export function SignContract({
             busy ||
             !consent ||
             name.trim().length < 2 ||
-            (mode === "drawn" && !drawn)
+            (mode === "drawn" && !drawn) ||
+            fields.some((f) => !fieldValues[f.key]?.trim())
           }
           onClick={() => {
             void post({
@@ -126,7 +167,10 @@ export function SignContract({
               signerName: name,
               signatureType: mode,
               signature: mode === "typed" ? name.trim() : drawn,
-            }).then((ok) => ok && setDone("signed"));
+              ...(fields.length > 0 ? { fieldValues } : {}),
+            }).then((data) => {
+              if (data) setDone(data.complete === false ? "partial" : "signed");
+            });
           }}
           className="rounded-xl bg-linear-to-r from-amber-500 to-orange-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-amber-400 hover:to-orange-500 disabled:opacity-50"
         >
@@ -155,7 +199,7 @@ export function SignContract({
             disabled={busy}
             onClick={() => {
               void post({ action: "decline", declineReason }).then(
-                (ok) => ok && setDone("declined"),
+                (data) => data && setDone("declined"),
               );
             }}
             className="mt-2 rounded-lg border border-red-300 px-4 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"

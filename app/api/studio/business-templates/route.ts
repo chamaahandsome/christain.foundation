@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { validateTemplate } from "@/lib/contracts";
 import { sanitizeRichHtml } from "@/lib/sanitize-html";
 import { getChannelAccess } from "@/lib/team-authorization";
+import { ACCESS_LEVELS, FEATURES } from "@/lib/team";
 
 // Business templates — reusable contract bodies (owner-only). A contract's
 // "Save as template" and the create form's template picker both land here.
@@ -17,9 +18,14 @@ const CreateSchema = z.object({
 });
 
 async function requireOwner(userId: string, channelId: string) {
-  const access = await getChannelAccess(userId, channelId);
+  const access = await getChannelAccess(
+    userId,
+    channelId,
+    FEATURES.BUSINESS,
+    ACCESS_LEVELS.MANAGER,
+  );
   if (!access.channel) return { error: "Channel not found", status: 404 } as const;
-  if (!access.isOwner) return { error: "Forbidden", status: 403 } as const;
+  if (!access.authorized) return { error: "Forbidden", status: 403 } as const;
   return { ok: true } as const;
 }
 

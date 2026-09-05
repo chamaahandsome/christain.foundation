@@ -5,7 +5,27 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-const FEATURES = ["library", "team", "analytics", "settings"] as const;
+// Every studio surface a member can be granted (mirrors lib/team FEATURES).
+const FEATURES = [
+  "library",
+  "books",
+  "campaigns",
+  "memberships",
+  "business",
+  "analytics",
+  "team",
+  "settings",
+] as const;
+const FEATURE_LABELS: Record<(typeof FEATURES)[number], string> = {
+  library: "Library & videos",
+  books: "Books",
+  campaigns: "Campaigns",
+  memberships: "Memberships",
+  business: "Business (Do-Biz)",
+  analytics: "Analytics",
+  team: "Team",
+  settings: "Settings",
+};
 const LEVELS = ["none", "viewer", "manager"] as const;
 
 type FeatureAccess = Record<string, string>;
@@ -25,8 +45,12 @@ interface Member {
 
 const DEFAULT_ACCESS: FeatureAccess = {
   library: "manager",
-  team: "none",
+  books: "manager",
+  campaigns: "manager",
+  memberships: "none",
+  business: "none",
   analytics: "viewer",
+  team: "none",
   settings: "none",
 };
 
@@ -201,7 +225,7 @@ export function TeamManager({ channelId }: { channelId: string }) {
                 ) : (
                   <p className="mt-3 text-xs text-neutral-500">
                     {FEATURES.filter((f) => (member.featureAccess[f] ?? "none") !== "none")
-                      .map((f) => `${f}: ${member.featureAccess[f]}`)
+                      .map((f) => `${FEATURE_LABELS[f]}: ${member.featureAccess[f]}`)
                       .join(" · ") || "No access granted."}
                   </p>
                 )}
@@ -224,10 +248,10 @@ function AccessEditor({
   compact?: boolean;
 }) {
   return (
-    <div className={`mt-3 grid gap-2 ${compact ? "sm:grid-cols-4" : "sm:grid-cols-2"}`}>
+    <div className={`mt-3 grid gap-2 sm:grid-cols-2 ${compact ? "lg:grid-cols-4" : ""}`}>
       {FEATURES.map((feature) => (
         <label key={feature} className="text-sm">
-          <span className="mb-1 block font-medium capitalize">{feature}</span>
+          <span className="mb-1 block text-xs font-medium">{FEATURE_LABELS[feature]}</span>
           <select
             value={access[feature] ?? "none"}
             onChange={(e) => onChange({ ...access, [feature]: e.target.value })}

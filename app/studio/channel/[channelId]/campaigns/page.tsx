@@ -26,12 +26,12 @@ export default async function CampaignsTab({
   const { userId } = await auth();
   if (!userId) redirect("/signin");
   const { channelId } = await params;
-  const access = await getChannelAccess(userId, channelId, FEATURES.LIBRARY);
+  const access = await getChannelAccess(userId, channelId, FEATURES.CAMPAIGNS);
   if (!access.channel || !access.authorized) notFound();
 
   const canEdit =
     access.isOwner ||
-    (access.featureAccess[FEATURES.LIBRARY] ?? "none") === ACCESS_LEVELS.MANAGER;
+    (access.featureAccess[FEATURES.CAMPAIGNS] ?? "none") === ACCESS_LEVELS.MANAGER;
 
   const campaigns = await db.campaign.findMany({
     where: { channelId },

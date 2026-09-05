@@ -1,4 +1,7 @@
 import { db } from "@/lib/db";
+import { sanitizeRichHtml } from "@/lib/sanitize-html";
+import { BillDocument } from "@/components/BillDocument";
+import { parseLineItems } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Invoice", robots: { index: false } };
@@ -11,7 +14,12 @@ export default async function InvoicePage({
   const { token } = await params;
   const invoice = await db.invoice.findUnique({
     where: { token },
-    include: { channel: { select: { name: true } } },
+    include: { channel: { select: {
+          name: true,
+          businessLogoUrl: true,
+          businessEmail: true,
+          businessAddress: true,
+        } } },
   });
   if (!invoice) {
     return (
@@ -27,45 +35,52 @@ export default async function InvoicePage({
     });
   }
 
-  return (
-    <main className="mx-auto max-w-xl px-4 py-16">
-      <div className="flex items-baseline justify-between">
-        <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">
-          Invoice · {invoice.invoiceNumber}
-        </p>
-        <span
-          className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium uppercase ${
-            invoice.status === "paid"
-              ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
-              : invoice.status === "void"
-                ? "bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"
-                : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-          }`}
-        >
-          {invoice.status}
-        </span>
-      </div>
-      <h1 className="mt-2 text-2xl font-semibold">{invoice.title}</h1>
-      <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-        From <span className="font-medium">{invoice.channel.name}</span> to{" "}
-        {invoice.clientName}
-      </p>
+  const lineItems = parseLineItems(invoice.lineItems);
 
-      <div className="mt-6 rounded-2xl border border-neutral-200 p-6 dark:border-neutral-800">
-        <p className="text-3xl font-semibold tracking-tight">
-          ${(invoice.amountCents / 100).toLocaleString()}
+  return (
+    <main className="mx-auto max-w-3xl px-4 py-16">
+      {/* The document itself — the same A4 paper the studio preview shows */}
+      <BillDocument
+        kind="invoice"
+        number={invoice.invoiceNumber}
+        title={invoice.title}
+        channelName={invoice.channel.name}
+        logoUrl={invoice.channel.businessLogoUrl}
+        companyEmail={invoice.channel.businessEmail}
+        companyAddress={invoice.channel.businessAddress}
+        clientName={invoice.clientName}
+        clientEmail={invoice.clientEmail}
+        issuedDate={(invoice.sentAt ?? invoice.createdAt).toLocaleDateString()}
+        secondaryDate={invoice.dueAt?.toLocaleDateString() ?? null}
+        lineItems={lineItems}
+        taxBps={invoice.taxBps}
+        discountCents={invoice.discountCents}
+        amountCents={invoice.amountCents}
+        notes={invoice.notes}
+        terms={invoice.terms}
+        status={invoice.status}
+      />
+      {invoice.paidAt && (
+        <p className="mt-3 text-center text-sm font-medium text-green-600 dark:text-green-400">
+          ✓ Paid {invoice.paidAt.toLocaleDateString()}
         </p>
-        {invoice.description && (
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-600 dark:text-neutral-400">
-            {invoice.description}
-          </p>
-        )}
-        <div className="mt-3 space-y-0.5 text-xs text-neutral-500">
-          <p>Issued {invoice.createdAt.toLocaleDateString()}</p>
-          {invoice.dueAt && <p>Due {invoice.dueAt.toLocaleDateString()}</p>}
-          {invoice.paidAt && <p>Paid {invoice.paidAt.toLocaleDateString()}</p>}
+      )}
+
+      {/* Legacy rich-HTML body (invoices created before line items) */}
+      {lineItems.length === 0 && invoice.description && (
+        <div className="mt-6 rounded-2xl border border-neutral-200 p-6 dark:border-neutral-800">
+          {invoice.description.includes("<") ? (
+            <div
+              className="prose-reader rounded-xl bg-white text-sm leading-6 text-neutral-900"
+              dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(invoice.description) }}
+            />
+          ) : (
+            <p className="whitespace-pre-wrap text-sm leading-6 text-neutral-600 dark:text-neutral-400">
+              {invoice.description}
+            </p>
+          )}
         </div>
-      </div>
+      )}
 
       {invoice.status !== "paid" && invoice.status !== "void" && (
         <p className="mt-4 text-xs leading-5 text-neutral-500">

@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   const access = await getChannelAccess(
     userId,
     body.channelId,
-    FEATURES.LIBRARY,
+    FEATURES.CAMPAIGNS,
     ACCESS_LEVELS.MANAGER,
   );
   if (!access.channel) return NextResponse.json({ error: "Channel not found" }, { status: 404 });

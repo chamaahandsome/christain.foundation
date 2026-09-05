@@ -12,21 +12,40 @@ import {
 } from "@/lib/team";
 
 describe("parseFeatureAccess", () => {
-  it("keeps known features with known levels", () => {
+  it("keeps known features with known levels (books/campaigns inherit library)", () => {
     expect(
       parseFeatureAccess({ library: "manager", team: "viewer" }),
-    ).toEqual({ library: "manager", team: "viewer" });
+    ).toEqual({
+      library: "manager",
+      team: "viewer",
+      books: "manager",
+      campaigns: "manager",
+    });
   });
 
   it("drops unknown features and invalid levels", () => {
     expect(
       parseFeatureAccess({
         library: "manager",
-        do_biz: "manager", // Maltivas feature not ported
+        do_biz: "manager", // Maltivas-only key never stored here
         analytics: "admin", // not a level
         settings: 3,
       }),
-    ).toEqual({ library: "manager" });
+    ).toEqual({ library: "manager", books: "manager", campaigns: "manager" });
+  });
+
+  it("explicit books/campaigns levels win over the library fallback", () => {
+    expect(
+      parseFeatureAccess({ library: "manager", books: "none", campaigns: "viewer" }),
+    ).toEqual({
+      library: "manager",
+      books: "none",
+      campaigns: "viewer",
+    });
+  });
+
+  it("new commerce features default to none (absent) without library", () => {
+    expect(parseFeatureAccess({ business: "manager" })).toEqual({ business: "manager" });
   });
 
   it("returns an empty map for non-object input", () => {

@@ -33,7 +33,7 @@ export async function POST(
   const access = await getChannelAccess(
     userId,
     campaign.channelId,
-    FEATURES.LIBRARY,
+    FEATURES.CAMPAIGNS,
     ACCESS_LEVELS.MANAGER,
   );
   if (!access.authorized) return NextResponse.json({ error: "Forbidden" }, { status: 403 });

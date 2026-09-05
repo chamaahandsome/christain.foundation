@@ -4,13 +4,19 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { validateTier } from "@/lib/membership";
 import { getChannelAccess } from "@/lib/team-authorization";
+import { ACCESS_LEVELS, FEATURES } from "@/lib/team";
 
 // Membership tier management — owner-only, like everything on the money tab.
 
 async function requireOwner(userId: string, channelId: string) {
-  const access = await getChannelAccess(userId, channelId);
+  const access = await getChannelAccess(
+    userId,
+    channelId,
+    FEATURES.MEMBERSHIPS,
+    ACCESS_LEVELS.MANAGER,
+  );
   if (!access.channel) return { error: "Channel not found", status: 404 } as const;
-  if (!access.isOwner) return { error: "Forbidden", status: 403 } as const;
+  if (!access.authorized) return { error: "Forbidden", status: 403 } as const;
   return { ok: true } as const;
 }
 

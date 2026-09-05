@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { nextContractNumber } from "@/lib/contracts";
 import { sanitizeRichHtml } from "@/lib/sanitize-html";
 import { getChannelAccess } from "@/lib/team-authorization";
+import { ACCESS_LEVELS, FEATURES } from "@/lib/team";
 
 // Contract authoring — owner-only, like everything with legal or money weight.
 
@@ -30,9 +31,14 @@ export async function POST(req: Request) {
   }
   const body = parsed.data;
 
-  const access = await getChannelAccess(userId, body.channelId);
+  const access = await getChannelAccess(
+    userId,
+    body.channelId,
+    FEATURES.BUSINESS,
+    ACCESS_LEVELS.MANAGER,
+  );
   if (!access.channel) return NextResponse.json({ error: "Channel not found" }, { status: 404 });
-  if (!access.isOwner) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!access.authorized) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   // Drafts may start clientless (the editor fills them in); full
   // validation runs at send.
@@ -55,10 +61,16 @@ export async function POST(req: Request) {
     content = tpl.content;
   }
 
+  const channelLogo = await db.channel.findUnique({
+    where: { id: body.channelId },
+    select: { businessLogoUrl: true },
+  });
+
   const contract = await db.contract.create({
     data: {
       channelId: body.channelId,
       contractNumber: nextContractNumber(last?.contractNumber ?? null),
+      logoUrl: channelLogo?.businessLogoUrl ?? null,
       title: body.title.trim(),
       clientName: body.clientName?.trim() ?? "",
       clientEmail: body.clientEmail?.trim().toLowerCase() ?? "",

@@ -120,6 +120,12 @@ model Channel {
   // cursive or drawn), stored as a PNG data-URL, reused on every contract.
   digitalSignature       String?       @db.Text
   digitalSignatureName   String?
+  // Do-Biz letterhead: current logo + up to 3 recents (click-to-use),
+  // plus the company info printed on invoices/quotes.
+  businessLogoUrl        String?       @db.Text
+  businessLogoHistory    Json?
+  businessEmail          String?
+  businessAddress        String?       @db.Text
   // First Business visit seeds the default template library.
   businessInitializedAt  DateTime?
   ownerId                String
@@ -957,6 +963,7 @@ enum ContractStatus {
   DRAFT
   SENT
   VIEWED
+  PARTIALLY_SIGNED
   SIGNED
   DECLINED
   EXPIRED
@@ -974,6 +981,7 @@ model Contract {
   clientCompany  String?
   amountCents    Int? // optional — not every agreement carries money
   currency       String         @default("usd")
+  logoUrl        String?        @db.Text // letterhead logo (defaults from Channel.businessLogoUrl)
   content        String         @db.Text // rich HTML, sanitized on write
   signedContent  String?        @db.Text // frozen copy at completion
   documentHash   String? // SHA-256 of signedContent
@@ -1010,7 +1018,7 @@ model ContractSignature {
   signedAt      DateTime?
   createdAt     DateTime  @default(now())
 
-  @@unique([contractId, signerRole])
+  @@unique([contractId, signerRole, signerEmail])
   @@index([contractId])
 }
 
@@ -1129,7 +1137,13 @@ model Quote {
   clientName       String
   clientEmail      String
   title            String
-  description      String?   @db.Text
+  description      String?   @db.Text // legacy rich-HTML body (pre line-items)
+  // Structured document (the Maltivas quote shape): [{item, details, qty, rateCents}]
+  lineItems        Json?
+  taxBps           Int       @default(0) // tax rate in basis points (850 = 8.5%)
+  discountCents    Int       @default(0)
+  notes            String?   @db.Text // shown to the client
+  terms            String?   @db.Text // terms & conditions footer
   amountCents      Int
   status           String    @default("draft") // draft|sent|viewed|accepted|declined|expired
   token            String    @unique // public view/accept link
@@ -1155,7 +1169,14 @@ model Invoice {
   clientName    String
   clientEmail   String
   title         String
-  description   String?   @db.Text
+  description   String?   @db.Text // legacy rich-HTML body (pre line-items)
+  // Structured document (the Maltivas invoice shape): [{item, details, qty, rateCents}]
+  lineItems     Json?
+  taxBps        Int       @default(0)
+  discountCents Int       @default(0)
+  paymentTerms  String    @default("due-on-receipt") // due-on-receipt|net-15|net-30|net-60
+  notes         String?   @db.Text
+  terms         String?   @db.Text
   amountCents   Int
   status        String    @default("draft") // draft|sent|viewed|paid|void
   token         String    @unique // public view link

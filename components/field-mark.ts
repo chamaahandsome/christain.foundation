@@ -1,8 +1,8 @@
 // Minimal port of Maltivas' FieldHighlight: a TipTap mark that preserves
-// <span data-field="key"> input sections through the editor (TipTap drops
-// unknown attributes otherwise) and styles them as fill-in fields. The
-// creator just types over the placeholder text; the highlight travels with
-// the field until the span is deleted.
+// <span data-field="key"> input sections through the editor and styles
+// them as fill-in chips. `filledBy` mirrors the Maltivas Field Settings
+// toggle: "creator" fields are set in the editor; "recipient" fields are
+// asked of the signer on the signing page.
 
 import { Mark, mergeAttributes } from "@tiptap/core";
 
@@ -16,6 +16,14 @@ export const FieldMark = Mark.create({
         parseHTML: (element) => element.getAttribute("data-field"),
         renderHTML: (attributes) =>
           attributes.field ? { "data-field": attributes.field } : {},
+      },
+      filledBy: {
+        default: "creator",
+        parseHTML: (element) => element.getAttribute("data-filled-by") ?? "creator",
+        renderHTML: (attributes) =>
+          attributes.filledBy && attributes.filledBy !== "creator"
+            ? { "data-filled-by": attributes.filledBy }
+            : {},
       },
     };
   },

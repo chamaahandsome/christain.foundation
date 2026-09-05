@@ -70,7 +70,11 @@ export async function POST(
         `<h2>Agreement</h2>` +
         `<p>This agreement follows accepted quote ${quote.quoteNumber} — ` +
         `${esc(quote.title)}, $${(quote.amountCents / 100).toLocaleString()}.</p>` +
-        (quote.description ? `<h3>Scope</h3><p>${esc(quote.description)}</p>` : "") +
+        (quote.description
+          ? quote.description.includes("<")
+            ? `<h3>Scope</h3>${quote.description}`
+            : `<h3>Scope</h3><p>${esc(quote.description)}</p>`
+          : "") +
         `<h3>Payment</h3><p>$${(quote.amountCents / 100).toLocaleString()}, terms as agreed.</p>` +
         `<h3>Terms</h3><ul><li>Cancellation…</li><li>This agreement is governed by…</li></ul>`,
       activities: {
