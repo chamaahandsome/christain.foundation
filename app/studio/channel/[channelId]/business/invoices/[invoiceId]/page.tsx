@@ -55,6 +55,7 @@ export default async function InvoiceEditorPage({
       }
       companyEmail={channel.businessEmail ?? ""}
       companyAddress={channel.businessAddress ?? ""}
+      token={invoice.token}
       initial={{
         id: invoice.id,
         number: invoice.invoiceNumber,

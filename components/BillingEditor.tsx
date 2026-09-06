@@ -11,6 +11,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { BillDocument } from "@/components/BillDocument";
 import { ImageUploadDialog } from "@/components/ImageUploadDialog";
+import { FeatureTour, useFirstVisit, type TourStep } from "@/components/FeatureTour";
+import { EyeIcon, LinkIcon, SaveIcon, SendIcon, SparklesIcon } from "@/components/icons";
 import {
   PAYMENT_TERMS,
   computeBillTotals,
@@ -19,6 +21,52 @@ import {
   type BillLineItem,
   type PaymentTermsKey,
 } from "@/lib/billing";
+
+// The Maltivas invoice/quote editor walkthrough, anchored to each card.
+function billingTourSteps(kind: "invoice" | "quote"): TourStep[] {
+  const doc = kind === "invoice" ? "invoice" : "quote";
+  return [
+    {
+      icon: "📄",
+      title: "The document is live",
+      body: `The paper on the left is exactly what your client sees — it updates as you type. The total recomputes from your line items automatically.`,
+      anchor: '[data-tour="bill-doc"]',
+    },
+    {
+      icon: "🏢",
+      title: "Your company info",
+      body: "Logo, email, and address print on the letterhead and save to your profile — every future contract, invoice, and quote reuses them.",
+      anchor: '[data-tour="bill-company"]',
+    },
+    {
+      icon: "👤",
+      title: "Who it's for",
+      body: `The client's name and email address the ${doc}; the email is where the link is sent.`,
+      anchor: '[data-tour="bill-contact"]',
+    },
+    {
+      icon: "📅",
+      title: kind === "invoice" ? "Payment terms set the due date" : "Validity window",
+      body:
+        kind === "invoice"
+          ? "Due on receipt, Net 15/30/60 — the due date is fixed from the day you send."
+          : "The quote expires after this many days; accepting turns it into an agreement for signature.",
+      anchor: '[data-tour="bill-date"]',
+    },
+    {
+      icon: "🧾",
+      title: "Line items do the math",
+      body: "Each row is qty × rate. Tax and discount apply to the whole document — discount first, then tax on the remainder.",
+      anchor: '[data-tour="bill-items"]',
+    },
+    {
+      icon: "📨",
+      title: "Save or send",
+      body: `Save draft keeps it private. Create & send emails your client a secure link${kind === "invoice" ? " — and once it's paid, mark it paid from this page" : " where they accept or decline"}.`,
+      anchor: '[data-tour="bill-send"]',
+    },
+  ];
+}
 
 export function BillingEditor({
   kind,
@@ -29,6 +77,8 @@ export function BillingEditor({
   companyEmail: initialEmail = "",
   companyAddress: initialAddress = "",
   initial,
+  token = null,
+  contractId = null,
 }: {
   kind: "invoice" | "quote";
   channelId: string;
@@ -38,12 +88,24 @@ export function BillingEditor({
   companyEmail?: string;
   companyAddress?: string;
   initial: BillDraft;
+  /** public share token — enables Copy link once sent */
+  token?: string | null;
+  /** invoice only: link to this contract on create (?contractId= prefill) */
+  contractId?: string | null;
 }) {
   const router = useRouter();
   const [d, setD] = useState(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [firstVisitTour, dismissFirstVisitTour] = useFirstVisit(
+    `cf:tour:${kind}-editor:v1`,
+  );
+  const [tourOpen, setTourOpen] = useState(false);
+  const [tourSeen, setTourSeen] = useState(false);
   const editable = d.status === "draft";
+  const showTour = (editable && firstVisitTour && !tourSeen) || tourOpen;
+  const open = d.status === "sent" || d.status === "viewed";
 
   // Company info lives on the channel profile — shared by every document.
   const [logoUrl, setLogoUrl] = useState(initialLogo);
@@ -100,7 +162,7 @@ export function BillingEditor({
         notes: d.notes.trim() || null,
         terms: d.terms.trim() || null,
         ...(kind === "invoice"
-          ? { paymentTerms: d.paymentTerms }
+          ? { paymentTerms: d.paymentTerms, ...(contractId ? { contractId } : {}) }
           : { validDays: d.validDays }),
       };
       const res = await fetch(apiBase, {
@@ -136,6 +198,38 @@ export function BillingEditor({
     }
   }
 
+  async function act(action: string) {
+    if (!d.id) return;
+    setBusy(action);
+    setError(null);
+    try {
+      const res = await fetch(apiBase, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ channelId, [`${kind}Id`]: d.id, action }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? `Failed (${res.status})`);
+        return;
+      }
+      router.refresh();
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function copyLink() {
+    if (!token) return;
+    const path = kind === "invoice" ? "invoice" : "quote";
+    void navigator.clipboard
+      .writeText(`${window.location.origin}/${path}/${token}`)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+  }
+
   const input =
     "w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-amber-500 disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:focus:border-amber-600";
   const label = "block text-xs font-medium text-neutral-500";
@@ -164,7 +258,52 @@ export function BillingEditor({
           <span className="shrink-0 rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
             {d.status}
           </span>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setTourOpen(true)}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            >
+              <SparklesIcon className="h-4 w-4 text-amber-500" />
+              {firstVisitTour || !tourSeen ? "Show tour" : "Replay tour"}
+            </button>
+            {!editable && token && (
+              <button
+                onClick={copyLink}
+                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:border-amber-500 hover:text-amber-700 dark:border-neutral-700 dark:hover:text-amber-400"
+              >
+                <LinkIcon className="h-4 w-4" />
+                {copied ? "Copied ✓" : "Copy link"}
+              </button>
+            )}
+            {open && (
+              <button
+                onClick={() => void act("send")}
+                disabled={busy !== null}
+                title={`Re-email the ${kind} to ${d.clientEmail}`}
+                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:border-amber-500 hover:text-amber-700 disabled:opacity-50 dark:border-neutral-700 dark:hover:text-amber-400"
+              >
+                <SendIcon className="h-4 w-4" />
+                {busy === "send" ? "Sending…" : "Resend"}
+              </button>
+            )}
+            {kind === "invoice" && open && (
+              <>
+                <button
+                  onClick={() => void act("markPaid")}
+                  disabled={busy !== null}
+                  className="shrink-0 rounded-lg border border-green-500 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-50 disabled:opacity-50 dark:text-green-400 dark:hover:bg-green-950/30"
+                >
+                  {busy === "markPaid" ? "…" : "✓ Mark paid"}
+                </button>
+                <button
+                  onClick={() => void act("void")}
+                  disabled={busy !== null}
+                  className="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-500 hover:border-red-400 hover:text-red-600 disabled:opacity-50 dark:border-neutral-700"
+                >
+                  Void
+                </button>
+              </>
+            )}
             {editable && (
               <>
                 <button
@@ -172,9 +311,11 @@ export function BillingEditor({
                   disabled={busy !== null}
                   className="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:border-amber-500 hover:text-amber-700 disabled:opacity-50 dark:border-neutral-700 dark:hover:text-amber-400"
                 >
-                  {busy === "Saving…" ? "Saving…" : "💾 Save draft"}
+                  <SaveIcon className="mr-1.5 h-4 w-4" />
+                  {busy === "Saving…" ? "Saving…" : "Save draft"}
                 </button>
                 <button
+                  data-tour="bill-send"
                   onClick={() => void save(true)}
                   disabled={
                     busy !== null ||
@@ -190,7 +331,8 @@ export function BillingEditor({
                   }
                   className="shrink-0 rounded-lg bg-linear-to-r from-amber-500 to-orange-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm hover:from-amber-400 hover:to-orange-500 disabled:opacity-50"
                 >
-                  {busy === "Sending…" ? "Sending…" : "📨 Create & send"}
+                  <SendIcon className="mr-1.5 h-4 w-4" />
+                  {busy === "Sending…" ? "Sending…" : "Create & send"}
                 </button>
               </>
             )}
@@ -202,7 +344,7 @@ export function BillingEditor({
       {/* Document LEFT (large) · details RIGHT — the Maltivas layout */}
       <div className="mx-auto mt-6 grid max-w-[1500px] gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         {/* ── The document ── */}
-        <div className="lg:sticky lg:top-32 lg:self-start">
+        <div data-tour="bill-doc" className="lg:sticky lg:top-32 lg:self-start">
           <BillDocument
             kind={kind}
             number={d.number}
@@ -229,7 +371,7 @@ export function BillingEditor({
         {/* ── Details sidebar ── */}
         <div className="space-y-5">
           {/* Your company info */}
-          <div className={card}>
+          <div data-tour="bill-company" className={card}>
             <h3 className="text-sm font-semibold">🏢 Your company info</h3>
             <div className="mt-3 space-y-3">
               {recentLogos.length > 0 && (
@@ -329,7 +471,7 @@ export function BillingEditor({
           </div>
 
           {/* Billing contact */}
-          <div className={card}>
+          <div data-tour="bill-contact" className={card}>
             <h3 className="text-sm font-semibold">👤 Billing contact</h3>
             <div className="mt-3 space-y-3">
               <label className={label}>
@@ -367,7 +509,7 @@ export function BillingEditor({
           </div>
 
           {/* Issue date & terms */}
-          <div className={card}>
+          <div data-tour="bill-date" className={card}>
             <h3 className="text-sm font-semibold">📅 Issue date</h3>
             <p className="mt-2 inline-flex items-center gap-2 rounded-lg border border-neutral-200 px-3 py-1.5 text-sm dark:border-neutral-700">
               🗓 Today <span className="text-neutral-400">{today}</span>
@@ -414,7 +556,7 @@ export function BillingEditor({
           </div>
 
           {/* Line items */}
-          <div className={card}>
+          <div data-tour="bill-items" className={card}>
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold">🧾 Line items</h3>
               {editable && (
@@ -566,6 +708,16 @@ export function BillingEditor({
         </div>
       </div>
 
+      <FeatureTour
+        open={showTour}
+        title={kind === "invoice" ? "Invoice editor" : "Quote editor"}
+        steps={billingTourSteps(kind)}
+        onClose={() => {
+          setTourOpen(false);
+          setTourSeen(true);
+          dismissFirstVisitTour();
+        }}
+      />
       <ImageUploadDialog
         open={logoDialog}
         title="Company logo"

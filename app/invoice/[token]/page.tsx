@@ -28,10 +28,18 @@ export default async function InvoicePage({
       </main>
     );
   }
-  if (invoice.status === "sent" && !invoice.viewedAt) {
+  // Drafts stay private until sent — the link only goes out at send.
+  if (invoice.status === "draft") {
+    return (
+      <main className="mx-auto max-w-xl px-4 py-20 text-center text-sm text-neutral-500">
+        This invoice isn&apos;t available yet.
+      </main>
+    );
+  }
+  if (invoice.status === "sent") {
     await db.invoice.update({
       where: { id: invoice.id },
-      data: { viewedAt: new Date() },
+      data: { status: "viewed", viewedAt: invoice.viewedAt ?? new Date() },
     });
   }
 

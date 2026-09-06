@@ -3,6 +3,7 @@ import { z } from "zod";
 import { NotificationType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { nextContractNumber } from "@/lib/contracts";
+import { contractContentFromQuote } from "@/lib/billing";
 
 // Public quote response: accept mints the contract draft (the Do-Biz
 // booking → quote → contract workflow); decline closes it out.
@@ -18,7 +19,9 @@ export async function POST(
   const { token } = await params;
   const quote = await db.quote.findUnique({
     where: { token },
-    include: { channel: { select: { id: true, name: true, ownerId: true } } },
+    include: {
+      channel: { select: { id: true, name: true, ownerId: true, businessLogoUrl: true } },
+    },
   });
   if (!quote) return NextResponse.json({ error: "Unknown quote." }, { status: 404 });
   if (!["sent", "viewed"].includes(quote.status)) {
@@ -56,8 +59,6 @@ export async function POST(
     orderBy: { contractNumber: "desc" },
     select: { contractNumber: true },
   });
-  const esc = (s: string) =>
-    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const contract = await db.contract.create({
     data: {
       channelId: quote.channelId,
@@ -66,17 +67,10 @@ export async function POST(
       clientName: quote.clientName,
       clientEmail: quote.clientEmail,
       amountCents: quote.amountCents,
-      content:
-        `<h2>Agreement</h2>` +
-        `<p>This agreement follows accepted quote ${quote.quoteNumber} — ` +
-        `${esc(quote.title)}, $${(quote.amountCents / 100).toLocaleString()}.</p>` +
-        (quote.description
-          ? quote.description.includes("<")
-            ? `<h3>Scope</h3>${quote.description}`
-            : `<h3>Scope</h3><p>${esc(quote.description)}</p>`
-          : "") +
-        `<h3>Payment</h3><p>$${(quote.amountCents / 100).toLocaleString()}, terms as agreed.</p>` +
-        `<h3>Terms</h3><ul><li>Cancellation…</li><li>This agreement is governed by…</li></ul>`,
+      logoUrl: quote.channel.businessLogoUrl,
+      // The quote's line items ride in as the scope, chips included — the
+      // draft is signing-ready in the editor.
+      content: contractContentFromQuote(quote),
       activities: {
         create: { type: "created", description: `Drafted from accepted quote ${quote.quoteNumber}` },
       },

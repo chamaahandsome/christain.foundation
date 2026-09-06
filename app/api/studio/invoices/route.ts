@@ -219,14 +219,15 @@ export async function PATCH(req: Request) {
   }
 
   // send
-  if (invoice.status !== "draft" && invoice.status !== "sent") {
+  if (!["draft", "sent", "viewed"].includes(invoice.status)) {
     return NextResponse.json({ error: "This invoice can't be sent." }, { status: 409 });
   }
   const sentAt = invoice.sentAt ?? new Date();
   await db.invoice.update({
     where: { id: invoiceId },
     data: {
-      status: "sent",
+      // a resend never demotes "viewed"
+      status: invoice.status === "draft" ? "sent" : invoice.status,
       sentAt,
       // Payment terms fix the due date at send time (unless one was set).
       dueAt: invoice.dueAt ?? dueDateFor(invoice.paymentTerms, sentAt),

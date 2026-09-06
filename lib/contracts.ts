@@ -2,6 +2,11 @@
 // DRAFT → SENT → VIEWED → SIGNED, with DECLINED / EXPIRED / CANCELLED exits.
 
 import crypto from "crypto";
+import {
+  countUnassignedClientChips,
+  getUniqueRecipients,
+  parseContractRecipients,
+} from "./contract-fields";
 
 export const SIGN_TOKEN_TTL_DAYS = 14;
 export const CONTRACT_CONSENT_TEXT =
@@ -23,11 +28,33 @@ export function validateContractDraft(input: {
   clientEmail: string;
   content: string;
   amountCents?: number | null;
+  recipients?: unknown;
 }): string | null {
   if (input.title.trim().length < 4) return "Give the contract a real title.";
-  if (input.clientName.trim().length < 2) return "Who is the other party?";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.clientEmail.trim())) {
-    return "Enter a valid email for the other party — the signing link is addressed to them.";
+
+  // Recipients can come from three places: emails assigned on signature
+  // chips, the primary client, and additional clients. Send needs at
+  // least one — and the primary client specifically when any chip is
+  // unassigned (unassigned chips fall to them) or when there are no
+  // chip assignments at all and no additional clients.
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.clientEmail.trim());
+  const assigned = getUniqueRecipients(input.content);
+  const unassigned = countUnassignedClientChips(input.content);
+  const extras = parseContractRecipients(input.recipients);
+  if (input.clientEmail.trim() && !emailOk) {
+    return "The client email doesn't look valid.";
+  }
+  if (emailOk && input.clientName.trim().length < 2) {
+    return "Who is the client? Add their name.";
+  }
+  if (unassigned > 0 && !emailOk && assigned.length === 0 && extras.length === 0) {
+    return "Assign an email to each signature field, or fill in the client email — unassigned fields go to the client.";
+  }
+  if (assigned.length === 0 && extras.length === 0 && !emailOk) {
+    return "Add at least one signer: assign a signature field an email, or fill in the client email.";
+  }
+  if (unassigned > 0 && !emailOk && (assigned.length > 0 || extras.length > 0)) {
+    return "Some signature fields have no email — assign them, or fill in the client email so they fall to the client.";
   }
   const text = input.content.replace(/<[^>]+>/g, " ").trim();
   if (text.length < 40) {

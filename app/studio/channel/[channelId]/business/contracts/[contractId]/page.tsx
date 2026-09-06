@@ -84,6 +84,7 @@ export default async function ContractEditor({
         clientName: contract.clientName,
         clientEmail: contract.clientEmail,
         clientCompany: contract.clientCompany,
+        recipients: contract.recipients,
         amountCents: contract.amountCents,
         status: contract.status,
         content: contract.content,

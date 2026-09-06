@@ -11,12 +11,15 @@ export const metadata = { title: "New invoice" };
 
 export default async function NewInvoicePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ channelId: string }>;
+  searchParams: Promise<{ contractId?: string }>;
 }) {
   const { userId } = await auth();
   if (!userId) redirect("/signin");
   const { channelId } = await params;
+  const { contractId } = await searchParams;
   const access = await getChannelAccess(
     userId,
     channelId,
@@ -35,6 +38,34 @@ export default async function NewInvoicePage({
     },
   });
 
+  // ?contractId= pre-fills from the agreement (the Maltivas flow): client,
+  // title, and a starting line item at the contract value; the created
+  // invoice is linked so it auto-sends when the contract fully signs.
+  const contract = contractId
+    ? await db.contract.findUnique({
+        where: { id: contractId },
+        select: {
+          id: true,
+          channelId: true,
+          title: true,
+          clientName: true,
+          clientEmail: true,
+          amountCents: true,
+        },
+      })
+    : null;
+  const seeded = emptyBillDraft("invoice");
+  if (contract && contract.channelId === channelId) {
+    seeded.clientName = contract.clientName;
+    seeded.clientEmail = contract.clientEmail;
+    seeded.title = contract.title;
+    if (contract.amountCents) {
+      seeded.lineItems = [
+        { item: contract.title, details: "", qty: 1, rateCents: contract.amountCents },
+      ];
+    }
+  }
+
   return (
     <BillingEditor
       kind="invoice"
@@ -50,7 +81,8 @@ export default async function NewInvoicePage({
       }
       companyEmail={channel.businessEmail ?? ""}
       companyAddress={channel.businessAddress ?? ""}
-      initial={emptyBillDraft("invoice")}
+      initial={seeded}
+      contractId={contract && contract.channelId === channelId ? contract.id : null}
     />
   );
 }

@@ -29,6 +29,14 @@ export default async function QuotePage({
       </main>
     );
   }
+  // Drafts stay private until sent.
+  if (quote.status === "draft") {
+    return (
+      <main className="mx-auto max-w-xl px-4 py-20 text-center text-sm text-neutral-500">
+        This quote isn&apos;t available yet.
+      </main>
+    );
+  }
   if (quote.status === "sent") {
     await db.quote.update({
       where: { id: quote.id },

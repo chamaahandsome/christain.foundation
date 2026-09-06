@@ -8,6 +8,7 @@ import {
 } from "@/lib/contracts";
 import { sanitizeRichHtml } from "@/lib/sanitize-html";
 import { SignContract } from "@/components/SignContract";
+import { PenIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Sign agreement", robots: { index: false } };
@@ -164,7 +165,15 @@ export default async function SignPage({
                   : "border-neutral-200 dark:border-neutral-800"
             }`}
           >
-            <span className="text-lg">{r.signedAt ? "✅" : r.isYou ? "✍️" : "⏳"}</span>
+            <span className="text-lg">
+              {r.signedAt ? (
+                "✅"
+              ) : r.isYou ? (
+                <PenIcon className="h-5 w-5 text-amber-600" />
+              ) : (
+                "⏳"
+              )}
+            </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">
                 {r.name}

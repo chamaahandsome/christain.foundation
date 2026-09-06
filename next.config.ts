@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Two dev servers on this repo (the developer's and the assistant's)
+  // corrupt each other when they share .next. Setting NEXT_DIST_DIR lets a
+  // second server build into its own directory; the default is unchanged.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   images: {
     remotePatterns: [
       // YouTube thumbnails for the embedded library

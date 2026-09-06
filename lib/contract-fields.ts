@@ -136,3 +136,34 @@ export function substituteSignatureFields(
     return replacementHtml;
   });
 }
+
+export interface ContractRecipient {
+  name: string;
+  email: string;
+  company: string | null;
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Parse the stored additional-clients JSON, dropping malformed rows. */
+export function parseContractRecipients(raw: unknown): ContractRecipient[] {
+  if (!Array.isArray(raw)) return [];
+  const out: ContractRecipient[] = [];
+  for (const row of raw.slice(0, 20)) {
+    if (typeof row !== "object" || row === null) continue;
+    const r = row as Record<string, unknown>;
+    const email =
+      typeof r.email === "string" ? r.email.trim().toLowerCase() : "";
+    if (!EMAIL_RE.test(email)) continue;
+    out.push({
+      name:
+        typeof r.name === "string" && r.name.trim() ? r.name.trim().slice(0, 200) : email,
+      email: email.slice(0, 320),
+      company:
+        typeof r.company === "string" && r.company.trim()
+          ? r.company.trim().slice(0, 200)
+          : null,
+    });
+  }
+  return out;
+}

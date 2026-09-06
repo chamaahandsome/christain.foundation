@@ -3,6 +3,7 @@
 
 # next.js
 /.next/
+/.next-agent/
 /out/
 next-env.d.ts
 

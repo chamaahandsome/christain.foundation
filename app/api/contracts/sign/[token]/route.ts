@@ -152,37 +152,46 @@ export async function POST(
         }),
       );
     }
-    // Every co-signer's recorded signature, then this signer's.
+    // Every co-signer's recorded signature, then this signer's. A signer
+    // whose signature matched no chip (extra clients, chip-less documents)
+    // is appended at the end so every party appears in the executed copy.
+    const unplaced: string[] = [];
     const clientSigs = row.contract.signatures.filter(
       (s) => s.signerRole === "client" && s.signature && s.signedAt,
     );
     for (const sig of clientSigs) {
-      signedContent = substituteSignatureFields(
-        signedContent,
-        "client",
-        signatureBlockHtml({
-          signature: sig.signature!,
-          signerName: sig.signerName,
-          signedAt: sig.signedAt,
-        }),
-        {
-          email: sig.signerEmail.toLowerCase(),
-          includeUnassigned:
-            sig.signerEmail.toLowerCase() === row.contract.clientEmail.toLowerCase(),
-        },
-      );
+      const block = signatureBlockHtml({
+        signature: sig.signature!,
+        signerName: sig.signerName,
+        signedAt: sig.signedAt,
+      });
+      const next = substituteSignatureFields(signedContent, "client", block, {
+        email: sig.signerEmail.toLowerCase(),
+        includeUnassigned:
+          sig.signerEmail.toLowerCase() === row.contract.clientEmail.toLowerCase(),
+      });
+      if (next === signedContent) unplaced.push(block);
+      signedContent = next;
     }
-    signedContent = substituteSignatureFields(
-      signedContent,
-      "client",
-      signatureBlockHtml({
+    {
+      const block = signatureBlockHtml({
         signature: body.signature,
         signerName: body.signerName.trim(),
         signedAt,
-      }),
-      // The last signer also absorbs any leftover unassigned chips.
-      { email: signerEmail, includeUnassigned: true },
-    );
+      });
+      const next = substituteSignatureFields(signedContent, "client", block, {
+        // The last signer also absorbs any leftover unassigned chips.
+        email: signerEmail,
+        includeUnassigned: true,
+      });
+      if (next === signedContent) unplaced.push(block);
+      signedContent = next;
+    }
+    if (unplaced.length > 0) {
+      signedContent +=
+        `<h2>Also signed by</h2>` +
+        unplaced.map((b) => `<p>${b}</p>`).join("");
+    }
   }
 
   await db.$transaction([

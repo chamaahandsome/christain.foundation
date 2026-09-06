@@ -15,6 +15,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import { TableKit } from "@tiptap/extension-table";
 import { FieldMark } from "@/components/field-mark";
 import { SignatureField } from "@/components/signature-field";
+import { PenIcon, PlusIcon, TrashIcon } from "@/components/icons";
 
 type FieldPopover = {
   kind: "field";
@@ -85,11 +86,15 @@ function FloatingToolbar({ editor, channelId }: { editor: Editor; channelId?: st
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
-  // Clicking anywhere outside the toolbar menus closes them (the menus
-  // and their triggers stop propagation below).
+  // Clicking anywhere outside the toolbar closes its menus. The check is
+  // by DOM containment, not stopPropagation — the App Router mounts React
+  // on `document`, so a document-level listener fires regardless of
+  // synthetic stopPropagation, and closing on an inside mousedown would
+  // unmount the item before its click could run.
   useEffect(() => {
     if (!plusOpen && !styleOpen) return;
-    const close = () => {
+    const close = (e: MouseEvent) => {
+      if ((e.target as HTMLElement | null)?.closest?.("[data-doc-toolbar]")) return;
       setPlusOpen(false);
       setStyleOpen(false);
     };
@@ -198,6 +203,7 @@ function FloatingToolbar({ editor, channelId }: { editor: Editor; channelId?: st
     <div className="pointer-events-none sticky top-16 z-30 flex justify-center">
       <div
         data-tour="editor-toolbar"
+        data-doc-toolbar=""
         className="pointer-events-auto relative flex flex-wrap items-center gap-0.5 rounded-full border border-white/10 bg-neutral-900/95 px-2 py-1.5 shadow-xl shadow-black/20 backdrop-blur"
       >
         {/* + insert menu */}
@@ -206,8 +212,8 @@ function FloatingToolbar({ editor, channelId }: { editor: Editor; channelId?: st
           title="Insert"
           onMouseDown={(e) => {
             e.preventDefault();
-            e.stopPropagation();
             setPlusOpen((o) => !o);
+            setStyleOpen(false);
           }}
           className="mr-1 flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br from-amber-500 to-orange-600 text-lg font-semibold text-white shadow-sm hover:from-amber-400 hover:to-orange-500"
         >
@@ -216,10 +222,7 @@ function FloatingToolbar({ editor, channelId }: { editor: Editor; channelId?: st
         {plusOpen && (
           <div
             className="absolute left-0 top-11 z-40 w-52 rounded-xl border border-white/10 bg-neutral-900 p-1.5 shadow-2xl"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
+            onMouseDown={(e) => e.preventDefault()}
           >
             <button
               type="button"
@@ -281,7 +284,7 @@ function FloatingToolbar({ editor, channelId }: { editor: Editor; channelId?: st
                 setPlusOpen(false);
               }}
             >
-              ✍️ Signature field
+              <PenIcon className="h-4 w-4 text-amber-400" /> Signature field
             </button>
           </div>
         )}
@@ -291,7 +294,6 @@ function FloatingToolbar({ editor, channelId }: { editor: Editor; channelId?: st
           type="button"
           onMouseDown={(e) => {
             e.preventDefault();
-            e.stopPropagation();
             setStyleOpen((o) => !o);
             setPlusOpen(false);
           }}
@@ -302,10 +304,7 @@ function FloatingToolbar({ editor, channelId }: { editor: Editor; channelId?: st
         {styleOpen && (
           <div
             className="absolute left-10 top-11 z-40 w-56 rounded-xl border border-white/10 bg-neutral-900 p-1.5 shadow-2xl"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
+            onMouseDown={(e) => e.preventDefault()}
           >
             {STYLES.map((s, i) => (
               <div key={s.label}>
@@ -629,6 +628,97 @@ function SignatureAssignment({
   );
 }
 
+/* ---------- table bubble menu ---------- */
+
+// The Maltivas table context bar: floats over the table while the caret
+// is inside one — add rows/columns, or delete row / column / table.
+function TableMenu({ editor }: { editor: Editor }) {
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        if (!editor.isActive("table") || !editor.isFocused) {
+          setPos(null);
+          return;
+        }
+        const dom = editor.view.domAtPos(editor.state.selection.from).node;
+        const el = (dom instanceof Element ? dom : dom.parentElement)?.closest("table");
+        if (!el) {
+          setPos(null);
+          return;
+        }
+        const rect = el.getBoundingClientRect();
+        const vw = window.innerWidth;
+        setPos({
+          x: Math.max(8, Math.min(rect.left + rect.width / 2, vw - 8)),
+          y: Math.max(60, rect.top - 12),
+        });
+      });
+    };
+    editor.on("selectionUpdate", update);
+    editor.on("transaction", update);
+    editor.on("blur", update);
+    editor.on("focus", update);
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    update();
+    return () => {
+      cancelAnimationFrame(raf);
+      editor.off("selectionUpdate", update);
+      editor.off("transaction", update);
+      editor.off("blur", update);
+      editor.off("focus", update);
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [editor]);
+
+  if (!pos) return null;
+
+  const item = (label: string, run: () => void, destructive = false) => (
+    <button
+      key={label}
+      type="button"
+      onMouseDown={(e) => {
+        e.preventDefault(); // keep the caret in the table
+        run();
+      }}
+      className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm leading-none transition-colors ${
+        destructive ? "text-red-400 hover:bg-red-500/15" : "text-neutral-200 hover:bg-white/10"
+      }`}
+    >
+      {destructive ? (
+        <TrashIcon className="h-3.5 w-3.5" />
+      ) : (
+        <PlusIcon className="h-3.5 w-3.5" />
+      )}
+      {label}
+    </button>
+  );
+  const divider = <span className="mx-1 h-5 w-px self-center bg-white/15" />;
+
+  return (
+    <div
+      data-doc-toolbar=""
+      className="fixed z-40 flex -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-2xl border border-white/10 bg-neutral-900/95 px-2 py-1.5 shadow-xl shadow-black/30 backdrop-blur"
+      style={{ left: pos.x, top: pos.y }}
+    >
+      {item("Row above", () => editor.chain().focus().addRowBefore().run())}
+      {item("Row below", () => editor.chain().focus().addRowAfter().run())}
+      {divider}
+      {item("Col before", () => editor.chain().focus().addColumnBefore().run())}
+      {item("Col after", () => editor.chain().focus().addColumnAfter().run())}
+      {divider}
+      {item("Row", () => editor.chain().focus().deleteRow().run(), true)}
+      {item("Col", () => editor.chain().focus().deleteColumn().run(), true)}
+      {item("Table", () => editor.chain().focus().deleteTable().run(), true)}
+    </div>
+  );
+}
+
 /* ---------- the editor ---------- */
 
 export function DocEditor({
@@ -743,6 +833,7 @@ export function DocEditor({
   return (
     <div className="relative">
       {editor && <FloatingToolbar editor={editor} channelId={channelId} />}
+      {editor && <TableMenu editor={editor} />}
       {/* Paper canvas — a sharp document page, paper-white in both themes */}
       <div
         onClick={onCanvasClick}

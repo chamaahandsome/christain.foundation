@@ -171,18 +171,23 @@ export default async function BusinessTab({
         contractId: b.contractId,
         date: b.createdAt.toLocaleDateString(),
       }))}
-      quotes={quotes.map((q) => ({
-        id: q.id,
-        quoteNumber: q.quoteNumber,
-        title: q.title,
-        clientName: q.clientName,
-        clientEmail: q.clientEmail,
-        amountCents: q.amountCents,
-        status: q.status,
-        token: q.token,
-        date: q.createdAt.toLocaleDateString(),
-        expiresAt: q.expiresAt?.toLocaleDateString() ?? null,
-      }))}
+      quotes={quotes.map((q) => {
+        const converted = invoices.find((inv) => inv.quoteId === q.id);
+        return {
+          id: q.id,
+          quoteNumber: q.quoteNumber,
+          title: q.title,
+          clientName: q.clientName,
+          clientEmail: q.clientEmail,
+          amountCents: q.amountCents,
+          status: q.status,
+          token: q.token,
+          date: q.createdAt.toLocaleDateString(),
+          expiresAt: q.expiresAt?.toLocaleDateString() ?? null,
+          invoiceId: converted?.id ?? null,
+          invoiceStatus: converted?.status ?? null,
+        };
+      })}
       invoices={invoices.map((inv) => ({
         id: inv.id,
         invoiceNumber: inv.invoiceNumber,

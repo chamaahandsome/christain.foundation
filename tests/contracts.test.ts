@@ -272,3 +272,73 @@ describe("substituteSignatureFields per recipient", () => {
     expect(out).toContain("data-signer=\"creator\"");
   });
 });
+
+/* ---------- multi-client drafts ---------- */
+
+import { parseContractRecipients } from "@/lib/contracts";
+
+describe("parseContractRecipients", () => {
+  it("keeps valid rows, lowercases emails, drops junk", () => {
+    expect(
+      parseContractRecipients([
+        { name: "Ann", email: "Ann@X.com", company: "Acme" },
+        { name: "", email: "b@y.com" },
+        { name: "NoEmail", email: "nope" },
+        "junk",
+      ]),
+    ).toEqual([
+      { name: "Ann", email: "ann@x.com", company: "Acme" },
+      { name: "b@y.com", email: "b@y.com", company: null },
+    ]);
+    expect(parseContractRecipients(null)).toEqual([]);
+  });
+});
+
+describe("validateContractDraft — multi-recipient sends", () => {
+  const body =
+    "<p>This agreement covers a speaking engagement at the spring conference, including travel.</p>";
+  const chipFor = (email: string | null) =>
+    `<span data-signature-field="" data-signer="client"${email ? ` data-email="${email}"` : ""}>x</span>`;
+
+  it("chips fully assigned → no client card needed (just click send)", () => {
+    expect(
+      validateContractDraft({
+        title: "Speaking engagement",
+        clientName: "",
+        clientEmail: "",
+        content: body + chipFor("a@x.com") + chipFor("b@y.com"),
+      }),
+    ).toBeNull();
+  });
+  it("extra clients alone are enough", () => {
+    expect(
+      validateContractDraft({
+        title: "Speaking engagement",
+        clientName: "",
+        clientEmail: "",
+        content: body,
+        recipients: [{ name: "Ann", email: "a@x.com" }],
+      }),
+    ).toBeNull();
+  });
+  it("unassigned chips demand a client email even with other recipients", () => {
+    expect(
+      validateContractDraft({
+        title: "Speaking engagement",
+        clientName: "",
+        clientEmail: "",
+        content: body + chipFor("a@x.com") + chipFor(null),
+      }),
+    ).toMatch(/no email/);
+  });
+  it("no signers anywhere → blocked", () => {
+    expect(
+      validateContractDraft({
+        title: "Speaking engagement",
+        clientName: "",
+        clientEmail: "",
+        content: body,
+      }),
+    ).toMatch(/at least one signer/);
+  });
+});

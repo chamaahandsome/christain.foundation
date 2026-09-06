@@ -112,3 +112,83 @@ export function emptyBillDraft(kind: "invoice" | "quote"): BillDraft {
     status: "draft",
   };
 }
+
+/* ---------- quote → contract ----------
+ * An accepted quote mints a contract draft. Structured quotes carry
+ * their line items in as a table (legacy quotes fall back to their
+ * description), and the draft arrives with both signature chips so it
+ * is signing-ready in the editor. */
+
+const escapeHtml = (s: string) =>
+  s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+const centsToDollars = (cents: number) =>
+  `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
+export function contractContentFromQuote(quote: {
+  quoteNumber: string;
+  title: string;
+  description?: string | null;
+  lineItems?: unknown;
+  taxBps?: number;
+  discountCents?: number;
+  amountCents: number;
+  terms?: string | null;
+}): string {
+  const items = parseLineItems(quote.lineItems);
+  const totals = computeBillTotals({
+    lineItems: items,
+    taxBps: quote.taxBps,
+    discountCents: quote.discountCents,
+  });
+  const total = items.length > 0 ? totals.totalCents : quote.amountCents;
+
+  let scope = "";
+  if (items.length > 0) {
+    const rows = items
+      .map(
+        (li) =>
+          `<tr><td><p>${escapeHtml(li.item)}</p></td>` +
+          `<td><p>${escapeHtml(li.details)}</p></td>` +
+          `<td><p>${li.qty}</p></td>` +
+          `<td><p>${centsToDollars(li.rateCents)}</p></td>` +
+          `<td><p>${centsToDollars(li.qty * li.rateCents)}</p></td></tr>`,
+      )
+      .join("");
+    const extras =
+      (totals.discountCents > 0
+        ? `<li>Discount: −${centsToDollars(totals.discountCents)}</li>`
+        : "") +
+      (totals.taxCents > 0 ? `<li>Tax: ${centsToDollars(totals.taxCents)}</li>` : "");
+    scope =
+      `<h2>Scope of work</h2>` +
+      `<table><tbody>` +
+      `<tr><th><p>Item</p></th><th><p>Details</p></th><th><p>Qty</p></th><th><p>Rate</p></th><th><p>Amount</p></th></tr>` +
+      rows +
+      `</tbody></table>` +
+      (extras ? `<ul>${extras}</ul>` : "");
+  } else if (quote.description) {
+    scope = quote.description.includes("<")
+      ? `<h2>Scope of work</h2>${quote.description}`
+      : `<h2>Scope of work</h2><p>${escapeHtml(quote.description)}</p>`;
+  }
+
+  return (
+    `<h1>${escapeHtml(quote.title)}</h1>` +
+    `<p>This agreement follows accepted quote ${escapeHtml(quote.quoteNumber)}. ` +
+    `In consideration of the mutual obligations below, the parties agree:</p>` +
+    scope +
+    `<h2>Payment</h2>` +
+    `<p>The total fee is ${centsToDollars(total)}, payable as the parties have agreed${
+      quote.terms ? `, per the quoted terms: ${escapeHtml(quote.terms)}` : ""
+    }.</p>` +
+    `<h2>Signatures</h2>` +
+    `<p>IN WITNESS WHEREOF, the parties have executed this Agreement.</p>` +
+    `<p><strong>Provider:</strong><br /><span data-signature-field="" data-signer="creator">✍️ Your signature</span></p>` +
+    `<p><strong>Client:</strong><br /><span data-signature-field="" data-signer="client">✍️ Client signature</span></p>`
+  );
+}

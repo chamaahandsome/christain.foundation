@@ -14,6 +14,7 @@ import { SignatureSetupModal } from "@/components/SignatureSetupModal";
 import { TemplateModalCF, type PickerTemplate } from "@/components/TemplateModalCF";
 import { ServicesEditor, type Service } from "@/components/ServicesEditor";
 import { FeatureTour, useFirstVisit, type TourStep } from "@/components/FeatureTour";
+import { PenIcon, SparklesIcon } from "@/components/icons";
 
 interface ContractRow {
   id: string;
@@ -54,6 +55,9 @@ interface QuoteRow {
   token: string;
   date: string;
   expiresAt: string | null;
+  /** the invoice this quote converted into, if any */
+  invoiceId: string | null;
+  invoiceStatus: string | null;
 }
 interface InvoiceRow {
   id: string;
@@ -183,13 +187,13 @@ function ContractCard({ c, channelId }: { c: ContractRow; channelId: string }) {
         {c.sigTotal > 0 && (
           <span
             title={`${c.sigSigned} of ${c.sigTotal} signatures collected`}
-            className={
+            className={`inline-flex items-center gap-1 ${
               c.sigSigned >= c.sigTotal
                 ? "font-medium text-green-600 dark:text-green-400"
                 : "text-neutral-400"
-            }
+            }`}
           >
-            ✍ {c.sigSigned}/{c.sigTotal}
+            <PenIcon className="h-3.5 w-3.5" /> {c.sigSigned}/{c.sigTotal}
           </span>
         )}
       </div>
@@ -291,8 +295,8 @@ export function BusinessDashboard(props: {
   const TABS = [
     ["overview", "Overview"],
     ["bookings", `Bookings (${props.bookings.length})`],
-    ["quotes", `Quotes (${props.quotes.length})`],
     ["contracts", `Contracts (${props.contracts.length})`],
+    ["quotes", `Quotes (${props.quotes.length})`],
     ["invoices", `Invoices (${props.invoices.length})`],
   ] as const;
 
@@ -351,9 +355,10 @@ export function BusinessDashboard(props: {
         <button
           onClick={() => setGuideOpen(true)}
           title="How Do-Biz works"
-          className="ml-auto whitespace-nowrap rounded-lg px-3 py-2 text-sm text-neutral-500 hover:text-amber-700 dark:hover:text-amber-400"
+          className="ml-auto flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm text-neutral-500 hover:text-amber-700 dark:hover:text-amber-400"
         >
-          ✨ Guide
+          <SparklesIcon className="h-4 w-4 text-amber-500" />
+          Guide
         </button>
       </div>
 
@@ -369,7 +374,8 @@ export function BusinessDashboard(props: {
               onClick={() => setTemplateModal(true)}
               className={newButton}
             >
-              ✍️ Create agreement
+              <PenIcon className="mr-1.5 h-4 w-4" />
+              Create agreement
             </button>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -480,7 +486,8 @@ export function BusinessDashboard(props: {
               onClick={() => setTemplateModal(true)}
               className={newButton}
             >
-              ✍️ Create contract
+              <PenIcon className="mr-1.5 h-4 w-4" />
+              Create contract
             </button>
           </div>
           {props.contracts.length === 0 && (
@@ -784,6 +791,7 @@ function QuotesPane({
   busy: boolean;
   call: (url: string, method: string, body?: unknown) => Promise<Record<string, unknown> | null>;
 }) {
+  const router = useRouter();
   const [copied, setCopied] = useState<string | null>(null);
 
   return (
@@ -877,6 +885,41 @@ function QuotesPane({
                     {copied === q.id ? "Copied ✓" : "Copy link"}
                   </button>
                 )}
+                {/* Accepted quote → invoice (the Maltivas conversion) */}
+                {q.status === "accepted" &&
+                  (q.invoiceStatus === "paid" ? (
+                    <span className="rounded-lg bg-green-100 px-3 py-1.5 text-xs font-medium text-green-700 dark:bg-green-950 dark:text-green-300">
+                      ✓ Invoice paid
+                    </span>
+                  ) : q.invoiceId ? (
+                    <Link
+                      href={`/studio/channel/${channelId}/business/invoices/${q.invoiceId}`}
+                      className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium hover:border-amber-500 hover:text-amber-700 dark:border-neutral-700 dark:hover:text-amber-400"
+                    >
+                      Go to invoice →
+                    </Link>
+                  ) : (
+                    <button
+                      disabled={busy}
+                      onClick={() => {
+                        void call("/api/studio/quotes", "PATCH", {
+                          channelId,
+                          quoteId: q.id,
+                          action: "convertToInvoice",
+                        }).then((data) => {
+                          const inv = data?.invoice as { id?: string } | undefined;
+                          if (inv?.id) {
+                            router.push(
+                              `/studio/channel/${channelId}/business/invoices/${inv.id}`,
+                            );
+                          }
+                        });
+                      }}
+                      className="rounded-lg bg-linear-to-r from-amber-500 to-orange-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-amber-400 hover:to-orange-500 disabled:opacity-50"
+                    >
+                      🧾 Create invoice
+                    </button>
+                  ))}
               </div>
             </div>
           </div>

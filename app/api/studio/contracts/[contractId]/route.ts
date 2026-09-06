@@ -1,12 +1,13 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import {
   SIGN_TOKEN_TTL_DAYS,
-  countUnassignedClientChips,
   generateSignToken,
   getUniqueRecipients,
+  parseContractRecipients,
   validateContractDraft,
 } from "@/lib/contracts";
 import { sanitizeRichHtml } from "@/lib/sanitize-html";
@@ -42,6 +43,8 @@ const PatchSchema = z.object({
   amountCents: z.number().int().nullable().optional(),
   content: z.string().min(1).max(200_000).optional(),
   logoUrl: z.string().url().max(2000).nullable().optional(),
+  // additional clients beyond the primary — each gets a signing link
+  recipients: z.array(z.unknown()).max(20).optional(),
   expiresAt: z.string().datetime().nullable().optional(),
 });
 
@@ -83,7 +86,10 @@ export async function PATCH(
     if (contract.status !== "DRAFT") {
       return NextResponse.json({ error: "Only drafts can be sent." }, { status: 409 });
     }
-    const invalidDraft = validateContractDraft(contract);
+    const invalidDraft = validateContractDraft({
+      ...contract,
+      recipients: contract.recipients,
+    });
     if (invalidDraft) return NextResponse.json({ error: invalidDraft }, { status: 422 });
     // The stored Do-Biz signature signs for the creator (set once in the
     // first-visit modal).
@@ -104,20 +110,30 @@ export async function PATCH(
     const expiresAt = new Date(Date.now() + SIGN_TOKEN_TTL_DAYS * 86_400_000);
 
     // One signing token per unique recipient (the Maltivas multi-signer
-    // flow): every client chip carrying an email is a recipient; chips
-    // without an email — and chip-less documents — fall to clientEmail.
-    const assigned = getUniqueRecipients(contract.content);
-    const needsDefault =
-      assigned.length === 0 || countUnassignedClientChips(contract.content) > 0;
-    const targets = [...assigned];
-    if (
-      needsDefault &&
-      !targets.some((t) => t.email === contract.clientEmail.toLowerCase())
-    ) {
-      targets.push({
-        email: contract.clientEmail.toLowerCase(),
-        name: contract.clientName,
-      });
+    // flow). Recipients come from three places, deduped by email: the
+    // primary client, additional clients on the card, and emails assigned
+    // on signature chips. Unassigned chips fall to the primary client
+    // (validation guarantees one exists in that case).
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contract.clientEmail.trim());
+    const seen = new Map<string, string>();
+    if (emailOk) {
+      seen.set(contract.clientEmail.trim().toLowerCase(), contract.clientName);
+    }
+    for (const extra of parseContractRecipients(contract.recipients)) {
+      if (!seen.has(extra.email)) seen.set(extra.email, extra.name);
+    }
+    for (const chip of getUniqueRecipients(contract.content)) {
+      if (!seen.has(chip.email)) seen.set(chip.email, chip.name);
+    }
+    const targets = [...seen.entries()].map(([email, name]) => ({
+      email,
+      name: name || email,
+    }));
+    if (targets.length === 0) {
+      return NextResponse.json(
+        { error: "Add at least one signer before sending." },
+        { status: 422 },
+      );
     }
     const tokens = targets.map((target) => ({
       token: generateSignToken(),
@@ -224,6 +240,13 @@ export async function PATCH(
         ? { clientCompany: body.clientCompany?.trim() || null }
         : {}),
       ...(body.logoUrl !== undefined ? { logoUrl: body.logoUrl } : {}),
+      ...(body.recipients !== undefined
+        ? {
+            recipients: parseContractRecipients(
+              body.recipients,
+            ) as unknown as Prisma.InputJsonValue,
+          }
+        : {}),
       ...(body.expiresAt !== undefined
         ? { expiresAt: body.expiresAt ? new Date(body.expiresAt) : null }
         : {}),

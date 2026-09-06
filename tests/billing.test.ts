@@ -57,3 +57,50 @@ describe("dueDateFor", () => {
     expect(Object.keys(PAYMENT_TERMS)).toContain("net-60");
   });
 });
+
+import { contractContentFromQuote } from "@/lib/billing";
+
+describe("contractContentFromQuote", () => {
+  const base = {
+    quoteNumber: "QUO-007",
+    title: "Event coverage",
+    amountCents: 200000,
+  };
+  it("embeds structured line items as a table with totals and both chips", () => {
+    const html = contractContentFromQuote({
+      ...base,
+      lineItems: [
+        { item: "Video <live>", details: "Full day", qty: 1, rateCents: 150000 },
+        { item: "Editing", details: "", qty: 2, rateCents: 25000 },
+      ],
+      taxBps: 1000,
+      discountCents: 0,
+    });
+    expect(html).toContain("Scope of work");
+    expect(html).toContain("Video &lt;live&gt;"); // escaped
+    expect(html).toContain("$1,500.00");
+    expect(html).toContain("Tax: $200.00"); // 10% of 200000
+    expect(html).toContain("$2,200.00"); // total in Payment
+    expect(html).toContain('data-signer="creator"');
+    expect(html).toContain('data-signer="client"');
+    expect(html).toContain("QUO-007");
+  });
+  it("falls back to the legacy description and quoted amount", () => {
+    const html = contractContentFromQuote({
+      ...base,
+      description: "Plain scope text",
+      lineItems: null,
+    });
+    expect(html).toContain("Plain scope text");
+    expect(html).toContain("$2,000.00");
+    expect(html).toContain("data-signature-field");
+  });
+  it("keeps rich-HTML descriptions as markup", () => {
+    const html = contractContentFromQuote({
+      ...base,
+      description: "<p>Rich <strong>scope</strong></p>",
+      lineItems: [],
+    });
+    expect(html).toContain("<p>Rich <strong>scope</strong></p>");
+  });
+});

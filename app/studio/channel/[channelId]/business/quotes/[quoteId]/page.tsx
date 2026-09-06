@@ -59,6 +59,7 @@ export default async function QuoteEditorPage({
       }
       companyEmail={channel.businessEmail ?? ""}
       companyAddress={channel.businessAddress ?? ""}
+      token={quote.token}
       initial={{
         id: quote.id,
         number: quote.quoteNumber,

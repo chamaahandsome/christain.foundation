@@ -979,6 +979,9 @@ model Contract {
   clientName     String
   clientEmail    String
   clientCompany  String?
+  // Additional clients beyond the primary (each gets their own signing
+  // link): [{ name, email, company? }]
+  recipients     Json?
   amountCents    Int? // optional — not every agreement carries money
   currency       String         @default("usd")
   logoUrl        String?        @db.Text // letterhead logo (defaults from Channel.businessLogoUrl)
@@ -1166,6 +1169,7 @@ model Invoice {
   channel       Channel   @relation(fields: [channelId], references: [id])
   invoiceNumber String // INV-001 … per channel
   contractId    String?
+  quoteId       String?   @unique // set when converted from an accepted quote
   clientName    String
   clientEmail   String
   title         String

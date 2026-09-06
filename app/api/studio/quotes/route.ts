@@ -5,6 +5,7 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { sanitizeRichHtml } from "@/lib/sanitize-html";
 import { generateSignToken, nextDocNumber } from "@/lib/contracts";
+import type { Prisma as PrismaNS } from "@prisma/client";
 import { sendQuoteEmail } from "@/lib/business-emails";
 import { getChannelAccess } from "@/lib/team-authorization";
 import { computeBillTotals, parseLineItems } from "@/lib/billing";
@@ -37,7 +38,7 @@ const CreateSchema = z.object({
 const PatchSchema = z.object({
   channelId: z.string().min(1),
   quoteId: z.string().min(1),
-  action: z.enum(["send", "delete", "edit"]),
+  action: z.enum(["send", "delete", "edit", "convertToInvoice"]),
   clientName: z.string().min(2).max(200).optional(),
   clientEmail: z.string().email().max(320).optional(),
   title: z.string().min(2).max(200).optional(),
@@ -147,6 +148,59 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Quote not found" }, { status: 404 });
   }
 
+  // Accepted quote → draft invoice carrying items/tax/client, linked back
+  // to the quote and to its minted contract (so signing auto-sends it).
+  if (action === "convertToInvoice") {
+    if (quote.status !== "accepted") {
+      return NextResponse.json(
+        { error: "Only accepted quotes convert to invoices." },
+        { status: 409 },
+      );
+    }
+    const existing = await db.invoice.findUnique({
+      where: { quoteId: quote.id },
+      select: { id: true },
+    });
+    if (existing) return NextResponse.json({ invoice: existing, existing: true });
+
+    const lastInv = await db.invoice.findFirst({
+      where: { channelId },
+      orderBy: { invoiceNumber: "desc" },
+      select: { invoiceNumber: true },
+    });
+    const invoice = await db.invoice.create({
+      data: {
+        channelId,
+        invoiceNumber: nextDocNumber("INV", lastInv?.invoiceNumber ?? null),
+        quoteId: quote.id,
+        contractId: quote.contractId,
+        clientName: quote.clientName,
+        clientEmail: quote.clientEmail,
+        title: quote.title,
+        description: quote.description,
+        lineItems: (quote.lineItems ?? undefined) as
+          | PrismaNS.InputJsonValue
+          | undefined,
+        taxBps: quote.taxBps,
+        discountCents: quote.discountCents,
+        notes: quote.notes,
+        terms: quote.terms,
+        amountCents: quote.amountCents,
+        token: generateSignToken(),
+      },
+    });
+    if (quote.contractId) {
+      await db.contractActivity.create({
+        data: {
+          contractId: quote.contractId,
+          type: "created",
+          description: `Invoice ${invoice.invoiceNumber} drafted from quote ${quote.quoteNumber}`,
+        },
+      });
+    }
+    return NextResponse.json({ invoice });
+  }
+
   if (action === "edit") {
     if (quote.status !== "draft") {
       return NextResponse.json({ error: "Only draft quotes can be edited." }, { status: 409 });
@@ -178,13 +232,17 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  // send
-  if (quote.status !== "draft") {
-    return NextResponse.json({ error: "This quote was already sent." }, { status: 409 });
+  // send (or resend while still open)
+  if (!["draft", "sent", "viewed"].includes(quote.status)) {
+    return NextResponse.json({ error: "This quote is no longer open." }, { status: 409 });
   }
   await db.quote.update({
     where: { id: quoteId },
-    data: { status: "sent", sentAt: new Date() },
+    data: {
+      // a resend never demotes "viewed"
+      status: quote.status === "draft" ? "sent" : quote.status,
+      sentAt: quote.sentAt ?? new Date(),
+    },
   });
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "";
   const user = await db.user.findUnique({ where: { id: userId }, select: { email: true } });

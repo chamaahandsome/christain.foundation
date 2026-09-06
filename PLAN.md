@@ -234,6 +234,35 @@ Matt-18 dispute clause). Contract canvas is sharp paper (3px radius,
 document shadow, page width). FeatureTour got anchored spotlight steps
 (CSS-selector anchors, dimmed backdrop, ring + docked card). Overview
 tab shows Recent-activity contract thumbnail cards.
+2026-09-06 (post-review fixes + parity round, after a second Maltivas
+sweep of the invoice/quote legs): accepted quotes mint contracts via
+contractContentFromQuote (line-items table + totals + both signature
+chips + channel logo — structured quotes no longer lose their scope);
+draft invoices/quotes are gated on their token pages until sent;
+invoices flip to "viewed" on open (resends never demote it); the
+editor header gains post-send actions (Copy link, Resend, Mark paid,
+Void); quote→invoice conversion (Invoice.quoteId @unique, PATCH
+action convertToInvoice, accepted-quote rows show Create invoice /
+Go to invoice / Invoice paid) with the converted invoice inheriting
+the quote's contract link so signing auto-sends it; and
+?contractId= pre-fills a new invoice from the agreement (linked at
+create). Deliberately NOT copied from Maltivas (verified dead code
+there): the Subscription tab (no handler), overdue/cancelled/expired
+statuses (never written), reminder + paid emails (never called),
+requiresAuth/deposits/milestones/taxable (unreachable or ignored).
+Still open as the next milestone: online payment collection
+(Stripe), PDFs, receipts, reminder cron.
+2026-09-06 (multi-party): Contract.recipients Json holds additional
+clients (name/email/company; parseContractRecipients, tested); the
+Client information card lists them with add/remove; every unique
+email (primary + extras + chip assignments) gets its own signing
+token; validateContractDraft now allows chip-only or extras-only
+sends (client card optional unless unassigned chips exist); at
+completion, signers whose signature matched no chip are appended
+under "Also signed by" so every party appears in the executed copy.
+Billing editors gained the anchored spotlight tour (auto first-run +
+Show/Replay); Do-Biz chrome emoji replaced with inline SVG icons
+(pen/eye/sparkles/save/send/link in components/icons.tsx).
 First visit seeds the library and opens the signature modal
 (generated-cursive-from-name or drawn; stored once, signs every send).
 Public surfaces: `/@handle/book` (service cards with rates/days →

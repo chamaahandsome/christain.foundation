@@ -12,11 +12,13 @@ import { DocEditor } from "@/components/DocEditor";
 import { SignatureSetupModal } from "@/components/SignatureSetupModal";
 import { ImageUploadDialog } from "@/components/ImageUploadDialog";
 import { FeatureTour, useFirstVisit, type TourStep } from "@/components/FeatureTour";
+import { EyeIcon, SaveIcon, SendIcon, SparklesIcon } from "@/components/icons";
 import {
   countSignatureFields,
   countUnassignedClientChips,
   extractRecipientFields,
   getUniqueRecipients,
+  parseContractRecipients,
   signatureBlockHtml,
   substituteSignatureFields,
 } from "@/lib/contract-fields";
@@ -34,6 +36,7 @@ interface ContractData {
   clientName: string;
   clientEmail: string;
   clientCompany: string | null;
+  recipients: unknown;
   amountCents: number | null;
   status: string;
   content: string;
@@ -125,6 +128,17 @@ export function ContractEditorPage({
   const [clientName, setClientName] = useState(contract.clientName);
   const [clientEmail, setClientEmail] = useState(contract.clientEmail);
   const [clientCompany, setClientCompany] = useState(contract.clientCompany ?? "");
+  // Additional clients beyond the primary — each gets their own signing
+  // link at send (the multi-party card).
+  const [extraClients, setExtraClients] = useState<
+    { name: string; email: string; company: string }[]
+  >(
+    parseContractRecipients(contract.recipients).map((r) => ({
+      name: r.name,
+      email: r.email,
+      company: r.company ?? "",
+    })),
+  );
   const [amount, setAmount] = useState(
     contract.amountCents !== null ? String(contract.amountCents / 100) : "",
   );
@@ -204,6 +218,7 @@ export function ContractEditorPage({
         amountCents: amount ? Math.round(Number(amount) * 100) : null,
         content,
         logoUrl,
+        recipients: extraClients,
       }),
     });
     if (!res.ok) {
@@ -215,14 +230,14 @@ export function ContractEditorPage({
     dirty.current = false;
     setSaveState("saved");
     return true;
-  }, [contract.id, title, clientName, clientEmail, clientCompany, amount, content, logoUrl]);
+  }, [contract.id, title, clientName, clientEmail, clientCompany, amount, content, logoUrl, extraClients]);
 
   // Autosave, the Maltivas cadence: debounce edits.
   useEffect(() => {
     if (!editable || !dirty.current) return;
     const timer = setTimeout(() => void save(), 2500);
     return () => clearTimeout(timer);
-  }, [editable, save, title, clientName, clientEmail, clientCompany, amount, content, logoUrl]);
+  }, [editable, save, title, clientName, clientEmail, clientCompany, amount, content, logoUrl, extraClients]);
 
   // Recipients-panel facts, recomputed as the document changes (the
   // Maltivas warnings: unassigned signature fields, missing recipient).
@@ -231,11 +246,14 @@ export function ContractEditorPage({
   const hasClientEmail = clientEmail.includes("@");
   const assignedRecipients = getUniqueRecipients(content);
   const unassignedChips = countUnassignedClientChips(content);
-  // The default clientEmail recipient covers unassigned chips and
-  // chip-less documents.
-  const needsDefault = assignedRecipients.length === 0 || unassignedChips > 0;
-  const totalRecipients =
-    assignedRecipients.length + (needsDefault && hasClientEmail ? 1 : 0);
+  const validExtras = extraClients.filter((c) => c.email.includes("@"));
+  // Every unique email — primary client, additional clients, chip
+  // assignments — gets its own signing link.
+  const totalRecipients = new Set([
+    ...(hasClientEmail ? [clientEmail.trim().toLowerCase()] : []),
+    ...validExtras.map((c) => c.email.trim().toLowerCase()),
+    ...assignedRecipients.map((r) => r.email),
+  ]).size;
   const letterhead = logoUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
     <div className="border-b-2 border-neutral-200 pb-4 text-center">
@@ -260,11 +278,11 @@ export function ContractEditorPage({
 
   const sendDisabledReason = !hasSignature
     ? "Create your signature first"
-    : needsDefault && !hasClientEmail
-      ? unassignedChips > 0
-        ? `${unassignedChips} signature field${unassignedChips > 1 ? "s have" : " has"} no email assigned — assign them, or fill in the client email`
-        : "Add a signature field with an email, or fill in the client email"
-      : null;
+    : unassignedChips > 0 && !hasClientEmail
+      ? `${unassignedChips} signature field${unassignedChips > 1 ? "s have" : " has"} no email assigned — assign them, or fill in the client email`
+      : totalRecipients === 0
+        ? "Add at least one signer: assign a signature field an email, or fill in a client"
+        : null;
 
   async function send() {
     if (!(await save())) return;
@@ -373,24 +391,27 @@ export function ContractEditorPage({
                   : "Saved"}
             </span>
           )}
+          <button
+            onClick={() => setTourOpen(true)}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+          >
+            <SparklesIcon className="h-4 w-4 text-amber-500" />
+            {firstVisitTour || !tourSeen ? "Show tour" : "Replay tour"}
+          </button>
           {editable && (
             <>
               <button
-                onClick={() => setTourOpen(true)}
-                className="shrink-0 rounded-lg px-2.5 py-1.5 text-sm text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              >
-                ✨ {firstVisitTour || !tourSeen ? "Show tour" : "Replay tour"}
-              </button>
-              <button
                 onClick={() => setPreview(true)}
-                className="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:border-amber-500 hover:text-amber-700 dark:border-neutral-700 dark:hover:text-amber-400"
+                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:border-amber-500 hover:text-amber-700 dark:border-neutral-700 dark:hover:text-amber-400"
               >
-                👁 Preview
+                <EyeIcon className="h-4 w-4" />
+                Preview
               </button>
               <button
                 onClick={() => void save()}
-                className="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:border-amber-500 hover:text-amber-700 dark:border-neutral-700 dark:hover:text-amber-400"
+                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:border-amber-500 hover:text-amber-700 dark:border-neutral-700 dark:hover:text-amber-400"
               >
+                <SaveIcon className="h-4 w-4" />
                 Save
               </button>
               <button
@@ -398,8 +419,9 @@ export function ContractEditorPage({
                 onClick={() => void send()}
                 disabled={!!sendDisabledReason || sending}
                 title={sendDisabledReason ?? "Sign with your stored signature and email the signing link"}
-                className="shrink-0 rounded-lg bg-linear-to-r from-amber-500 to-orange-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm hover:from-amber-400 hover:to-orange-500 disabled:opacity-50"
+                className="flex shrink-0 items-center gap-1.5 rounded-lg bg-linear-to-r from-amber-500 to-orange-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm hover:from-amber-400 hover:to-orange-500 disabled:opacity-50"
               >
+                <SendIcon className="h-4 w-4" />
                 {sending ? "Sending…" : "Send to client"}
               </button>
             </>
@@ -500,8 +522,8 @@ export function ContractEditorPage({
                       </div>
                     </div>
                 ))}
-                {/* Default client row (covers unassigned chips / no chips) */}
-                {needsDefault && hasClientEmail && (
+                {/* Primary client (unassigned chips fall to them) */}
+                {hasClientEmail && (
                   <div className="flex items-center gap-2.5 rounded-lg border border-dashed border-neutral-300 px-3 py-2 dark:border-neutral-700">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-xs font-bold text-neutral-500 dark:bg-neutral-800">
                       {(clientName || clientEmail).slice(0, 1).toUpperCase()}
@@ -516,6 +538,21 @@ export function ContractEditorPage({
                     </div>
                   </div>
                 )}
+                {/* Additional clients — each gets their own link */}
+                {validExtras.map((c) => (
+                  <div
+                    key={c.email}
+                    className="flex items-center gap-2.5 rounded-lg border border-dashed border-neutral-300 px-3 py-2 dark:border-neutral-700"
+                  >
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-xs font-bold text-neutral-500 dark:bg-neutral-800">
+                      {(c.name || c.email).slice(0, 1).toUpperCase()}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-medium">{c.name || c.email}</p>
+                      <p className="truncate text-[11px] text-neutral-400">{c.email}</p>
+                    </div>
+                  </div>
+                ))}
                 {/* Warnings — the Maltivas problem callouts */}
                 {unassignedChips > 0 && !hasClientEmail && (
                   <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
@@ -531,16 +568,16 @@ export function ContractEditorPage({
                     {unassignedChips > 1 ? "s" : ""} go to {clientEmail}.
                   </p>
                 )}
-                {assignedRecipients.length === 0 && !hasClientEmail && (
+                {totalRecipients === 0 && (
                   <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
                     ⚠ No recipient — add a signature field with an email, or
-                    fill in the client email below.
+                    fill in a client below.
                   </p>
                 )}
                 {sigFields.client === 0 && (
                   <p className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs leading-5 text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
                     No client signature field in the document — add one from
-                    the toolbar (+ → ✍️ Signature field) to place where they
+                    the toolbar (+ → Signature field) to place where they
                     sign.
                   </p>
                 )}
@@ -557,6 +594,10 @@ export function ContractEditorPage({
 
           <div className="rounded-2xl border border-neutral-200 p-5 dark:border-neutral-800">
             <h3 className="text-sm font-semibold">Client information</h3>
+            <p className="mt-1 text-xs text-neutral-400">
+              Every client listed here gets their own signing link. Unassigned
+              signature fields fall to the first client.
+            </p>
             <div className="mt-3 space-y-2">
               <input
                 value={clientName}
@@ -590,6 +631,87 @@ export function ContractEditorPage({
                 className={input}
               />
             </div>
+
+            {/* Additional clients — multi-party agreements */}
+            {extraClients.map((c, i) => (
+              <div
+                key={i}
+                className="mt-3 space-y-2 rounded-xl border border-dashed border-neutral-300 p-3 dark:border-neutral-700"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">
+                    Client {i + 2}
+                  </p>
+                  {editable && (
+                    <button
+                      type="button"
+                      title="Remove this client"
+                      onClick={() => {
+                        setExtraClients((list) => list.filter((_, j) => j !== i));
+                        markDirty();
+                      }}
+                      className="rounded-md px-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                <input
+                  value={c.name}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setExtraClients((list) =>
+                      list.map((row, j) => (j === i ? { ...row, name: v } : row)),
+                    );
+                    markDirty();
+                  }}
+                  disabled={!editable}
+                  placeholder="Full name"
+                  className={input}
+                />
+                <input
+                  value={c.email}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setExtraClients((list) =>
+                      list.map((row, j) => (j === i ? { ...row, email: v } : row)),
+                    );
+                    markDirty();
+                  }}
+                  disabled={!editable}
+                  type="email"
+                  placeholder="Email (their signing link goes here)"
+                  className={input}
+                />
+                <input
+                  value={c.company}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setExtraClients((list) =>
+                      list.map((row, j) => (j === i ? { ...row, company: v } : row)),
+                    );
+                    markDirty();
+                  }}
+                  disabled={!editable}
+                  placeholder="Company / church (optional)"
+                  className={input}
+                />
+              </div>
+            ))}
+            {editable && (
+              <button
+                type="button"
+                onClick={() => {
+                  setExtraClients((list) => [
+                    ...list,
+                    { name: "", email: "", company: "" },
+                  ]);
+                }}
+                className="mt-3 w-full rounded-lg border border-dashed border-neutral-300 px-3 py-2 text-xs text-neutral-500 hover:border-amber-500 hover:text-amber-700 dark:border-neutral-700 dark:hover:text-amber-400"
+              >
+                + Add another client
+              </button>
+            )}
           </div>
 
           <div className="rounded-2xl border border-neutral-200 p-5 dark:border-neutral-800">
@@ -731,6 +853,14 @@ export function ContractEditorPage({
               When linked, the invoice is emailed to the client automatically
               after the contract is signed.
             </p>
+            {contract.status !== "SIGNED" && (
+              <Link
+                href={`/studio/channel/${channelId}/business/invoices/new?contractId=${contract.id}`}
+                className="mt-2 block rounded-lg border border-dashed border-neutral-300 px-3 py-2 text-center text-xs text-neutral-500 hover:border-amber-500 hover:text-amber-700 dark:border-neutral-700 dark:hover:text-amber-400"
+              >
+                + Create new invoice — pre-fills from this contract
+              </Link>
+            )}
           </div>
 
           <div className="rounded-2xl border border-neutral-200 p-5 dark:border-neutral-800">
