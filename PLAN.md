@@ -160,17 +160,21 @@ ebooks/updates; courses land with native hosting.
 ```
 Contract/ContractSignature/ContractSignToken/ContractActivity — as before
 BusinessTemplate — category, data-field content, fields manifest, isDefault
-BookableService  — hire services: category, rate+unit, requirements,
-                   weekly availableDays, visible/active
-BookingRequest   — public request (serviceId?) → quote or contract
+BookableService  — kind HIRE|ONLINE. HIRE: category, rate+unit,
+                   requirements, weekly availableDays, visible/active.
+                   ONLINE (1:1): slot length + daily window + fee,
+                   meetingProvider/meetingUrl
+BookingRequest   — kind HIRE|ONLINE. HIRE → quote or contract; ONLINE →
+                   paid (or free) and confirmed with a Meet link
 Quote            — QUO-### · token page · accept mints the contract
 Invoice          — INV-### · token page · send/markPaid/void (collection later)
 Channel          — digitalSignature(+Name), businessInitializedAt, bookingEnabled
 ```
 The studio Business tab (top-level, owner-only) is the Do-Biz dashboard:
 **Overview** (stat cards + recent activity + Create-agreement) · **Bookings**
-(Services / Requests sub-tabs; requests → Send quote, Accept→contract, or
-decline) · **Quotes** · **Contracts** (TemplateModal — search/filters/
+(Create bookings / Booking requests sub-tabs, each split again into
+Service hire / Online 1:1; hire requests → Send quote, Accept→contract, or
+decline; 1:1s → Join, Mark completed, Cancel) · **Quotes** · **Contracts** (TemplateModal — search/filters/
 categories left, card grid with hover previews right; selecting creates the
 contract and opens the **editor page**. 2026-09-04: the editor is the full
 Maltivas experience — `DocEditor` (floating pill toolbar over a paper
@@ -263,6 +267,71 @@ under "Also signed by" so every party appears in the executed copy.
 Billing editors gained the anchored spotlight tour (auto first-run +
 Show/Replay); Do-Biz chrome emoji replaced with inline SVG icons
 (pen/eye/sparkles/save/send/link in components/icons.tsx).
+2026-09-07 (signing polish + bookings parity, after a Maltivas bookings
+sweep): typed signatures use the Hurricane script (next/font, shared by
+the setup canvas, the sign dialog preview, sign-ready chips and
+executed documents) and signed sections render as green-highlighted
+cards with name/date/✓; flattenCreatorFields unwraps creator chips to
+plain prose everywhere the document is final (locked editor, preview,
+/signed, closed sign links). Bookings: BookingStatus grew RESPONDED /
+QUOTED / COMPLETED with respondedAt/viewedAt/completedAt + quoteId;
+raising a quote advances the request; BookableService gained
+durationMins, extras (add-ons with optional prices) and images;
+requesters tick add-ons on the public form and they ride into the
+request and the studio card; requesters now get a "request received"
+confirmation email (Maltivas sends none) and an optional reply email
+on Mark responded. lib/bookings (parseServiceExtras/parseServiceImages/
+bookingTotalCents) is pure + tested. Deliberately NOT ported from
+Maltivas: availability text encoded in a description field, the second
+request table, the unauthenticated availability write API, and the
+schema-only message thread. 2026-09-07 (time slots): services opt into slot booking
+(slotMinutes + dailyStart/dailyEnd + bufferMins + timezone +
+leadTimeHours/maxAdvanceDays); lib/availability generates slots, gates
+days against availableDays/lead time/horizon and validates a chosen
+slot (pure, 11 tests). ServiceBooking holds occupancy with
+@@unique([serviceId, date, startMin]) — that key, not app logic, is
+what prevents double-booking. Public GET
+/api/services/[id]/availability lists a day's slots with taken ones
+marked (read-only; Maltivas' equivalent write endpoint is
+unauthenticated); requesting places a HELD row (7 days) in the same
+call, losing a race returns a clean 409 and rolls the request back;
+accepting promotes HELD → BOOKED, declining releases it, and
+/api/cron/expire-holds (registered 6-hourly, CRON_SECRET-guarded)
+sweeps expired holds while never touching BOOKED. Wall-clock times are
+stored as minutes and always labeled with the service's timezone — no
+conversion math, which is where the Maltivas booking bugs live. UI:
+slot config in ServicesEditor, per-service photos (up to 3), a public
+date + slot picker, and the reserved slot on the studio request card.
+2026-09-07 (online 1:1, ported from Maltivas bagel-break): `BookingKind`
+(HIRE | ONLINE) on BookableService and BookingRequest splits Bookings
+into two flows sharing one slot engine. ONLINE is the Maltivas
+"appointment" event — a fixed-length meeting booked straight off the
+page, free or paid, one slot per booking (minBookingSlots =
+maxBookingSlots = 1). Free confirms on the spot; paid holds the slot 30
+minutes (SESSION_HOLD_MINUTES, matched by the Checkout session's
+expires_at) while Stripe collects a destination charge with the existing
+5% `booking` fee, and `checkout.session.completed` (cfKind "session")
+confirms it. lib/session-booking.confirmSessionBooking is the single,
+idempotent confirmation path for both. Google Calendar is done over REST
+with the creator's Clerk-held Google token (no googleapis dependency,
+same pattern as lib/youtube-api): `events.insert` with
+`conferenceData` mints a Meet link and invites both parties, passing
+local dateTime + IANA timeZone so CF's no-conversion rule survives
+intact. It degrades in two steps — the creator's own standing room link,
+then "link to follow" — and every confirmation email carries an
+add-to-calendar template URL that needs no OAuth at all. BookingStatus
+grew CONFIRMED / CANCELLED; cancelling withdraws the calendar event,
+frees the slot and emails the guest (refunds are issued in Stripe by
+hand and the email says so). expire-holds also closes ONLINE requests
+whose payment never landed. UI: **Create bookings** and **Booking
+requests** each carry Service hire / Online 1:1 sub-tabs; SessionsEditor
+is the 1:1 event form, SessionBookingClient the public day→time→pay flow,
+and `/@handle/book` leads with 1:1s above hire services. lib/sessions is
+pure + tested (14 tests), lib/google-calendar's URL helpers likewise (8).
+Deliberately not ported: Trickl on sessions — chunks arrive over time and
+a slot can't wait for them.
+Still open: embeddable booking widget, per-slot pricing, automatic
+refunds on cancellation, reschedule.
 First visit seeds the library and opens the signature modal
 (generated-cursive-from-name or drawn; stored once, signs every send).
 Public surfaces: `/@handle/book` (service cards with rates/days →

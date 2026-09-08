@@ -194,7 +194,7 @@ describe("signatureBlockHtml", () => {
   it("renders a PNG data-URL as an image and anything else as cursive text", () => {
     expect(signatureBlockHtml({ signature: "data:image/png;base64,x", signerName: "A" })).toContain("<img");
     const typed = signatureBlockHtml({ signature: 'B "quoted"', signerName: "B <x>" });
-    expect(typed).toContain("font-family:Georgia");
+    expect(typed).toContain("--font-signature");
     expect(typed).toContain("B &quot;quoted&quot;");
     expect(typed).toContain("B &lt;x&gt;");
   });
@@ -340,5 +340,101 @@ describe("validateContractDraft — multi-recipient sends", () => {
         content: body,
       }),
     ).toMatch(/at least one signer/);
+  });
+});
+
+import { findUnfilledCreatorFields } from "@/lib/contracts";
+
+describe("findUnfilledCreatorFields", () => {
+  it("flags placeholder-looking creator fields, skips filled and recipient ones", () => {
+    const html =
+      `<span data-field="effectiveDate">Effective Date</span>` + // label = key → unfilled
+      `<span data-field="company">Grace Chapel Media</span>` + // filled
+      `<span data-field="scope">Describe the work to be performed</span>` + // prompt → unfilled
+      `<span data-field="cancellationDays">number</span>` + // prompt word → unfilled
+      `<span data-field="hostAddress" data-filled-by="recipient">Host address</span>`; // signer's
+    const found = findUnfilledCreatorFields(html);
+    expect(found.map((f) => f.key)).toEqual(["effectiveDate", "scope", "cancellationDays"]);
+    expect(found[0].label).toBe("Effective Date");
+  });
+  it("dedupes repeated keys", () => {
+    const html =
+      `<span data-field="eventDate">Event Date</span>` +
+      `<span data-field="eventDate">Event Date</span>`;
+    expect(findUnfilledCreatorFields(html)).toHaveLength(1);
+  });
+});
+
+import { prepareSigningHtml } from "@/lib/contracts";
+
+describe("prepareSigningHtml", () => {
+  const doc =
+    `<p>Between <span data-field="company">Acme</span> and ` +
+    `<span data-field="addr" data-filled-by="recipient">Your address</span>.</p>` +
+    `<p><span data-signature-field="" data-signer="client" data-email="me@x.com" data-signer-name="Me">✍️ Me</span></p>` +
+    `<p><span data-signature-field="" data-signer="client" data-email="other@y.com" data-signer-name="Other">✍️ Other</span></p>` +
+    `<p><span data-signature-field="" data-signer="client">✍️ Client signature</span></p>`;
+
+  it("flattens creator fields, marks my inputs and chips, inerts others", () => {
+    const v = prepareSigningHtml(doc, { signerEmail: "me@x.com", isDefaultRecipient: false });
+    expect(v.html).toContain("Between Acme and"); // unwrapped to plain text
+    expect(v.html).not.toContain('data-field="company"');
+    expect(v.html).toContain('data-sign-input="addr"');
+    expect(v.html).toContain('data-sign-here="1"');
+    expect(v.html.match(/data-sign-pending/g)).toHaveLength(2); // other + unassigned
+    expect(v.myChips).toBe(1);
+    expect(v.othersPending).toBe(2);
+  });
+  it("default recipient owns unassigned chips", () => {
+    const v = prepareSigningHtml(doc, { signerEmail: "default@z.com", isDefaultRecipient: true });
+    expect(v.myChips).toBe(1); // the unassigned one
+    expect(v.othersPending).toBe(2);
+  });
+  it("leaves creator chips alone (substituted upstream)", () => {
+    const v = prepareSigningHtml(
+      `<span data-signature-field="" data-signer="creator">✍️ Your signature</span>`,
+      { signerEmail: "a@b.c", isDefaultRecipient: true },
+    );
+    expect(v.html).toContain('data-signer="creator"');
+    expect(v.myChips).toBe(0);
+  });
+});
+
+import { recipientFieldsFor } from "@/lib/contracts";
+
+describe("assigned recipient fields", () => {
+  const doc =
+    `<span data-field="addr" data-filled-by="recipient" data-assignee="ann@x.com">Ann's address</span>` +
+    `<span data-field="title" data-filled-by="recipient">Anyone's title</span>`;
+
+  it("recipientFieldsFor scopes to the signer (assigned + unassigned)", () => {
+    expect(recipientFieldsFor(doc, "Ann@X.com").map((f) => f.key)).toEqual([
+      "addr",
+      "title",
+    ]);
+    expect(recipientFieldsFor(doc, "bob@y.com").map((f) => f.key)).toEqual(["title"]);
+  });
+  it("prepareSigningHtml inerts co-signers' assigned fields", () => {
+    const mine = prepareSigningHtml(doc, { signerEmail: "ann@x.com", isDefaultRecipient: false });
+    expect(mine.html.match(/data-sign-input/g)).toHaveLength(2);
+    const other = prepareSigningHtml(doc, { signerEmail: "bob@y.com", isDefaultRecipient: false });
+    expect(other.html.match(/data-sign-input/g)).toHaveLength(1);
+    expect(other.html).toContain("Ann's address — ann@x.com fills this");
+  });
+});
+
+import { flattenCreatorFields } from "@/lib/contracts";
+
+describe("flattenCreatorFields", () => {
+  it("unwraps creator chips, keeps recipient chips and signatures", () => {
+    const html =
+      `<p>Between <span data-field="company">Acme</span> and ` +
+      `<span data-field="who" data-filled-by="recipient">Client</span>.</p>` +
+      `<p><span data-signature-field="" data-signer="client">x</span></p>`;
+    const out = flattenCreatorFields(html);
+    expect(out).toContain("Between Acme and");
+    expect(out).not.toContain('data-field="company"');
+    expect(out).toContain('data-filled-by="recipient"');
+    expect(out).toContain("data-signature-field");
   });
 });

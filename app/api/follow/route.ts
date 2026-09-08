@@ -7,6 +7,26 @@ const BodySchema = z.object({
   channelId: z.string().min(1),
 });
 
+// Follow state for the signed-in viewer (channel pages are CDN-cached, so
+// the client asks for its own state).
+export async function GET(req: Request) {
+  const channelId = new URL(req.url).searchParams.get("channelId");
+  if (!channelId) {
+    return NextResponse.json({ error: "channelId required" }, { status: 400 });
+  }
+  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    return NextResponse.json({ following: false });
+  }
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ following: false });
+
+  const follow = await db.follow.findUnique({
+    where: { userId_channelId: { userId, channelId } },
+    select: { userId: true },
+  });
+  return NextResponse.json({ following: Boolean(follow) });
+}
+
 // Toggle follow on a channel. Returns the new state + follower count.
 export async function POST(req: Request) {
   const { userId } = await auth();

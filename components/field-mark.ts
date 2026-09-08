@@ -25,6 +25,14 @@ export const FieldMark = Mark.create({
             ? { "data-filled-by": attributes.filledBy }
             : {},
       },
+      // recipient fields only: the email of the signer who fills this in
+      // (unset = the first signer to open the document)
+      assignee: {
+        default: null,
+        parseHTML: (element) => element.getAttribute("data-assignee"),
+        renderHTML: (attributes) =>
+          attributes.assignee ? { "data-assignee": attributes.assignee } : {},
+      },
     };
   },
 

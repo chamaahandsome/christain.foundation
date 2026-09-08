@@ -3,8 +3,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import {
   contractHash,
-  extractRecipientFields,
   fillRecipientFields,
+  recipientFieldsFor,
   signatureBlockHtml,
   substituteSignatureFields,
   tokenUsable,
@@ -107,8 +107,9 @@ export async function POST(
     return NextResponse.json({ error: "The drawn signature didn't upload." }, { status: 422 });
   }
 
-  // Recipient fill-ins must all be answered before the document freezes.
-  const recipientFields = extractRecipientFields(row.contract.content);
+  // This signer's fill-ins (assigned to them, plus unassigned ones) must
+  // all be answered; a co-signer's assigned fields are not their problem.
+  const recipientFields = recipientFieldsFor(row.contract.content, row.signerEmail);
   const missing = recipientFields.filter((f) => !body.fieldValues?.[f.key]?.trim());
   if (missing.length > 0) {
     return NextResponse.json(

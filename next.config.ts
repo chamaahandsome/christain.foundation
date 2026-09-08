@@ -19,7 +19,8 @@ const nextConfig: NextConfig = {
         // with @ — that's the parallel-routes convention). Tabs are real
         // sub-routes: /@handle/videos, /@handle/books, later /shop etc.
         { source: "/@:handle", destination: "/channel/:handle" },
-        { source: "/@:handle/:tab", destination: "/channel/:handle/:tab" },
+        // Catch-all so deeper pages resolve too — /@handle/book/:serviceId.
+        { source: "/@:handle/:path*", destination: "/channel/:handle/:path*" },
       ],
       afterFiles: [],
       fallback: [],

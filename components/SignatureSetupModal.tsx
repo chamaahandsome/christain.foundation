@@ -37,10 +37,14 @@ export function SignatureSetupModal({
     ctx.scale(scale, scale);
     ctx.clearRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
     ctx.fillStyle = "#171717";
-    // Cursive stack — the browser picks the best it has.
-    let size = 44;
+    // Signature script first (Hurricane via next/font), cursive fallbacks.
+    const family = getComputedStyle(document.documentElement)
+      .getPropertyValue("--font-signature")
+      .trim();
+    const stack = `${family ? `${family}, ` : ""}"Snell Roundhand", "Segoe Script", "Brush Script MT", cursive`;
+    let size = 52;
     do {
-      ctx.font = `italic ${size}px "Snell Roundhand", "Segoe Script", "Brush Script MT", cursive`;
+      ctx.font = `${size}px ${stack}`;
       size -= 2;
     } while (ctx.measureText(text).width > canvas.offsetWidth - 32 && size > 16);
     ctx.textBaseline = "middle";
@@ -50,8 +54,10 @@ export function SignatureSetupModal({
   useEffect(() => {
     if (open && mode === "generated") {
       setName(creatorName);
-      // Wait a frame for layout so offsetWidth is real.
-      requestAnimationFrame(() => renderCursive(creatorName));
+      // Wait for layout AND the signature webfont before drawing.
+      void (document.fonts?.ready ?? Promise.resolve()).then(() =>
+        requestAnimationFrame(() => renderCursive(creatorName)),
+      );
     }
   }, [open, mode, creatorName, renderCursive]);
 

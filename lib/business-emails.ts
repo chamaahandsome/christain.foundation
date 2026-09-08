@@ -110,7 +110,25 @@ export async function sendBookingDecisionEmail(input: {
   channelName: string;
   accepted: boolean;
   note: string | null;
+  /** a reply that isn't yet a decision */
+  responded?: boolean;
 }): Promise<boolean> {
+  const quoted = input.note
+    ? `<blockquote style="margin:16px 0;padding-left:14px;border-left:3px solid #e5e5e5;color:#525252">${esc(input.note)}</blockquote>`
+    : "";
+  if (input.responded) {
+    return sendEmail({
+      from: "bookings",
+      to: input.to,
+      subject: `${input.channelName} replied to your booking request`,
+      html: emailShell(
+        "A reply to your request",
+        `<p>Hi ${esc(input.requesterName)},</p>` +
+          `<p><strong>${esc(input.channelName)}</strong> has replied about your booking request:</p>` +
+          quoted,
+      ),
+    });
+  }
   return sendEmail({
     from: "bookings",
     to: input.to,
@@ -123,9 +141,33 @@ export async function sendBookingDecisionEmail(input: {
         (input.accepted
           ? `<p><strong>${esc(input.channelName)}</strong> accepted your request and is drafting the agreement — a signing link will reach this inbox shortly.</p>`
           : `<p><strong>${esc(input.channelName)}</strong> can't take this booking.</p>`) +
-        (input.note
-          ? `<blockquote style="margin:16px 0;padding-left:14px;border-left:3px solid #e5e5e5;color:#525252">${esc(input.note)}</blockquote>`
-          : ""),
+        quoted,
+    ),
+  });
+}
+
+/** Confirmation to the requester the moment their request lands. */
+export async function sendBookingReceivedEmail(input: {
+  to: string;
+  requesterName: string;
+  channelName: string;
+  serviceTitle: string | null;
+  eventDate: Date | null;
+}): Promise<boolean> {
+  return sendEmail({
+    from: "bookings",
+    to: input.to,
+    subject: `We received your booking request — ${input.channelName}`,
+    html: emailShell(
+      "Request received",
+      `<p>Hi ${esc(input.requesterName)},</p>` +
+        `<p>Your request reached <strong>${esc(input.channelName)}</strong>` +
+        (input.serviceTitle ? ` for <strong>${esc(input.serviceTitle)}</strong>` : "") +
+        (input.eventDate
+          ? ` on ${esc(input.eventDate.toLocaleDateString())}`
+          : "") +
+        `.</p>` +
+        `<p>They'll come back to you by email. If it's a fit, you'll receive a quote or an agreement to sign right here.</p>`,
     ),
   });
 }
@@ -181,6 +223,132 @@ export async function sendInvoiceEmail(input: {
         (input.dueAt ? `, due ${input.dueAt.toLocaleDateString()}` : "") +
         `.</p>` +
         emailButton(input.invoiceUrl, "View the invoice"),
+    ),
+  });
+}
+
+/* ─────────────── online 1:1 sessions (the bagel-break leg) ─────────────── */
+
+/** The meeting block both confirmation emails share. */
+function sessionDetails(input: {
+  sessionTitle: string;
+  when: string;
+  meetingUrl: string | null;
+  addToCalendarUrl: string;
+}): string {
+  return (
+    `<table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0">` +
+    `<tr><td style="padding:6px 0;color:#737373;width:110px">Session</td>` +
+    `<td style="padding:6px 0"><strong>${esc(input.sessionTitle)}</strong></td></tr>` +
+    `<tr><td style="padding:6px 0;color:#737373">When</td>` +
+    `<td style="padding:6px 0">${esc(input.when)}</td></tr>` +
+    `</table>` +
+    (input.meetingUrl
+      ? emailButton(input.meetingUrl, "Join the meeting")
+      : `<p style="font-size:13px;color:#737373">The meeting link will follow by email before the session.</p>`) +
+    `<p style="font-size:13px;color:#737373">` +
+    `<a href="${input.addToCalendarUrl}" style="color:#d97706">Add it to your calendar</a></p>`
+  );
+}
+
+/** To the guest: their 1:1 is confirmed, here's how to join. */
+export async function sendSessionConfirmedEmail(input: {
+  to: string;
+  guestName: string;
+  channelName: string;
+  sessionTitle: string;
+  when: string;
+  meetingUrl: string | null;
+  addToCalendarUrl: string;
+  amountCents: number | null;
+  replyTo?: string;
+}): Promise<boolean> {
+  return sendEmail({
+    from: "bookings",
+    to: input.to,
+    replyTo: input.replyTo,
+    subject: `Confirmed: your 1:1 with ${input.channelName}`,
+    html: emailShell(
+      "Your session is booked",
+      `<p>Hi ${esc(input.guestName)},</p>` +
+        `<p>Your one-to-one with <strong>${esc(input.channelName)}</strong> is confirmed` +
+        (input.amountCents && input.amountCents > 0
+          ? ` — payment of $${(input.amountCents / 100).toLocaleString()} received`
+          : "") +
+        `.</p>` +
+        sessionDetails(input) +
+        `<p style="font-size:13px;color:#737373">Need to change it? Reply to this email — ` +
+        `it reaches ${esc(input.channelName)} directly.</p>`,
+    ),
+  });
+}
+
+/** To the creator: someone booked a slot. */
+export async function sendSessionBookedEmail(input: {
+  to: string;
+  channelName: string;
+  guestName: string;
+  guestEmail: string;
+  sessionTitle: string;
+  when: string;
+  meetingUrl: string | null;
+  addToCalendarUrl: string;
+  amountCents: number | null;
+  message: string | null;
+  studioUrl: string;
+}): Promise<boolean> {
+  return sendEmail({
+    from: "bookings",
+    to: input.to,
+    replyTo: input.guestEmail,
+    subject: `New 1:1 booking — ${input.guestName}`,
+    html: emailShell(
+      "A session was booked",
+      `<p><strong>${esc(input.guestName)}</strong> (${esc(input.guestEmail)}) booked a ` +
+        `one-to-one with ${esc(input.channelName)}` +
+        (input.amountCents && input.amountCents > 0
+          ? ` and paid $${(input.amountCents / 100).toLocaleString()}`
+          : " (free session)") +
+        `.</p>` +
+        sessionDetails(input) +
+        (input.message
+          ? `<p style="border-left:3px solid #f59e0b;padding-left:12px;color:#525252">${esc(
+              input.message,
+            )}</p>`
+          : "") +
+        emailButton(input.studioUrl, "Open your bookings"),
+    ),
+  });
+}
+
+/** To the guest: the creator called the session off. */
+export async function sendSessionCancelledEmail(input: {
+  to: string;
+  guestName: string;
+  channelName: string;
+  sessionTitle: string;
+  when: string;
+  note: string | null;
+  refundNote: string | null;
+}): Promise<boolean> {
+  return sendEmail({
+    from: "bookings",
+    to: input.to,
+    subject: `Cancelled: your 1:1 with ${input.channelName}`,
+    html: emailShell(
+      "Your session was cancelled",
+      `<p>Hi ${esc(input.guestName)},</p>` +
+        `<p><strong>${esc(input.channelName)}</strong> had to cancel ` +
+        `<strong>${esc(input.sessionTitle)}</strong> — ${esc(input.when)}.</p>` +
+        (input.note
+          ? `<p style="border-left:3px solid #f59e0b;padding-left:12px;color:#525252">${esc(
+              input.note,
+            )}</p>`
+          : "") +
+        (input.refundNote
+          ? `<p style="font-size:13px;color:#737373">${esc(input.refundNote)}</p>`
+          : "") +
+        `<p>The slot is free again, and you're welcome to book another time.</p>`,
     ),
   });
 }

@@ -1058,8 +1058,22 @@ model ContractActivity {
 
 enum BookingStatus {
   PENDING
-  ACCEPTED
+  RESPONDED // creator replied, no quote yet
+  QUOTED // a quote is out with the requester
+  ACCEPTED // agreed — a contract draft exists
+  CONFIRMED // online 1:1 — paid (or free) and on the calendar
+  COMPLETED // the engagement happened
   DECLINED
+  CANCELLED // online 1:1 — called off after confirmation
+}
+
+// The two things a creator can be booked for. HIRE is the Maltivas
+// hire_service flow (request → quote → contract, timing agreed between
+// people). ONLINE is the Maltivas bagel-break flow (appointment): pick a
+// slot, pay if there's a fee, and the meeting link is issued on the spot.
+enum BookingKind {
+  HIRE
+  ONLINE
 }
 
 model BookingRequest {
@@ -1067,7 +1081,10 @@ model BookingRequest {
   channelId      String
   channel        Channel       @relation(fields: [channelId], references: [id])
   serviceId      String? // which bookable service, when chosen
-  userId         String // signed-in requester
+  kind           BookingKind   @default(HIRE) // mirrors the service's kind
+  // Who asked. Null for a guest — booking is open to anyone with the
+  // link, so the email below is the identity that matters.
+  userId         String?
   requesterName  String
   requesterEmail String
   organization   String?
@@ -1075,13 +1092,35 @@ model BookingRequest {
   location       String?
   budgetCents    Int?
   message        String        @db.Text
+  // Add-ons the requester selected: [{ name, priceCents? }]
+  selectedExtras Json?
   status         BookingStatus @default(PENDING)
   decisionNote   String?       @db.Text
   contractId     String? // draft minted on accept
+  quoteId        String? // quote raised from this request
+  slotStartMin   Int? // first chosen slot, for time-slot services
+  // Every slot reserved by this request: [{ date, startMin, endMin }]
+  slotSelections Json?
+  // ---- online 1:1 only ----
+  // The meeting room the guest joins: a Google Meet link minted with the
+  // calendar event, or the creator's own standing room when Google isn't
+  // connected. calendarHtmlLink opens the event in the creator's calendar.
+  meetingUrl       String? @db.Text
+  calendarEventId  String?
+  calendarHtmlLink String? @db.Text
+  amountCents      Int? // the fee charged, snapshotted at booking
+  paymentStatus    String? // free | pending | paid | refunded
+  paymentRef       String? // Stripe payment-intent / session id
+  confirmedAt      DateTime?
+
+  viewedAt       DateTime? // creator opened it
+  respondedAt    DateTime? // first move off PENDING
+  completedAt    DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
   @@index([channelId, status])
+  @@index([channelId, kind])
   @@index([userId])
 }
 
@@ -1110,15 +1149,48 @@ model BookableService {
   id            String   @id @default(cuid())
   channelId     String
   channel       Channel  @relation(fields: [channelId], references: [id])
+  // HIRE: an in-person/produced engagement, agreed through the request →
+  // quote → contract flow. ONLINE: a 1:1 meeting booked and paid on the
+  // spot, with a Google Calendar event and meeting link issued at booking.
+  kind          BookingKind @default(HIRE)
   title         String // "Sunday preaching", "Worship set", "Conference keynote"
   category      String   @default("speaking") // speaking | teaching | worship | other
   description   String   @db.Text
   rateCents     Int? // null = "let's talk"
   rateUnit      String   @default("event") // hour | day | event | project
+  // Keep the rate off the public card (Maltivas' isPrivate): the creator
+  // still sees it and quotes from it, visitors read "Price on request".
+  privateRate   Boolean  @default(false)
   requirements  String?  @db.Text // what the host provides
+  durationMins  Int? // typical length, informational
+  // Time-slot booking (opt-in): when slotMinutes is set the service is
+  // booked in fixed slots inside a daily window, on availableDays. Times
+  // are wall-clock in `timezone` — no conversion games, the label always
+  // states the zone. Null slotMinutes keeps the request-based flow.
+  slotMinutes   Int?
+  dailyStart    String? // "09:00"
+  dailyEnd      String? // "17:00"
+  bufferMins    Int      @default(0)
+  timezone      String   @default("UTC")
+  leadTimeHours Int      @default(24) // earliest a slot can be booked
+  maxAdvanceDays Int     @default(120)
+  // Consecutive slots per day a visitor may take
+  minBookingSlots Int    @default(1)
+  maxBookingSlots Int?
+  // Optional add-ons the requester can select: [{ name, priceCents? }]
+  extras        Json?
+  // Showcase images for the public card: [url, …] (max 3)
+  images        Json?
   // Weekly availability: array of day codes ["SUN","FRI","SAT"] — empty or
   // null means "ask" (no fixed days).
   availableDays Json?
+  // ---- online 1:1 only ----
+  // "google_meet": a Meet link is minted with the calendar event using the
+  // creator's Google connection. "custom": every booking uses meetingUrl —
+  // the creator's standing Zoom/Meet room. google_meet falls back to
+  // meetingUrl (then to "link to follow") when Google isn't reachable.
+  meetingProvider String  @default("google_meet")
+  meetingUrl      String? @db.Text
   visible       Boolean  @default(true) // shown on the public book page
   active        Boolean  @default(true)
   sortOrder     Int      @default(0)
@@ -1126,6 +1198,32 @@ model BookableService {
   updatedAt     DateTime @updatedAt
 
   @@index([channelId])
+  @@index([channelId, kind])
+}
+
+// Slot occupancy for time-slot services. A public request places a HELD
+// row (expiring, swept by the cron); accepting the request promotes it to
+// BOOKED. The unique key is what actually prevents double-booking.
+model ServiceBooking {
+  id               String    @id @default(cuid())
+  channelId        String
+  serviceId        String
+  date             DateTime // midnight UTC of the booked day — the day key
+  startMin         Int // minutes from midnight, service wall clock
+  endMin           Int
+  status           String    @default("HELD") // HELD | BOOKED | CANCELLED
+  holdExpiresAt    DateTime?
+  bookingRequestId String?
+  clientName       String?
+  clientEmail      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([serviceId, date, startMin])
+  @@index([channelId])
+  @@index([serviceId, date])
+  @@index([bookingRequestId])
+  @@index([status, holdExpiresAt])
 }
 
 // Quotes & invoices (Do-Biz workflow legs): booking request → quote →

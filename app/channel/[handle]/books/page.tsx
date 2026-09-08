@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { BookCard } from "@/components/BookCard";
 
-export const dynamic = "force-dynamic";
+// ISR (SCALABILITY §3.1): same page for everyone — CDN-cached, re-rendered at most
+// once per 60s, so origin load scales with content changes, not traffic.
+export const revalidate = 60;
 
 // Books tab: every published book, storefront-style.
 export default async function ChannelBooksPage({

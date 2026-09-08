@@ -5,6 +5,8 @@ import { getChannelAccess } from "@/lib/team-authorization";
 import { ACCESS_LEVELS, FEATURES } from "@/lib/team";
 import { DEFAULT_TEMPLATES } from "@/lib/default-templates";
 import { countSignatureFields } from "@/lib/contract-fields";
+import { parseServiceExtras, parseServiceImages } from "@/lib/bookings";
+import { formatMin } from "@/lib/availability";
 import { BusinessDashboard } from "@/components/BusinessDashboard";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +39,8 @@ export default async function BusinessTab({
       bookingEnabled: true,
       businessInitializedAt: true,
       digitalSignature: true,
+      stripeAccountId: true,
+      stripeChargesEnabled: true,
     },
   });
   if (!channel.businessInitializedAt) {
@@ -90,7 +94,7 @@ export default async function BusinessTab({
     }
   }
 
-  const [templates, contracts, bookings, services, quotes, invoices] =
+  const [templates, contracts, bookings, serviceTitles, services, quotes, invoices] =
     await Promise.all([
       db.businessTemplate.findMany({
         where: { channelId },
@@ -111,11 +115,25 @@ export default async function BusinessTab({
       }),
       db.bookableService.findMany({
         where: { channelId },
+        select: { id: true, title: true },
+      }),
+      db.bookableService.findMany({
+        where: { channelId },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
       }),
       db.quote.findMany({ where: { channelId }, orderBy: { createdAt: "desc" } }),
       db.invoice.findMany({ where: { channelId }, orderBy: { createdAt: "desc" } }),
     ]);
+
+  // Confirmed 1:1s per session, so the editor can refuse to delete one
+  // people have already booked.
+  const sessionRows = services.filter((s) => s.kind === "ONLINE");
+  const bookedPerSession = new Map<string, number>();
+  for (const b of bookings) {
+    if (b.kind !== "ONLINE" || !b.serviceId) continue;
+    if (!["CONFIRMED", "COMPLETED"].includes(b.status)) continue;
+    bookedPerSession.set(b.serviceId, (bookedPerSession.get(b.serviceId) ?? 0) + 1);
+  }
 
   const strip = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 
@@ -145,20 +163,53 @@ export default async function BusinessTab({
           sigTotal,
         };
       })}
-      services={services.map((s) => ({
+      canTakePayment={Boolean(channel.stripeAccountId && channel.stripeChargesEnabled)}
+      sessions={sessionRows.map((s) => ({
+        id: s.id,
+        title: s.title,
+        category: s.category,
+        description: s.description,
+        rateCents: s.rateCents,
+        images: parseServiceImages(s.images),
+        availableDays: (s.availableDays as string[] | null) ?? [],
+        slotMinutes: s.slotMinutes,
+        dailyStart: s.dailyStart,
+        dailyEnd: s.dailyEnd,
+        bufferMins: s.bufferMins,
+        timezone: s.timezone,
+        leadTimeHours: s.leadTimeHours,
+        maxAdvanceDays: s.maxAdvanceDays,
+        meetingProvider: s.meetingProvider,
+        meetingUrl: s.meetingUrl,
+        visible: s.visible,
+        active: s.active,
+        bookedCount: bookedPerSession.get(s.id) ?? 0,
+      }))}
+      services={services
+        .filter((s) => s.kind !== "ONLINE")
+        .map((s) => ({
         id: s.id,
         title: s.title,
         category: s.category,
         description: s.description,
         rateCents: s.rateCents,
         rateUnit: s.rateUnit,
+        privateRate: s.privateRate,
         requirements: s.requirements,
         availableDays: (s.availableDays as string[] | null) ?? [],
+        durationMins: s.durationMins,
+        extras: parseServiceExtras(s.extras),
+        images: parseServiceImages(s.images),
+        slotMinutes: s.slotMinutes,
+        dailyStart: s.dailyStart,
+        dailyEnd: s.dailyEnd,
+        timezone: s.timezone,
         visible: s.visible,
         active: s.active,
-      }))}
+        }))}
       bookings={bookings.map((b) => ({
         id: b.id,
+        kind: b.kind,
         requesterName: b.requesterName,
         requesterEmail: b.requesterEmail,
         organization: b.organization,
@@ -169,7 +220,37 @@ export default async function BusinessTab({
         status: b.status,
         decisionNote: b.decisionNote,
         contractId: b.contractId,
+        serviceTitle:
+          serviceTitles.find((s) => s.id === b.serviceId)?.title ?? null,
+        extras: parseServiceExtras(b.selectedExtras),
+        slotLabel: (() => {
+          const picks = Array.isArray(b.slotSelections)
+            ? (b.slotSelections as { date: string; startMin: number }[])
+            : [];
+          if (picks.length > 0) {
+            const byDay = new Map<string, number[]>();
+            for (const p of picks) {
+              byDay.set(p.date, [...(byDay.get(p.date) ?? []), p.startMin]);
+            }
+            return [...byDay.entries()]
+              .sort()
+              .map(
+                ([d, mins]) =>
+                  `${new Date(`${d}T12:00:00Z`).toLocaleDateString()} ${formatMin(
+                    Math.min(...mins),
+                  )}${mins.length > 1 ? ` (${mins.length} slots)` : ""}`,
+              )
+              .join(" · ");
+          }
+          return b.slotStartMin !== null && b.eventDate
+            ? `${b.eventDate.toLocaleDateString()} at ${formatMin(b.slotStartMin)}`
+            : null;
+        })(),
         date: b.createdAt.toLocaleDateString(),
+        meetingUrl: b.meetingUrl,
+        calendarHtmlLink: b.calendarHtmlLink,
+        amountCents: b.amountCents,
+        paymentStatus: b.paymentStatus,
       }))}
       quotes={quotes.map((q) => {
         const converted = invoices.find((inv) => inv.quoteId === q.id);

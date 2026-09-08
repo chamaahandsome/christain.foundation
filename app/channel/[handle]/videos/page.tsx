@@ -5,7 +5,9 @@ import { db } from "@/lib/db";
 import { thumbnailUrl } from "@/lib/youtube";
 import { VideoRow } from "@/components/VideoRow";
 
-export const dynamic = "force-dynamic";
+// ISR (SCALABILITY §3.1): same page for everyone — CDN-cached, re-rendered at most
+// once per 60s, so origin load scales with content changes, not traffic.
+export const revalidate = 60;
 
 // Videos tab: the full library, shelved the way the channel looks on
 // YouTube — Latest, Shorts, Lives, then one slider per populated series.

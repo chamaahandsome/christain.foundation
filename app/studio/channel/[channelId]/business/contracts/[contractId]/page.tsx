@@ -29,7 +29,8 @@ export default async function ContractEditor({
     db.contract.findUnique({
       where: { id: contractId },
       include: {
-        activities: { orderBy: { createdAt: "desc" }, take: 20 },
+        // fetched wide, collapsed per-day below
+        activities: { orderBy: { createdAt: "desc" }, take: 200 },
         signTokens: {
           where: { usedAt: null, expiresAt: { gt: new Date() } },
           orderBy: { createdAt: "desc" },
@@ -92,10 +93,22 @@ export default async function ContractEditor({
         signLink: contract.signTokens[0]
           ? `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/sign/${contract.signTokens[0].token}`
           : null,
-        activities: contract.activities.map((a) => ({
-          id: a.id,
-          description: a.description,
-          date: a.createdAt.toLocaleDateString(),
+        // Same action on the same day collapses to one row with a count —
+        // "Draft edited ×14" instead of fourteen identical lines.
+        activities: Object.values(
+          contract.activities.reduce<
+            Record<string, { id: string; description: string; date: string; n: number }>
+          >((acc, a) => {
+            const date = a.createdAt.toLocaleDateString();
+            const key = `${a.description}|${date}`;
+            if (acc[key]) acc[key].n += 1;
+            else acc[key] = { id: a.id, description: a.description, date, n: 1 };
+            return acc;
+          }, {}),
+        ).map((g) => ({
+          id: g.id,
+          description: g.n > 1 ? `${g.description} ×${g.n}` : g.description,
+          date: g.date,
         })),
       }}
     />

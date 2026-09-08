@@ -83,8 +83,64 @@ export async function PATCH(
   }
 
   if (body.action === "send") {
+    // Already out the door? Re-email the existing signing links instead of
+    // failing — only closed contracts refuse.
+    if (["SENT", "VIEWED", "PARTIALLY_SIGNED"].includes(contract.status)) {
+      const openTokens = await db.contractSignToken.findMany({
+        where: {
+          contractId: contract.id,
+          usedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+      });
+      if (openTokens.length === 0) {
+        return NextResponse.json(
+          { error: "No open signing links to resend — they were all used or expired." },
+          { status: 409 },
+        );
+      }
+      const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+      const user = await db.user.findUnique({
+        where: { id: userId },
+        select: { email: true },
+      });
+      let emailedCount = 0;
+      if (origin) {
+        for (const tk of openTokens) {
+          const ok = await sendContractSigningEmail({
+            to: tk.signerEmail,
+            clientName: tk.signerName,
+            channelName: gate.contract.channel.name,
+            contractTitle: contract.title,
+            contractNumber: contract.contractNumber,
+            signingUrl: `${origin}/sign/${tk.token}`,
+            replyTo: user?.email ?? undefined,
+          });
+          if (ok) emailedCount += 1;
+        }
+      }
+      await db.contractActivity.create({
+        data: {
+          contractId: contract.id,
+          type: "sent",
+          description: `Signing links re-emailed to ${openTokens.length} pending signer${openTokens.length > 1 ? "s" : ""}`,
+        },
+      });
+      return NextResponse.json({
+        ok: true,
+        resent: true,
+        token: openTokens[0].token,
+        recipients: openTokens.length,
+        emailed: emailedCount,
+      });
+    }
     if (contract.status !== "DRAFT") {
-      return NextResponse.json({ error: "Only drafts can be sent." }, { status: 409 });
+      return NextResponse.json(
+        {
+          error: `This contract is ${contract.status.toLowerCase().replace(/_/g, " ")} — it can't be sent again.`,
+        },
+        { status: 409 },
+      );
     }
     const invalidDraft = validateContractDraft({
       ...contract,
@@ -107,7 +163,14 @@ export async function PATCH(
       where: { id: userId },
       select: { email: true, name: true },
     });
-    const expiresAt = new Date(Date.now() + SIGN_TOKEN_TTL_DAYS * 86_400_000);
+    // The send dialog can choose when the signing links expire; default
+    // is the standard TTL. Clamped to at least tomorrow.
+    const requested = body.expiresAt ? new Date(body.expiresAt).getTime() : NaN;
+    const expiresAt = new Date(
+      Number.isFinite(requested)
+        ? Math.max(requested, Date.now() + 86_400_000)
+        : Date.now() + SIGN_TOKEN_TTL_DAYS * 86_400_000,
+    );
 
     // One signing token per unique recipient (the Maltivas multi-signer
     // flow). Recipients come from three places, deduped by email: the
@@ -167,6 +230,7 @@ export async function PATCH(
         data: {
           status: "SENT",
           sentAt: new Date(),
+          expiresAt,
           activities: {
             create: {
               type: "sent",
@@ -232,6 +296,19 @@ export async function PATCH(
   // Drafts save freely (a half-filled client is fine mid-edit); the full
   // validation gate runs at send.
 
+  // Autosave fires every few seconds — log "Draft edited" at most once
+  // per day instead of flooding the activity trail.
+  const dayStart = new Date();
+  dayStart.setHours(0, 0, 0, 0);
+  const editedToday = await db.contractActivity.findFirst({
+    where: {
+      contractId: contract.id,
+      type: "updated",
+      createdAt: { gte: dayStart },
+    },
+    select: { id: true },
+  });
+
   const updated = await db.contract.update({
     where: { id: contract.id },
     data: {
@@ -250,7 +327,9 @@ export async function PATCH(
       ...(body.expiresAt !== undefined
         ? { expiresAt: body.expiresAt ? new Date(body.expiresAt) : null }
         : {}),
-      activities: { create: { type: "updated", description: "Draft edited" } },
+      ...(editedToday
+        ? {}
+        : { activities: { create: { type: "updated", description: "Draft edited" } } }),
     },
   });
   return NextResponse.json({ contract: updated });

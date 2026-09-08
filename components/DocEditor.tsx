@@ -6,7 +6,7 @@
 // click-to-configure bubbles for fields (Field Settings: filled by you
 // now, or by the recipient at signing) and signature chips.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -15,7 +15,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import { TableKit } from "@tiptap/extension-table";
 import { FieldMark } from "@/components/field-mark";
 import { SignatureField } from "@/components/signature-field";
-import { PenIcon, PlusIcon, TrashIcon } from "@/components/icons";
+import { LinkIcon, PenIcon, PlusIcon, TrashIcon } from "@/components/icons";
 
 type FieldPopover = {
   kind: "field";
@@ -23,6 +23,7 @@ type FieldPopover = {
   to: number;
   fieldKey: string;
   filledBy: "creator" | "recipient";
+  assignee: string;
   value: string;
   x: number;
   y: number;
@@ -83,8 +84,18 @@ function Tb({
 function FloatingToolbar({ editor, channelId }: { editor: Editor; channelId?: string }) {
   const [plusOpen, setPlusOpen] = useState(false);
   const [styleOpen, setStyleOpen] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [fieldOpen, setFieldOpen] = useState(false);
+  const [fieldLabel, setFieldLabel] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const closeMenus = () => {
+    setPlusOpen(false);
+    setStyleOpen(false);
+    setLinkOpen(false);
+    setFieldOpen(false);
+  };
 
   // Clicking anywhere outside the toolbar closes its menus. The check is
   // by DOM containment, not stopPropagation — the App Router mounts React
@@ -92,15 +103,17 @@ function FloatingToolbar({ editor, channelId }: { editor: Editor; channelId?: st
   // synthetic stopPropagation, and closing on an inside mousedown would
   // unmount the item before its click could run.
   useEffect(() => {
-    if (!plusOpen && !styleOpen) return;
+    if (!plusOpen && !styleOpen && !linkOpen && !fieldOpen) return;
     const close = (e: MouseEvent) => {
       if ((e.target as HTMLElement | null)?.closest?.("[data-doc-toolbar]")) return;
       setPlusOpen(false);
       setStyleOpen(false);
+      setLinkOpen(false);
+      setFieldOpen(false);
     };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
-  }, [plusOpen, styleOpen]);
+  }, [plusOpen, styleOpen, linkOpen, fieldOpen]);
 
   const onFilePicked = useCallback(
     async (file: File | null) => {
@@ -125,39 +138,39 @@ function FloatingToolbar({ editor, channelId }: { editor: Editor; channelId?: st
     [editor, channelId],
   );
 
-  const insertField = useCallback(() => {
-    const label = window.prompt(
-      "Name this field (what it asks for, e.g. Effective Date)",
-      "",
-    );
-    if (!label?.trim()) return;
-    editor
-      .chain()
-      .focus()
-      .insertContent([
-        {
-          type: "text",
-          text: label.trim(),
-          marks: [
-            { type: "fieldMark", attrs: { field: slugify(label), filledBy: "creator" } },
-          ],
-        },
-        { type: "text", text: " " },
-      ])
-      .run();
-  }, [editor]);
+  const insertField = useCallback(
+    (label: string) => {
+      if (!label.trim()) return;
+      editor
+        .chain()
+        .focus()
+        .insertContent([
+          {
+            type: "text",
+            text: label.trim(),
+            marks: [
+              { type: "fieldMark", attrs: { field: slugify(label), filledBy: "creator" } },
+            ],
+          },
+          { type: "text", text: " " },
+        ])
+        .run();
+    },
+    [editor],
+  );
 
-  const setLink = useCallback(() => {
-    const previous = editor.getAttributes("link").href as string | undefined;
-    const url = window.prompt("Link URL (https://…)", previous ?? "https://");
-    if (url === null) return;
-    if (url === "" || url === "https://") {
-      editor.chain().focus().unsetLink().run();
-      return;
-    }
-    if (!/^https?:\/\//i.test(url)) return;
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
-  }, [editor]);
+  const applyLink = useCallback(
+    (url: string) => {
+      const trimmed = url.trim();
+      if (!trimmed || trimmed === "https://") {
+        editor.chain().focus().unsetLink().run();
+        return;
+      }
+      const href = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+      editor.chain().focus().extendMarkRange("link").setLink({ href }).run();
+    },
+    [editor],
+  );
 
   const styleLabel = editor.isActive("heading", { level: 1 })
     ? "Heading 1"
@@ -212,8 +225,9 @@ function FloatingToolbar({ editor, channelId }: { editor: Editor; channelId?: st
           title="Insert"
           onMouseDown={(e) => {
             e.preventDefault();
-            setPlusOpen((o) => !o);
-            setStyleOpen(false);
+            const next = !plusOpen;
+            closeMenus();
+            setPlusOpen(next);
           }}
           className="mr-1 flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br from-amber-500 to-orange-600 text-lg font-semibold text-white shadow-sm hover:from-amber-400 hover:to-orange-500"
         >
@@ -270,8 +284,9 @@ function FloatingToolbar({ editor, channelId }: { editor: Editor; channelId?: st
               type="button"
               className={plusItem}
               onClick={() => {
-                insertField();
-                setPlusOpen(false);
+                closeMenus();
+                setFieldLabel("");
+                setFieldOpen(true);
               }}
             >
               <span className="font-serif text-amber-400">T</span> Input field
@@ -294,8 +309,9 @@ function FloatingToolbar({ editor, channelId }: { editor: Editor; channelId?: st
           type="button"
           onMouseDown={(e) => {
             e.preventDefault();
-            setStyleOpen((o) => !o);
-            setPlusOpen(false);
+            const next = !styleOpen;
+            closeMenus();
+            setStyleOpen(next);
           }}
           className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-neutral-300 hover:bg-white/10"
         >
@@ -362,9 +378,103 @@ function FloatingToolbar({ editor, channelId }: { editor: Editor; channelId?: st
           ⇥
         </Tb>
         {divider}
-        <Tb title="Link" active={editor.isActive("link")} onClick={setLink}>
-          🔗
+        <Tb
+          title="Link"
+          active={editor.isActive("link") || linkOpen}
+          onClick={() => {
+            const next = !linkOpen;
+            closeMenus();
+            if (next) {
+              setLinkUrl((editor.getAttributes("link").href as string | undefined) ?? "");
+              setLinkOpen(true);
+            }
+          }}
+        >
+          <LinkIcon className="h-4 w-4" />
         </Tb>
+        {linkOpen && (
+          <div
+            className="absolute right-0 top-11 z-40 w-72 rounded-xl border border-white/10 bg-neutral-900 p-3 shadow-2xl"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">
+              Link URL
+            </p>
+            <input
+              autoFocus
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  applyLink(linkUrl);
+                  setLinkOpen(false);
+                }
+                if (e.key === "Escape") setLinkOpen(false);
+              }}
+              placeholder="https://…"
+              className="mt-1.5 w-full rounded-lg border border-white/15 bg-neutral-800 px-3 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-500 focus:border-amber-500"
+            />
+            <div className="mt-2.5 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  applyLink(linkUrl);
+                  setLinkOpen(false);
+                }}
+                className="flex-1 rounded-lg bg-linear-to-r from-amber-500 to-orange-600 px-3 py-1.5 text-sm font-semibold text-white hover:from-amber-400 hover:to-orange-500"
+              >
+                {editor.isActive("link") ? "Update link" : "Add link"}
+              </button>
+              {editor.isActive("link") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    editor.chain().focus().unsetLink().run();
+                    setLinkOpen(false);
+                  }}
+                  className="rounded-lg px-3 py-1.5 text-sm text-red-400 hover:bg-red-500/15"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+        {fieldOpen && (
+          <div
+            className="absolute left-0 top-11 z-40 w-72 rounded-xl border border-white/10 bg-neutral-900 p-3 shadow-2xl"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">
+              Name this field
+            </p>
+            <input
+              autoFocus
+              value={fieldLabel}
+              onChange={(e) => setFieldLabel(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && fieldLabel.trim()) {
+                  insertField(fieldLabel);
+                  setFieldOpen(false);
+                }
+                if (e.key === "Escape") setFieldOpen(false);
+              }}
+              placeholder="e.g. Effective Date"
+              className="mt-1.5 w-full rounded-lg border border-white/15 bg-neutral-800 px-3 py-2 text-sm text-neutral-100 outline-none placeholder:text-neutral-500 focus:border-amber-500"
+            />
+            <button
+              type="button"
+              disabled={!fieldLabel.trim()}
+              onClick={() => {
+                insertField(fieldLabel);
+                setFieldOpen(false);
+              }}
+              className="mt-2.5 w-full rounded-lg bg-linear-to-r from-amber-500 to-orange-600 px-3 py-1.5 text-sm font-semibold text-white hover:from-amber-400 hover:to-orange-500 disabled:opacity-50"
+            >
+              Insert field
+            </button>
+          </div>
+        )}
         {divider}
         <Tb title="Undo" disabled={!editor.can().undo()} onClick={() => editor.chain().focus().undo().run()}>
           ↺
@@ -384,16 +494,41 @@ function FloatingToolbar({ editor, channelId }: { editor: Editor; channelId?: st
   );
 }
 
+/* Fixed-position popovers estimate their height at open; once rendered
+   (or when a toggle grows them), pull them up so they never run off the
+   bottom of the viewport. */
+function useClampToViewport(
+  ref: React.RefObject<HTMLDivElement | null>,
+  deps: unknown[],
+) {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const overflow = rect.bottom - (window.innerHeight - 8);
+    if (overflow > 0) {
+      el.style.top = `${Math.max(8, rect.top - overflow)}px`;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+}
+
 /* ---------- field settings popover ---------- */
 
 function FieldSettings({
   popover,
+  recipients,
   onUpdate,
   onDelete,
   onClose,
 }: {
   popover: FieldPopover;
-  onUpdate: (value: string, filledBy: "creator" | "recipient") => void;
+  recipients: { email: string; name: string }[];
+  onUpdate: (
+    value: string,
+    filledBy: "creator" | "recipient",
+    assignee: string | null,
+  ) => void;
   onDelete: () => void;
   onClose: () => void;
 }) {
@@ -401,7 +536,11 @@ function FieldSettings({
     popover.value === popover.fieldKey ? "" : popover.value,
   );
   const [filledBy, setFilledBy] = useState(popover.filledBy);
+  const [assignee, setAssignee] = useState(popover.assignee);
+  const [assigneeOpen, setAssigneeOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  useClampToViewport(boxRef, [filledBy]);
   useEffect(() => inputRef.current?.focus(), []);
 
   const toggle = (mine: boolean) =>
@@ -413,6 +552,7 @@ function FieldSettings({
 
   return (
     <div
+      ref={boxRef}
       className="fixed z-50 w-80 rounded-2xl border border-neutral-200 bg-white p-4 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900"
       style={{ left: popover.x, top: popover.y }}
     >
@@ -445,6 +585,74 @@ function FieldSettings({
           : "The signer fills this in on the signing page before signing."}
       </p>
 
+      {filledBy === "recipient" && (
+        <>
+          <p className="mt-3 text-[11px] font-semibold uppercase tracking-widest text-neutral-400">
+            Filled by which signer
+          </p>
+          <div className="relative mt-1.5">
+            <button
+              type="button"
+              onClick={() => setAssigneeOpen((o) => !o)}
+              className="flex w-full items-center justify-between gap-2 rounded-lg border border-neutral-300 px-3 py-2 text-left text-sm hover:border-amber-400 dark:border-neutral-700 dark:bg-neutral-950"
+            >
+              <span className="min-w-0 truncate">
+                {assignee ? (
+                  <>
+                    <span className="font-medium">
+                      {recipients.find((r) => r.email === assignee)?.name ?? assignee}
+                    </span>
+                    <span className="text-neutral-400"> — {assignee}</span>
+                  </>
+                ) : (
+                  "Any signer (first to open)"
+                )}
+              </span>
+              <span className="shrink-0 text-[10px] text-neutral-400">▾</span>
+            </button>
+            {assigneeOpen && (
+              <div className="absolute inset-x-0 top-full z-10 mt-1 overflow-hidden rounded-xl border border-neutral-200 bg-white p-1 shadow-xl dark:border-neutral-700 dark:bg-neutral-900">
+                {[{ email: "", name: "Any signer (first to open)" }, ...recipients].map(
+                  (r) => {
+                    const active = assignee === r.email;
+                    return (
+                      <button
+                        key={r.email || "any"}
+                        type="button"
+                        onClick={() => {
+                          setAssignee(r.email);
+                          setAssigneeOpen(false);
+                        }}
+                        className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${
+                          active
+                            ? "bg-amber-50 font-medium text-amber-900 dark:bg-amber-950/40 dark:text-amber-300"
+                            : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                        }`}
+                      >
+                        <span className="w-4 shrink-0 text-amber-600">
+                          {active ? "✓" : ""}
+                        </span>
+                        <span className="min-w-0 truncate">
+                          {r.name}
+                          {r.email && (
+                            <span className="text-neutral-400"> — {r.email}</span>
+                          )}
+                        </span>
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+            )}
+          </div>
+          {recipients.length === 0 && (
+            <p className="mt-1 text-[11px] text-neutral-400">
+              Add clients or assign signature fields to see signers here.
+            </p>
+          )}
+        </>
+      )}
+
       {filledBy === "creator" && (
         <>
           <p className="mt-3 text-[11px] font-semibold uppercase tracking-widest text-neutral-400">
@@ -455,7 +663,7 @@ function FieldSettings({
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") onUpdate(value, filledBy);
+              if (e.key === "Enter") onUpdate(value, filledBy, assignee || null);
               if (e.key === "Escape") onClose();
             }}
             placeholder={popover.fieldKey.replace(/-/g, " ")}
@@ -476,7 +684,7 @@ function FieldSettings({
         </button>
         <button
           type="button"
-          onClick={() => onUpdate(value, filledBy)}
+          onClick={() => onUpdate(value, filledBy, assignee || null)}
           className="flex-1 rounded-lg bg-linear-to-r from-amber-500 to-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:from-amber-400 hover:to-orange-500"
         >
           Update
@@ -517,6 +725,8 @@ function SignatureAssignment({
   const [who, setWho] = useState<"creator" | "client">(popover.signer);
   const [name, setName] = useState(popover.signerName);
   const [email, setEmail] = useState(popover.email);
+  const boxRef = useRef<HTMLDivElement>(null);
+  useClampToViewport(boxRef, [who]);
   const emailOk = email === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const card = (active: boolean) =>
@@ -530,6 +740,7 @@ function SignatureAssignment({
 
   return (
     <div
+      ref={boxRef}
       className="fixed z-50 w-80 rounded-2xl border border-neutral-200 bg-white p-4 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900"
       style={{ left: popover.x, top: popover.y }}
     >
@@ -727,12 +938,18 @@ export function DocEditor({
   channelId,
   placeholder,
   minHeight = 640,
+  logoUrl = null,
+  recipients = [],
 }: {
   value: string;
   onChange: (html: string) => void;
   channelId?: string;
   placeholder?: string;
   minHeight?: number;
+  /** letterhead logo rendered centered at the top of the paper */
+  logoUrl?: string | null;
+  /** known signers — offered as assignees for recipient-filled fields */
+  recipients?: { email: string; name: string }[];
 }) {
   const [popover, setPopover] = useState<FieldPopover | SignaturePopover | null>(null);
 
@@ -823,6 +1040,7 @@ export function DocEditor({
         fieldKey: target.getAttribute("data-field") ?? "field",
         filledBy:
           (target.getAttribute("data-filled-by") as "creator" | "recipient") ?? "creator",
+        assignee: target.getAttribute("data-assignee") ?? "",
         value: text,
         ...popoverPosition(target),
       });
@@ -839,14 +1057,23 @@ export function DocEditor({
         onClick={onCanvasClick}
         className="mx-auto mt-4 max-w-[880px] rounded-[3px] border border-neutral-300/80 bg-white text-neutral-900 shadow-[0_1px_3px_rgba(0,0,0,0.08),0_12px_32px_rgba(0,0,0,0.12)] dark:border-neutral-600"
       >
+        {/* Letterhead — the saved logo, centered, exactly as the signed
+            document and signing page render it */}
+        {logoUrl && (
+          <div className="border-b-2 border-neutral-200 px-8 pb-4 pt-8 text-center sm:px-12">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logoUrl} alt="" className="mx-auto h-20 object-contain" />
+          </div>
+        )}
         <EditorContent editor={editor} />
       </div>
 
       {popover?.kind === "field" && editor && (
         <FieldSettings
           popover={popover}
+          recipients={recipients}
           onClose={() => setPopover(null)}
-          onUpdate={(value, filledBy) => {
+          onUpdate={(value, filledBy, assignee) => {
             const text =
               filledBy === "creator" && value.trim()
                 ? value.trim()
@@ -861,7 +1088,14 @@ export function DocEditor({
                 type: "text",
                 text,
                 marks: [
-                  { type: "fieldMark", attrs: { field: popover.fieldKey, filledBy } },
+                  {
+                    type: "fieldMark",
+                    attrs: {
+                      field: popover.fieldKey,
+                      filledBy,
+                      assignee: filledBy === "recipient" ? assignee : null,
+                    },
+                  },
                 ],
               })
               .run();

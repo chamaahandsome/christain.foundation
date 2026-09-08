@@ -9,6 +9,7 @@ import {
 } from "@/lib/fulfillment";
 import { calcGiftFee } from "@/lib/giving";
 import { calcPlatformFee } from "@/lib/platform-fees";
+import { confirmSessionBooking } from "@/lib/session-booking";
 import { stripeClient, syncAccountStatus } from "@/lib/stripe";
 
 // Stripe webhook: signature-verified, exactly-once via
@@ -158,6 +159,26 @@ export async function POST(req: Request) {
           }`,
           feeCents: calcPlatformFee(session.amount_total ?? 0, "campaign", "stripe"),
           ...(shipping ? { shippingAddress: shipping } : {}),
+        });
+        break;
+      }
+      // An online 1:1: the slot has been held since the visitor picked it,
+      // and the charge is what turns it into a confirmed meeting.
+      if (
+        meta.cfKind === "session" &&
+        meta.cfRequestId &&
+        session.payment_status === "paid"
+      ) {
+        await confirmSessionBooking({
+          requestId: meta.cfRequestId,
+          payment: {
+            status: "paid",
+            amountCents: session.amount_total ?? 0,
+            providerRef:
+              typeof session.payment_intent === "string"
+                ? session.payment_intent
+                : session.id,
+          },
         });
         break;
       }

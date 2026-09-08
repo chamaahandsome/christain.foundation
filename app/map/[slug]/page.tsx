@@ -5,7 +5,9 @@ import { QuestionTier, Visibility } from "@prisma/client";
 import { db } from "@/lib/db";
 import { thumbnailUrl } from "@/lib/youtube";
 
-export const dynamic = "force-dynamic";
+// ISR (SCALABILITY §3.1): same page for everyone — CDN-cached, re-rendered at most
+// once per 60s, so origin load scales with content changes, not traffic.
+export const revalidate = 60;
 
 async function getQuestion(slug: string) {
   return db.question.findUnique({

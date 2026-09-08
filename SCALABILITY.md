@@ -122,6 +122,17 @@ monitor `search` p95 in the soak runs.
 | **C — Observe & operate** | Sentry (errors), Vercel Speed Insights + Analytics, DB metrics dashboard, alerts on SLO burn; monthly `soak` | `soak` 60min clean |
 | **1M+ (as needed)** | Search engine extraction; read replica; edge-cache search suggestions | re-run full ladder |
 
+**Status (2026-09-07): Phase A code shipped.** Ten public surfaces converted
+from `force-dynamic` to ISR (`revalidate = 60`; watch pages 300, sitemap 3600):
+home, explore, map + question pages, channel layout/home/videos/books/campaigns,
+watch. Per-user bits moved client-side behind a `__session`-cookie guard (zero
+API calls for anonymous viewers): continue-watching resume via `GET
+/api/progress` in `YouTubeEmbed`, follow state via `GET /api/follow` in
+`FollowButton`. MEMBERS watch paths still call `auth()` and stay per-request
+rendered by design; `/search`, `/feed`, `/books`, `/book/[id]`,
+channel `/support` remain dynamic (per-user or searchParams). Verify after
+deploy: second hit shows `x-vercel-cache: HIT`, then run `baseline` + `spike`.
+
 **Readiness levels:**
 
 - **100K/mo ready** = Phase A shipped, `smoke` + `baseline` green.

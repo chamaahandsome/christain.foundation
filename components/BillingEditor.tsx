@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { BillDocument } from "@/components/BillDocument";
 import { ImageUploadDialog } from "@/components/ImageUploadDialog";
+import { ThemedSelect } from "@/components/ThemedSelect";
 import { FeatureTour, useFirstVisit, type TourStep } from "@/components/FeatureTour";
 import { EyeIcon, LinkIcon, SaveIcon, SendIcon, SparklesIcon } from "@/components/icons";
 import {
@@ -427,15 +428,14 @@ export function BillingEditor({
                       ✕
                     </button>
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setLogoDialog(true)}
-                    className="mt-1.5 w-full rounded-lg border border-dashed border-neutral-300 px-3 py-3 text-xs text-neutral-500 hover:border-amber-500 hover:text-amber-700 dark:border-neutral-700 dark:hover:text-amber-400"
-                  >
-                    Upload a logo
-                  </button>
-                )}
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setLogoDialog(true)}
+                  className="mt-1.5 w-full rounded-lg border border-dashed border-neutral-300 px-3 py-2.5 text-xs text-neutral-500 hover:border-amber-500 hover:text-amber-700 dark:border-neutral-700 dark:hover:text-amber-400"
+                >
+                  + Upload {logoUrl ? "another" : "a"} logo (keeps your 3 most recent)
+                </button>
                 <p className="mt-1 text-[11px] text-neutral-400">
                   Used for all new contracts, invoices, and quotes.
                 </p>
@@ -518,18 +518,16 @@ export function BillingEditor({
               {kind === "invoice" ? (
                 <label className={label}>
                   Payment terms
-                  <select
+                  <ThemedSelect
                     value={d.paymentTerms}
-                    onChange={(e) => set("paymentTerms", e.target.value)}
+                    onChange={(v) => set("paymentTerms", v)}
                     disabled={!editable}
-                    className={`${input} mt-1 [&>option]:dark:bg-neutral-900`}
-                  >
-                    {Object.entries(PAYMENT_TERMS).map(([key, t]) => (
-                      <option key={key} value={key}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
+                    options={Object.entries(PAYMENT_TERMS).map(([key, t]) => ({
+                      value: key,
+                      label: t.label,
+                    }))}
+                    className="mt-1"
+                  />
                   <span className="mt-1 block text-[11px] font-normal normal-case text-neutral-400">
                     Due: {secondaryDate} (from the send date)
                   </span>

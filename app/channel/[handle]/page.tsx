@@ -6,7 +6,9 @@ import { thumbnailUrl } from "@/lib/youtube";
 import { BookCard } from "@/components/BookCard";
 import { VideoRow } from "@/components/VideoRow";
 
-export const dynamic = "force-dynamic";
+// ISR (SCALABILITY §3.1): same page for everyone — CDN-cached, re-rendered at most
+// once per 60s, so origin load scales with content changes, not traffic.
+export const revalidate = 60;
 
 // Stack icons: clean stroke SVGs (lucide-style), amber on the tile.
 const STACK_ICONS: Record<string, React.ReactNode> = {
@@ -162,7 +164,7 @@ export default async function ChannelHomePage({
       ? [{
           href: `/@${handle}/books`,
           icon: "book",
-          label: "Books",
+          label: "eBooks",
           sub: books.map((b) => b.title).slice(0, 2).join(" · "),
         }]
       : []),

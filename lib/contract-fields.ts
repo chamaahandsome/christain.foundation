@@ -62,15 +62,33 @@ export function countSignatureFields(html: string): { creator: number; client: n
   return counts;
 }
 
-export function extractRecipientFields(html: string): { key: string; label: string }[] {
+export function extractRecipientFields(
+  html: string,
+): { key: string; label: string; assignee: string | null }[] {
   const seen = new Set<string>();
-  const fields: { key: string; label: string }[] = [];
+  const fields: { key: string; label: string; assignee: string | null }[] = [];
   for (const m of html.matchAll(RECIPIENT_FIELD_RE)) {
     if (seen.has(m[1])) continue;
     seen.add(m[1]);
-    fields.push({ key: m[1], label: m[2].replace(/<[^>]*>/g, "").trim() || m[1] });
+    fields.push({
+      key: m[1],
+      label: m[2].replace(/<[^>]*>/g, "").trim() || m[1],
+      assignee: attrOf(m[0], "data-assignee")?.trim().toLowerCase() || null,
+    });
   }
   return fields;
+}
+
+/** The recipient fields THIS signer must fill: assigned to them, or
+ * unassigned (first signer to open takes those). */
+export function recipientFieldsFor(
+  html: string,
+  signerEmail: string,
+): { key: string; label: string; assignee: string | null }[] {
+  const email = signerEmail.trim().toLowerCase();
+  return extractRecipientFields(html).filter(
+    (f) => !f.assignee || f.assignee === email,
+  );
 }
 
 const escapeHtml = (s: string) =>
@@ -93,22 +111,25 @@ export function fillRecipientFields(
   });
 }
 
-/** An inline signature block: the image (or cursive name) with the signer's
- * name and date beneath — what replaces a signature chip. */
+/** A signed-section card (the Maltivas highlight): the signature — drawn
+ * image or Hurricane-script name — in a green-tinted card with the
+ * signer's name, date, and a check beneath. Replaces a signature chip. */
 export function signatureBlockHtml(sig: {
   signature: string;
   signerName: string;
   signedAt?: Date | null;
 }): string {
   const image = sig.signature.startsWith("data:image/png")
-    ? `<img src="${sig.signature}" alt="${escapeHtml(sig.signerName)}" style="height:56px;display:inline-block" />`
-    : `<span style="font-family:Georgia,serif;font-style:italic;font-size:1.4em">${escapeHtml(sig.signature)}</span>`;
+    ? `<img src="${sig.signature}" alt="${escapeHtml(sig.signerName)}" style="height:64px;display:block;margin:0 auto" />`
+    : `<span style="display:block;text-align:center;font-family:var(--font-signature),'Snell Roundhand','Segoe Script',cursive;font-size:2.4em;line-height:1.15;color:#171717">${escapeHtml(sig.signature)}</span>`;
   const when = sig.signedAt
-    ? `<span style="color:#737373"> · ${sig.signedAt.toISOString().slice(0, 10)}</span>`
+    ? ` · ${sig.signedAt.toISOString().slice(0, 10)}`
     : "";
   return (
-    `<span style="display:inline-block;vertical-align:bottom">${image}<br />` +
-    `<span style="font-size:0.8em;color:#525252">${escapeHtml(sig.signerName)}${when}</span></span>`
+    `<span style="display:inline-block;vertical-align:bottom;min-width:240px;max-width:100%;padding:14px 22px 10px;border:1.5px solid #bbf7d0;border-radius:14px;background:linear-gradient(180deg,#f0fdf4,#ffffff)">` +
+    image +
+    `<span style="display:block;margin-top:8px;padding-top:6px;border-top:1px solid #d1fae5;font-size:0.72em;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#15803d">${escapeHtml(sig.signerName)}${when} <span style="float:right">✓</span></span>` +
+    `</span>`
   );
 }
 
@@ -166,4 +187,105 @@ export function parseContractRecipients(raw: unknown): ContractRecipient[] {
     });
   }
   return out;
+}
+
+const CREATOR_FIELD_RE =
+  /<span\b(?![^>]*data-filled-by="recipient")[^>]*data-field="([^"]+)"[^>]*>([\s\S]*?)<\/span>/gi;
+
+const normalize = (s: string) =>
+  s
+    .replace(/<[^>]*>/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+/** Creator-filled fields whose text still reads like the template's
+ * placeholder (it normalizes to the field key, or looks like a prompt) —
+ * the Maltivas pre-send "N fields look unfilled" check. */
+export function findUnfilledCreatorFields(
+  html: string,
+): { key: string; label: string }[] {
+  const seen = new Set<string>();
+  const out: { key: string; label: string }[] = [];
+  for (const m of html.matchAll(CREATOR_FIELD_RE)) {
+    const key = m[1];
+    if (seen.has(key)) continue;
+    const text = m[2].replace(/<[^>]*>/g, "").trim();
+    // camelCase keys compare word-wise: effectiveDate ~ "Effective Date"
+    const keyWords = normalize(key.replace(/([a-z])([A-Z])/g, "$1 $2"));
+    const looksUnfilled =
+      normalize(text) === keyWords ||
+      // prompt-style placeholders: "Describe the work…", "who books and pays"
+      /^(describe|who|what|where|which|how|number|amount)\b/i.test(text) ||
+      text.includes("…");
+    if (looksUnfilled) {
+      seen.add(key);
+      out.push({
+        key,
+        label: key
+          .replace(/[-_]/g, " ")
+          .replace(/([a-z])([A-Z])/g, "$1 $2")
+          .replace(/\b\w/g, (c) => c.toUpperCase()),
+      });
+    }
+  }
+  return out;
+}
+
+/* ---------- the signing view ----------
+ * What the signer's page renders: everything that isn't theirs becomes
+ * ordinary text; only their own inputs stay interactive. Creator-filled
+ * fields unwrap to plain prose, recipient fill-ins become
+ * data-sign-input chips, the signer's signature chips become
+ * data-sign-here markers, and co-signers' pending chips become inert
+ * grey markers. (Creator + already-signed substitutions happen before
+ * this pass.) */
+
+/** Unwrap creator-filled chips to plain prose — used wherever the
+ * document is final (locked editor view, preview, signed & verified
+ * copies): the chips are authoring affordances, not part of the
+ * agreement. Recipient chips and signature blocks are left intact. */
+export function flattenCreatorFields(html: string): string {
+  return html.replace(CREATOR_FIELD_RE, (_m, _key: string, inner: string) => inner);
+}
+
+export function prepareSigningHtml(
+  html: string,
+  opts: { signerEmail: string; isDefaultRecipient: boolean },
+): { html: string; myChips: number; othersPending: number } {
+  let out = html;
+
+  // Creator-filled fields → plain text (keep the value, drop the chip)
+  out = out.replace(CREATOR_FIELD_RE, (_m, _key: string, inner: string) => inner);
+
+  // Recipient fill-ins → the signer's input chips; fields assigned to a
+  // co-signer render inert until that signer fills them.
+  out = out.replace(RECIPIENT_FIELD_RE, (whole, key: string, inner: string) => {
+    const assignee = attrOf(whole, "data-assignee")?.trim().toLowerCase() || null;
+    if (assignee && assignee !== opts.signerEmail) {
+      const label = inner.replace(/<[^>]*>/g, "").trim() || key;
+      return `<span data-sign-pending="">${label} — ${assignee} fills this</span>`;
+    }
+    return `<span data-sign-input="${key}">${inner}</span>`;
+  });
+
+  // Signature chips: mine become sign-here markers; others go inert
+  let myChips = 0;
+  let othersPending = 0;
+  out = out.replace(SIGNATURE_SPAN_RE, (whole) => {
+    if (attrOf(whole, "data-signer") === "creator") return whole; // substituted earlier
+    const email = attrOf(whole, "data-email")?.trim().toLowerCase() || null;
+    const name = attrOf(whole, "data-signer-name")?.trim() || null;
+    const mine =
+      (email !== null && email === opts.signerEmail) ||
+      (email === null && opts.isDefaultRecipient);
+    if (mine) {
+      myChips += 1;
+      return `<span data-sign-here="${myChips}">▼ Click here to sign ▼</span>`;
+    }
+    othersPending += 1;
+    return `<span data-sign-pending="">${name ?? email ?? "Co-signer"} — pending</span>`;
+  });
+
+  return { html: out, myChips, othersPending };
 }

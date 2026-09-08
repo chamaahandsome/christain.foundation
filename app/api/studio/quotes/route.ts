@@ -129,6 +129,21 @@ export async function POST(req: Request) {
         : new Date(Date.now() + (body.validDays ?? 30) * 86_400_000),
     },
   });
+  // A quote raised from a booking request advances that request.
+  if (body.bookingRequestId) {
+    await db.bookingRequest.updateMany({
+      where: {
+        id: body.bookingRequestId,
+        channelId: body.channelId,
+        status: { in: ["PENDING", "RESPONDED"] },
+      },
+      data: {
+        status: "QUOTED",
+        quoteId: quote.id,
+        respondedAt: new Date(),
+      },
+    });
+  }
   return NextResponse.json({ quote });
 }
 

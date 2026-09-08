@@ -6,9 +6,12 @@
 
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 
-// e.g. "mail.thechristian.foundation" — a verified SES identity. Unset in
-// dev means email is off and senders no-op.
+// e.g. "mail.thecf.online" — a verified SES identity. Unset in dev means
+// email is off and senders no-op.
 const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN;
+// Replies to any transactional email land in the support inbox unless a
+// caller sets a more specific reply-to (e.g. the creator's own address).
+const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL ?? "support@thecf.online";
 
 export const emailConfigured = (): boolean => Boolean(EMAIL_DOMAIN);
 
@@ -35,7 +38,7 @@ export async function sendEmail(input: {
       new SendEmailCommand({
         Source: `Christian Foundation <${input.from ?? "no-reply"}@${EMAIL_DOMAIN}>`,
         Destination: { ToAddresses: [input.to] },
-        ...(input.replyTo ? { ReplyToAddresses: [input.replyTo] } : {}),
+        ReplyToAddresses: [input.replyTo ?? SUPPORT_EMAIL],
         Message: {
           Subject: { Data: input.subject, Charset: "UTF-8" },
           Body: { Html: { Data: input.html, Charset: "UTF-8" } },

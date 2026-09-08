@@ -4,7 +4,7 @@
 // hidden until a channel crosses this (founder call, 2026-09-01).
 export const FOLLOWER_COUNT_FLOOR = 100;
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 
 export function FollowButton({
@@ -13,12 +13,31 @@ export function FollowButton({
   initialFollowers,
 }: {
   channelId: string;
-  initialFollowing: boolean;
+  /** Omit on CDN-cached pages — the button resolves its own state. */
+  initialFollowing?: boolean;
   initialFollowers: number;
 }) {
-  const [following, setFollowing] = useState(initialFollowing);
+  const [following, setFollowing] = useState(initialFollowing ?? false);
   const [followers, setFollowers] = useState(initialFollowers);
   const [busy, setBusy] = useState(false);
+
+  // Channel pages are CDN-cached (same HTML for everyone), so the per-user
+  // follow state arrives here. No Clerk session cookie → signed out → the
+  // "Follow" default is already right, no API call spent.
+  useEffect(() => {
+    if (initialFollowing !== undefined) return;
+    if (!document.cookie.includes("__session")) return;
+    let cancelled = false;
+    fetch(`/api/follow?channelId=${encodeURIComponent(channelId)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { following?: boolean } | null) => {
+        if (!cancelled && data?.following) setFollowing(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [channelId, initialFollowing]);
 
   async function toggle() {
     setBusy(true);

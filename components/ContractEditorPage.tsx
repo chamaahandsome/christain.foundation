@@ -11,12 +11,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DocEditor } from "@/components/DocEditor";
 import { SignatureSetupModal } from "@/components/SignatureSetupModal";
 import { ImageUploadDialog } from "@/components/ImageUploadDialog";
+import { ThemedSelect } from "@/components/ThemedSelect";
 import { FeatureTour, useFirstVisit, type TourStep } from "@/components/FeatureTour";
 import { EyeIcon, SaveIcon, SendIcon, SparklesIcon } from "@/components/icons";
 import {
   countSignatureFields,
   countUnassignedClientChips,
   extractRecipientFields,
+  extractSignatureBubbles,
+  findUnfilledCreatorFields,
+  flattenCreatorFields,
   getUniqueRecipients,
   parseContractRecipients,
   signatureBlockHtml,
@@ -194,6 +198,12 @@ export function ContractEditorPage({
     }
   }
   const [preview, setPreview] = useState(false);
+  const [sendDialog, setSendDialog] = useState(false);
+  const [sendAnyway, setSendAnyway] = useState(false);
+  const [linkExpiry, setLinkExpiry] = useState(() => {
+    const d = new Date(Date.now() + 14 * 86_400_000);
+    return d.toISOString().slice(0, 10);
+  });
   const [copied, setCopied] = useState(false);
   const dirty = useRef(false);
 
@@ -254,6 +264,36 @@ export function ContractEditorPage({
     ...validExtras.map((c) => c.email.trim().toLowerCase()),
     ...assignedRecipients.map((r) => r.email),
   ]).size;
+  // Envelope facts for the send dialog (the Maltivas pre-flight review).
+  const unfilledFields = findUnfilledCreatorFields(content);
+  const envelopeRecipients = (() => {
+    const bubbles = extractSignatureBubbles(content).filter(
+      (b) => b.signer === "client",
+    );
+    const chipCount = (email: string | null) =>
+      bubbles.filter((b) => b.email === email).length;
+    const unassigned = bubbles.filter((b) => !b.email).length;
+    const seen = new Map<string, { name: string; fields: number }>();
+    if (hasClientEmail) {
+      seen.set(clientEmail.trim().toLowerCase(), {
+        name: clientName || clientEmail,
+        fields: chipCount(clientEmail.trim().toLowerCase()) + unassigned,
+      });
+    }
+    for (const c of validExtras) {
+      const email = c.email.trim().toLowerCase();
+      if (!seen.has(email)) {
+        seen.set(email, { name: c.name || c.email, fields: chipCount(email) });
+      }
+    }
+    for (const r of assignedRecipients) {
+      if (!seen.has(r.email)) {
+        seen.set(r.email, { name: r.name, fields: chipCount(r.email) });
+      }
+    }
+    return [...seen.entries()].map(([email, v]) => ({ email, ...v }));
+  })();
+
   const letterhead = logoUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
     <div className="border-b-2 border-neutral-200 pb-4 text-center">
@@ -262,8 +302,9 @@ export function ContractEditorPage({
     </div>
   ) : null;
 
-  // What the client will see: your chip becomes your real signature.
-  const previewHtml =
+  // What the client will see: creator fill-ins read as plain prose and
+  // your chip becomes your real signature.
+  const previewHtml = flattenCreatorFields(
     hasSignature && signatureImage
       ? substituteSignatureFields(
           content,
@@ -274,7 +315,8 @@ export function ContractEditorPage({
             signedAt: new Date(),
           }),
         )
-      : content;
+      : content,
+  );
 
   const sendDisabledReason = !hasSignature
     ? "Create your signature first"
@@ -292,7 +334,10 @@ export function ContractEditorPage({
       const res = await fetch(`/api/studio/contracts/${contract.id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "send" }),
+        body: JSON.stringify({
+          action: "send",
+          expiresAt: new Date(`${linkExpiry}T23:59:59`).toISOString(),
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -416,7 +461,10 @@ export function ContractEditorPage({
               </button>
               <button
                 data-tour="editor-send"
-                onClick={() => void send()}
+                onClick={() => {
+                  setSendAnyway(false);
+                  setSendDialog(true);
+                }}
                 disabled={!!sendDisabledReason || sending}
                 title={sendDisabledReason ?? "Sign with your stored signature and email the signing link"}
                 className="flex shrink-0 items-center gap-1.5 rounded-lg bg-linear-to-r from-amber-500 to-orange-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm hover:from-amber-400 hover:to-orange-500 disabled:opacity-50"
@@ -437,6 +485,17 @@ export function ContractEditorPage({
               className="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:border-amber-500 hover:text-amber-700 dark:border-neutral-700 dark:hover:text-amber-400"
             >
               {copied ? "Copied ✓" : "Copy signing link"}
+            </button>
+          )}
+          {["SENT", "VIEWED", "PARTIALLY_SIGNED"].includes(contract.status) && (
+            <button
+              onClick={() => void send()}
+              disabled={sending}
+              title="Re-email the signing links to everyone still pending"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium hover:border-amber-500 hover:text-amber-700 disabled:opacity-50 dark:border-neutral-700 dark:hover:text-amber-400"
+            >
+              <SendIcon className="h-4 w-4" />
+              {sending ? "Resending…" : "Resend links"}
             </button>
           )}
         </div>
@@ -465,6 +524,11 @@ export function ContractEditorPage({
                 markDirty();
               }}
               channelId={channelId}
+              logoUrl={logoUrl}
+              recipients={envelopeRecipients.map((r) => ({
+                email: r.email,
+                name: r.name,
+              }))}
               placeholder="The agreement itself — chips are fill-ins; click one to configure it"
             />
           ) : (
@@ -814,16 +878,15 @@ export function ContractEditorPage({
                   </button>
                 )}
               </div>
-            ) : (
-              editable && (
-                <button
-                  type="button"
-                  onClick={() => setLogoDialog(true)}
-                  className="mt-2 w-full rounded-lg border border-dashed border-neutral-300 px-3 py-3 text-xs text-neutral-500 hover:border-amber-500 hover:text-amber-700 dark:border-neutral-700 dark:hover:text-amber-400"
-                >
-                  Upload a logo
-                </button>
-              )
+            ) : null}
+            {editable && (
+              <button
+                type="button"
+                onClick={() => setLogoDialog(true)}
+                className="mt-2 w-full rounded-lg border border-dashed border-neutral-300 px-3 py-2.5 text-xs text-neutral-500 hover:border-amber-500 hover:text-amber-700 dark:border-neutral-700 dark:hover:text-amber-400"
+              >
+                + Upload {logoUrl ? "another" : "a"} logo (keeps your 3 most recent)
+              </button>
             )}
             <p className="mt-1.5 text-[11px] leading-4 text-neutral-400">
               Used for all new contracts, invoices, and quotes. Square PNG or
@@ -834,21 +897,24 @@ export function ContractEditorPage({
           <div className="rounded-2xl border border-neutral-200 p-5 dark:border-neutral-800">
             <h3 className="text-sm font-semibold">🧾 Invoice</h3>
             <p className="mt-1 text-xs text-neutral-500">Link to invoice (optional)</p>
-            <select
+            <ThemedSelect
               value={linkedInvoiceId}
               disabled={linking || contract.status === "SIGNED"}
-              onChange={(e) => void linkInvoice(e.target.value)}
-              className="mt-2 w-full rounded-lg border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-amber-500 disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 [&>option]:dark:bg-neutral-900"
-            >
-              <option value="">No invoice linked</option>
-              {invoices
-                .filter((inv) => inv.status === "draft" || inv.contractId === contract.id)
-                .map((inv) => (
-                  <option key={inv.id} value={inv.id}>
-                    {inv.invoiceNumber} · ${(inv.amountCents / 100).toLocaleString()} — {inv.title}
-                  </option>
-                ))}
-            </select>
+              onChange={(v) => void linkInvoice(v)}
+              className="mt-2"
+              options={[
+                { value: "", label: "No invoice linked" },
+                ...invoices
+                  .filter(
+                    (inv) => inv.status === "draft" || inv.contractId === contract.id,
+                  )
+                  .map((inv) => ({
+                    value: inv.id,
+                    label: `${inv.invoiceNumber} · $${(inv.amountCents / 100).toLocaleString()}`,
+                    hint: inv.title,
+                  })),
+              ]}
+            />
             <p className="mt-1.5 text-xs text-neutral-400">
               When linked, the invoice is emailed to the client automatically
               after the contract is signed.
@@ -880,6 +946,144 @@ export function ContractEditorPage({
           </p>
         </aside>
       </div>
+
+      {/* Send dialog — the Maltivas envelope review before it goes out */}
+      {sendDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => setSendDialog(false)}
+        >
+          <div
+            className="my-8 w-full max-w-xl rounded-3xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-700 dark:bg-neutral-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-950/50">
+                  <SendIcon className="h-5 w-5 text-amber-600" />
+                </span>
+                <h2 className="text-xl font-bold">Send contract for signature</h2>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-neutral-500">
+                Review the envelope before it goes out. You can&apos;t edit the
+                contract once signers receive the link.
+              </p>
+
+              {/* Unfilled-placeholder pre-flight */}
+              {unfilledFields.length > 0 && (
+                <div className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/40">
+                  <p className="font-semibold text-amber-900 dark:text-amber-300">
+                    ⚠ {unfilledFields.length} field
+                    {unfilledFields.length > 1 ? "s" : ""} look unfilled
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-amber-800/90 dark:text-amber-300/80">
+                    These placeholders still match their template labels. If
+                    that&apos;s intentional, send away — otherwise close this
+                    and complete them first.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {unfilledFields.map((f) => (
+                      <span
+                        key={f.key}
+                        className="rounded-lg border border-amber-300 bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                      >
+                        {f.label}
+                      </span>
+                    ))}
+                  </div>
+                  <label className="mt-3 flex items-center gap-2 text-sm text-amber-900 dark:text-amber-300">
+                    <input
+                      type="checkbox"
+                      checked={sendAnyway}
+                      onChange={(e) => setSendAnyway(e.target.checked)}
+                      className="h-4 w-4 accent-amber-600"
+                    />
+                    Send anyway — I know these are unfilled
+                  </label>
+                </div>
+              )}
+
+              {/* Contract */}
+              <div className="mt-4 rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-800/60">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400">
+                  Contract
+                </p>
+                <p className="mt-1 text-lg font-semibold">{title || "Untitled contract"}</p>
+              </div>
+
+              {/* From */}
+              <p className="mt-4 text-[11px] font-semibold uppercase tracking-widest text-neutral-400">
+                ✉ From
+              </p>
+              <div className="mt-1.5 rounded-2xl border border-neutral-200 p-4 dark:border-neutral-700">
+                <p className="font-semibold">{channelName}</p>
+                <p className="text-sm text-neutral-500">
+                  via Christian Foundation — replies come to your email
+                </p>
+              </div>
+
+              {/* Recipients */}
+              <p className="mt-4 text-[11px] font-semibold uppercase tracking-widest text-neutral-400">
+                👥 Recipients ({envelopeRecipients.length})
+              </p>
+              <div className="mt-1.5 space-y-2">
+                {envelopeRecipients.map((r) => (
+                  <div
+                    key={r.email}
+                    className="rounded-2xl border border-neutral-200 p-4 dark:border-neutral-700"
+                  >
+                    <p className="font-semibold">{r.name}</p>
+                    <p className="text-sm text-neutral-500">
+                      ✉ {r.email}
+                      {r.fields > 0 &&
+                        ` · ${r.fields} signature field${r.fields > 1 ? "s" : ""}`}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Link expires */}
+              <p className="mt-4 text-[11px] font-semibold uppercase tracking-widest text-neutral-400">
+                🗓 Link expires
+              </p>
+              <input
+                type="date"
+                value={linkExpiry}
+                min={new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)}
+                onChange={(e) => setLinkExpiry(e.target.value)}
+                className="mt-1.5 w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm outline-none focus:border-amber-500 dark:border-neutral-700 dark:bg-neutral-950"
+              />
+              <p className="mt-1 text-xs text-neutral-400">
+                Signers can use their links until this date.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-neutral-200 px-6 py-4 dark:border-neutral-800">
+              <button
+                onClick={() => setSendDialog(false)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={
+                  sending || (unfilledFields.length > 0 && !sendAnyway)
+                }
+                onClick={() => {
+                  setSendDialog(false);
+                  void send();
+                }}
+                className="flex items-center gap-2 rounded-xl bg-linear-to-r from-amber-500 to-orange-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-amber-400 hover:to-orange-500 disabled:opacity-50"
+              >
+                <SendIcon className="h-4 w-4" />
+                {sending
+                  ? "Sending…"
+                  : `Send to ${envelopeRecipients.length} recipient${envelopeRecipients.length > 1 ? "s" : ""}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Preview — the document as the client will see it */}
       {preview && (

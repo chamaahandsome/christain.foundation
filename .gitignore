@@ -21,3 +21,7 @@ next-env.d.ts
 
 # testing
 /coverage
+
+# one-off verification scripts
+*.tmp.mjs
+*.tmp.ts

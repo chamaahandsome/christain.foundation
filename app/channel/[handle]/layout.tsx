@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { affirmationComplete } from "@/lib/gate";
 import { ChannelTabs, type ChannelTab } from "@/components/ChannelTabs";
 import { FOLLOWER_COUNT_FLOOR, FollowButton } from "@/components/FollowButton";
 import { StatementBadge } from "@/components/StatementBadge";
 
-export const dynamic = "force-dynamic";
+// ISR (SCALABILITY §3.1): the channel header is the same for every viewer —
+// the follow state is the one per-user bit, and FollowButton resolves it
+// client-side. Cached per handle, re-rendered at most once per 60s.
+export const revalidate = 60;
 
 // The creator's public home (/@handle): one header, tabbed content below.
 // Tabs appear as the channel grows — Videos, Books today; Shop, Campaigns,
@@ -19,17 +21,6 @@ async function getChannel(handle: string) {
     where: { handle },
     include: { _count: { select: { followers: true, contentItems: true } } },
   });
-}
-
-async function isFollowing(channelId: string): Promise<boolean> {
-  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) return false;
-  const { userId } = await auth();
-  if (!userId) return false;
-  const follow = await db.follow.findUnique({
-    where: { userId_channelId: { userId, channelId } },
-    select: { userId: true },
-  });
-  return Boolean(follow);
 }
 
 export async function generateMetadata({
@@ -66,9 +57,9 @@ export default async function ChannelLayout({
   const tabs: ChannelTab[] = [
     { slug: "", label: "Home" },
     ...(channel._count.contentItems > 0 ? [{ slug: "videos", label: "Videos" }] : []),
-    ...(bookCount > 0 ? [{ slug: "books", label: "Books" }] : []),
+    ...(bookCount > 0 ? [{ slug: "books", label: "eBooks" }] : []),
     ...(campaignCount > 0 ? [{ slug: "campaigns", label: "Campaigns" }] : []),
-    ...(channel.bookingEnabled ? [{ slug: "book", label: "Book" }] : []),
+    ...(channel.bookingEnabled ? [{ slug: "book", label: "Book Me" }] : []),
     ...(canReceiveGifts ? [{ slug: "support", label: "Support" }] : []),
     // Coming as the features land: { slug: "shop" }
   ];
@@ -114,7 +105,6 @@ export default async function ChannelLayout({
     <StatementBadge channelName={channel.name} {...affirmedStatement} />
   ) : null;
 
-  const following = await isFollowing(channel.id);
   const initials = channel.name
     .split(/\s+/)
     .slice(0, 2)
@@ -162,7 +152,6 @@ export default async function ChannelLayout({
           <div className="mt-4">
             <FollowButton
               channelId={channel.id}
-              initialFollowing={following}
               initialFollowers={channel._count.followers}
             />
           </div>
@@ -192,7 +181,6 @@ export default async function ChannelLayout({
             </div>
             <FollowButton
               channelId={channel.id}
-              initialFollowing={following}
               initialFollowers={channel._count.followers}
             />
           </div>

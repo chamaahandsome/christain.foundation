@@ -13,6 +13,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { SignatureSetupModal } from "@/components/SignatureSetupModal";
 import { TemplateModalCF, type PickerTemplate } from "@/components/TemplateModalCF";
 import { ServicesEditor, type Service } from "@/components/ServicesEditor";
+import { SessionsEditor, type SessionService } from "@/components/SessionsEditor";
 import { FeatureTour, useFirstVisit, type TourStep } from "@/components/FeatureTour";
 import { PenIcon, SparklesIcon } from "@/components/icons";
 
@@ -32,6 +33,8 @@ interface ContractRow {
 }
 interface BookingRow {
   id: string;
+  /** HIRE (request → quote → contract) or ONLINE (a booked 1:1) */
+  kind: "HIRE" | "ONLINE";
   requesterName: string;
   requesterEmail: string;
   organization: string | null;
@@ -42,7 +45,16 @@ interface BookingRow {
   status: string;
   decisionNote: string | null;
   contractId: string | null;
+  serviceTitle: string | null;
+  extras: { name: string; priceCents: number | null }[];
+  /** reserved slot, for time-slot services */
+  slotLabel: string | null;
   date: string;
+  /** online 1:1 only */
+  meetingUrl: string | null;
+  calendarHtmlLink: string | null;
+  amountCents: number | null;
+  paymentStatus: string | null;
 }
 interface QuoteRow {
   id: string;
@@ -122,7 +134,11 @@ const BADGE: Record<string, string> = {
   accepted: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
   paid: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
   PENDING: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
+  RESPONDED: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
+  QUOTED: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
+  COMPLETED: "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300",
   ACCEPTED: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+  CONFIRMED: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
   DECLINED: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
   declined: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
   DECLINED_: "",
@@ -154,9 +170,9 @@ function ContractCard({ c, channelId }: { c: ContractRow; channelId: string }) {
     }
     className="group overflow-hidden rounded-2xl border border-neutral-200 transition-all hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-lg dark:border-neutral-800 dark:hover:border-amber-700"
   >
-    {/* Mini document page — title + a snippet of the text */}
-    <div className="relative h-52 overflow-hidden bg-neutral-100 px-6 pt-5 dark:bg-neutral-800/60">
-      <div className="h-full overflow-hidden rounded-t-md bg-white px-4 pt-3 shadow-sm">
+    {/* Mini document page — fills the card top edge to edge */}
+    <div className="relative h-52 overflow-hidden bg-white">
+      <div className="h-full overflow-hidden px-5 pt-4">
         <div className="flex items-center justify-between">
           <span className="h-2.5 w-2.5 rounded-full bg-linear-to-br from-amber-500 to-orange-600" />
           <span className="text-[9px] text-neutral-400">Page 1</span>
@@ -168,7 +184,7 @@ function ContractCard({ c, channelId }: { c: ContractRow; channelId: string }) {
           {c.preview}
         </p>
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-linear-to-t from-neutral-100 dark:from-neutral-800/90" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-linear-to-t from-white" />
     </div>
     {/* Footer strip */}
     <div className="p-4">
@@ -214,9 +230,12 @@ export function BusinessDashboard(props: {
   templates: PickerTemplate[];
   contracts: ContractRow[];
   services: Service[];
+  sessions: SessionService[];
   bookings: BookingRow[];
   quotes: QuoteRow[];
   invoices: InvoiceRow[];
+  /** Stripe Connect is live — required before a paid 1:1 can be booked */
+  canTakePayment: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -282,7 +301,9 @@ export function BusinessDashboard(props: {
   }
 
   const stats = {
-    pendingBookings: props.bookings.filter((b) => b.status === "PENDING").length,
+    pendingBookings: props.bookings.filter((b) =>
+      ["PENDING", "RESPONDED", "QUOTED"].includes(b.status),
+    ).length,
     activeQuotes: props.quotes.filter((q) => ["sent", "viewed"].includes(q.status)).length,
     acceptedQuotes: props.quotes.filter((q) => q.status === "accepted").length,
     signedContracts: props.contracts.filter((c) => c.status === "SIGNED").length,
@@ -527,7 +548,9 @@ function BookingsPane({
   handle,
   bookingEnabled,
   services,
+  sessions,
   bookings,
+  canTakePayment,
   busy,
   call,
 }: {
@@ -535,18 +558,61 @@ function BookingsPane({
   handle: string;
   bookingEnabled: boolean;
   services: Service[];
+  sessions: SessionService[];
   bookings: BookingRow[];
+  canTakePayment: boolean;
   busy: boolean;
   call: (url: string, method: string, body?: unknown) => Promise<Record<string, unknown> | null>;
 }) {
   const [sub, setSub] = useState<"services" | "requests">("services");
+  // Both halves of Bookings split the same way: what you're booked for is
+  // either an engagement someone hires you for, or a 1:1 they book online.
+  const [kind, setKind] = useState<"HIRE" | "ONLINE">("HIRE");
   const [deciding, setDeciding] = useState<{ id: string; action: "accept" | "decline" } | null>(
     null,
   );
+  const [cancelling, setCancelling] = useState<BookingRow | null>(null);
   const [note, setNote] = useState("");
   const [quoting, setQuoting] = useState<BookingRow | null>(null);
   const [quoteTitle, setQuoteTitle] = useState("");
   const [quoteAmount, setQuoteAmount] = useState("");
+
+  const hireBookings = bookings.filter((b) => b.kind !== "ONLINE");
+  const sessionBookings = bookings.filter((b) => b.kind === "ONLINE");
+  const shown = kind === "ONLINE" ? sessionBookings : hireBookings;
+
+  const kindTabs = (
+    <div className="mt-4 flex gap-1.5 rounded-xl border border-neutral-200 bg-white p-1 dark:border-neutral-800 dark:bg-neutral-950 sm:w-fit">
+      {(
+        [
+          [
+            "HIRE",
+            sub === "services"
+              ? `Service hire (${services.length})`
+              : `Service hire (${hireBookings.length})`,
+          ],
+          [
+            "ONLINE",
+            sub === "services"
+              ? `Online 1:1 (${sessions.length})`
+              : `Online 1:1 (${sessionBookings.length})`,
+          ],
+        ] as const
+      ).map(([key, label]) => (
+        <button
+          key={key}
+          onClick={() => setKind(key)}
+          className={`whitespace-nowrap rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors ${
+            kind === key
+              ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300"
+              : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <div className="mt-8">
@@ -599,18 +665,31 @@ function BookingsPane({
         ))}
       </div>
 
-      {sub === "services" && (
-        <ServicesEditor channelId={channelId} services={services} busy={busy} />
-      )}
+      {kindTabs}
+
+      {sub === "services" &&
+        (kind === "HIRE" ? (
+          <ServicesEditor channelId={channelId} services={services} busy={busy} />
+        ) : (
+          <SessionsEditor
+            channelId={channelId}
+            sessions={sessions}
+            busy={busy}
+            handle={handle}
+            canTakePayment={canTakePayment}
+          />
+        ))}
 
       {sub === "requests" && (
         <div className="mt-4 space-y-4">
-          {bookings.length === 0 && (
+          {shown.length === 0 && (
             <p className="rounded-xl border border-dashed border-neutral-300 p-6 text-sm text-neutral-500 dark:border-neutral-700">
-              No requests yet — share your booking page.
+              {kind === "ONLINE"
+                ? "No 1:1s booked yet — publish a session and share your booking page."
+                : "No requests yet — share your booking page."}
             </p>
           )}
-          {bookings.map((b) => (
+          {shown.map((b) => (
             <div
               key={b.id}
               className="rounded-2xl border border-neutral-200 p-5 dark:border-neutral-800"
@@ -630,8 +709,81 @@ function BookingsPane({
                     {` · ${b.date}`}
                   </p>
                 </div>
-                {b.status === "PENDING" && (
+                {/* An online 1:1 has already decided itself — it was paid
+                    for (or free) and put on the calendar at booking. All
+                    that's left is joining, marking it done, or calling it
+                    off. */}
+                {b.kind === "ONLINE" && (
                   <div className="flex flex-wrap gap-2">
+                    {b.meetingUrl && b.status === "CONFIRMED" && (
+                      <a
+                        href={b.meetingUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-lg bg-linear-to-r from-amber-500 to-orange-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-amber-400 hover:to-orange-500"
+                      >
+                        Join meeting
+                      </a>
+                    )}
+                    {b.calendarHtmlLink && (
+                      <a
+                        href={b.calendarHtmlLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium hover:border-amber-500 hover:text-amber-700 dark:border-neutral-700 dark:hover:text-amber-400"
+                      >
+                        In calendar
+                      </a>
+                    )}
+                    {b.status === "CONFIRMED" && (
+                      <>
+                        <button
+                          disabled={busy}
+                          onClick={() =>
+                            void call("/api/studio/bookings", "PATCH", {
+                              channelId,
+                              action: "complete",
+                              requestId: b.id,
+                            })
+                          }
+                          title="The meeting happened"
+                          className="rounded-lg border border-green-500 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/30"
+                        >
+                          Mark completed
+                        </button>
+                        <button
+                          disabled={busy}
+                          onClick={() => {
+                            setNote("");
+                            setCancelling(b);
+                          }}
+                          className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-red-600 hover:border-red-400 dark:border-neutral-700 dark:text-red-400"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+                {b.kind !== "ONLINE" &&
+                  ["PENDING", "RESPONDED", "QUOTED"].includes(b.status) && (
+                  <div className="flex flex-wrap gap-2">
+                    {b.status === "PENDING" && (
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          void call("/api/studio/bookings", "PATCH", {
+                            channelId,
+                            action: "respond",
+                            requestId: b.id,
+                          })
+                        }
+                        title="You've replied by email — keep the request open"
+                        className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium hover:border-amber-500 hover:text-amber-700 dark:border-neutral-700 dark:hover:text-amber-400"
+                      >
+                        Mark responded
+                      </button>
+                    )}
                     <button
                       disabled={busy}
                       onClick={() => {
@@ -641,7 +793,7 @@ function BookingsPane({
                       }}
                       className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium hover:border-amber-500 hover:text-amber-700 dark:border-neutral-700 dark:hover:text-amber-400"
                     >
-                      Send quote
+                      {b.status === "QUOTED" ? "Send another quote" : "Send quote"}
                     </button>
                     <button
                       disabled={busy}
@@ -665,7 +817,58 @@ function BookingsPane({
                     </button>
                   </div>
                 )}
+                {b.kind !== "ONLINE" && b.status === "ACCEPTED" && (
+                  <button
+                    disabled={busy}
+                    onClick={() =>
+                      void call("/api/studio/bookings", "PATCH", {
+                        channelId,
+                        action: "complete",
+                        requestId: b.id,
+                      })
+                    }
+                    title="The engagement happened"
+                    className="rounded-lg border border-green-500 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/30"
+                  >
+                    Mark completed
+                  </button>
+                )}
               </div>
+              {b.serviceTitle && (
+                <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+                  {b.serviceTitle}
+                  {b.slotLabel && ` · ${b.slotLabel}`}
+                </p>
+              )}
+              {b.kind === "ONLINE" && (
+                <p className="mt-1 text-xs text-neutral-500">
+                  {b.paymentStatus === "paid" && b.amountCents !== null
+                    ? `Paid ${money(b.amountCents)}`
+                    : b.paymentStatus === "pending"
+                      ? "Awaiting payment — the slot is held for 30 minutes"
+                      : "Free session"}
+                  {b.meetingUrl
+                    ? " · meeting link issued"
+                    : b.status === "CONFIRMED"
+                      ? " · no meeting link yet (connect Google, or set a room link on the session)"
+                      : ""}
+                </p>
+              )}
+              {b.extras.length > 0 && (
+                <p className="mt-1 text-xs text-neutral-500">
+                  Add-ons requested:{" "}
+                  {b.extras
+                    .map(
+                      (x) =>
+                        `${x.name}${
+                          x.priceCents !== null
+                            ? ` (+$${(x.priceCents / 100).toLocaleString()})`
+                            : ""
+                        }`,
+                    )
+                    .join(", ")}
+                </p>
+              )}
               <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-neutral-600 dark:text-neutral-400">
                 {b.message}
               </p>
@@ -736,6 +939,43 @@ function BookingsPane({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Calling off a confirmed 1:1 */}
+      <ConfirmDialog
+        open={cancelling !== null}
+        title="Cancel this session?"
+        body={
+          cancelling?.paymentStatus === "paid"
+            ? "The calendar invite is withdrawn and the slot goes back on sale. The guest is emailed and told their payment will be refunded — issue the refund in Stripe."
+            : "The calendar invite is withdrawn, the slot goes back on sale, and the guest is emailed."
+        }
+        confirmLabel="Cancel session"
+        destructive
+        onConfirm={() => {
+          const c = cancelling;
+          setCancelling(null);
+          if (c) {
+            void call("/api/studio/bookings", "PATCH", {
+              channelId,
+              action: "cancelSession",
+              requestId: c.id,
+              ...(note.trim() ? { decisionNote: note.trim() } : {}),
+            });
+          }
+        }}
+        onCancel={() => setCancelling(null)}
+      />
+      {cancelling && (
+        <div className="fixed inset-x-0 bottom-6 z-[80] mx-auto w-full max-w-md px-4">
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={1000}
+            placeholder="Why, in a line — the guest sees this…"
+            className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm shadow-lg outline-none dark:border-neutral-700 dark:bg-neutral-900"
+          />
         </div>
       )}
 

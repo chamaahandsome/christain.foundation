@@ -12,7 +12,7 @@ const NAV = [
   { href: "/start", label: "Start Here" },
   { href: "/map", label: "The Map" },
   { href: "/explore", label: "Explore" },
-  { href: "/ebooks", label: "Books" },
+  { href: "/ebooks", label: "eBooks" },
   { href: "/search", label: "Search" },
 ];
 
@@ -42,7 +42,7 @@ export async function SiteHeader() {
             <>
               <SignedIn>
                 <NavLink href="/feed">Feed</NavLink>
-                <NavLink href="/books">Books</NavLink>
+                <NavLink href="/books">eBooks</NavLink>
                 <NavLink href="/studio">Studio</NavLink>
                 {admin && <AdminMenu />}
                 <NotificationsBell />

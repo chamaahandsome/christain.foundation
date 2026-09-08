@@ -6,7 +6,9 @@ import { thumbnailUrl } from "@/lib/youtube";
 import showcase from "@/lib/showcase.json";
 import showcaseMusic from "@/lib/showcase-music.json";
 
-export const dynamic = "force-dynamic";
+// ISR (SCALABILITY §3.1): same page for everyone — CDN-cached, re-rendered at most
+// once per 60s, so origin load scales with content changes, not traffic.
+export const revalidate = 60;
 
 // The front door. Featured creators/content render from the database as the
 // platform fills; every section degrades gracefully while it's empty.
@@ -360,6 +362,15 @@ export default async function Home() {
           non-essentials, liberty. In all things, charity.
         </p>
         <p className="mt-2 text-xs text-neutral-400">— Rupertus Meldenius</p>
+        <p className="mt-6 text-xs text-neutral-400">
+          Questions?{" "}
+          <a
+            href="mailto:support@thecf.online"
+            className="underline underline-offset-2 hover:text-amber-700 dark:hover:text-amber-400"
+          >
+            support@thecf.online
+          </a>
+        </p>
       </footer>
     </main>
   );

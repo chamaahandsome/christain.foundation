@@ -13,7 +13,11 @@ import { db } from "@/lib/db";
 import { formatScriptureRef, type ScriptureRef } from "@/lib/scripture";
 import { thumbnailUrl } from "@/lib/youtube";
 
-export const dynamic = "force-dynamic";
+// ISR (SCALABILITY §3.1): PUBLIC watch pages render identically for everyone
+// and are CDN-cached (continue-watching resumes client-side in YouTubeEmbed).
+// MEMBERS items call auth() below, which opts those paths — and only those —
+// into per-request rendering.
+export const revalidate = 300;
 
 async function getItem(id: string) {
   return db.contentItem.findUnique({
@@ -92,19 +96,6 @@ export default async function WatchPage({
     }
   }
 
-  let startSec: number | undefined;
-  if (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
-    const { userId } = await auth();
-    if (userId) {
-      const progress = await db.watchProgress.findUnique({
-        where: { userId_contentItemId: { userId, contentItemId: item.id } },
-      });
-      if (progress && !progress.completedAt && progress.positionSec > 10) {
-        startSec = progress.positionSec;
-      }
-    }
-  }
-
   const related = await db.contentItem.findMany({
     where: {
       channelId: item.channelId,
@@ -158,7 +149,6 @@ export default async function WatchPage({
           <YouTubeEmbed
             videoId={item.youtubeVideoId}
             contentItemId={item.id}
-            startSec={startSec}
             title={item.title}
           />
         </PinnedPlayer>

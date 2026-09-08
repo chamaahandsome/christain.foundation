@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { daysLeft, progressPercent } from "@/lib/campaigns";
 
-export const dynamic = "force-dynamic";
+// ISR (SCALABILITY §3.1): same page for everyone — CDN-cached, re-rendered at most
+// once per 60s, so origin load scales with content changes, not traffic.
+export const revalidate = 60;
 export const metadata = { title: "Campaigns" };
 
 // The channel's crowdfunding shelf — live and funded campaigns.

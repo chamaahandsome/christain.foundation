@@ -1,13 +1,16 @@
 import { db } from "@/lib/db";
+import Link from "next/link";
 import {
   CONTRACT_CONSENT_TEXT,
-  extractRecipientFields,
+  flattenCreatorFields,
+  prepareSigningHtml,
+  recipientFieldsFor,
   signatureBlockHtml,
   substituteSignatureFields,
   tokenUsable,
 } from "@/lib/contracts";
 import { sanitizeRichHtml } from "@/lib/sanitize-html";
-import { SignContract } from "@/components/SignContract";
+import { SigningExperience } from "@/components/SigningExperience";
 import { PenIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -113,7 +116,16 @@ export default async function SignPage({
       },
     );
   }
-  const recipientFields = extractRecipientFields(displayHtml);
+  const recipientFields = recipientFieldsFor(displayHtml, row.signerEmail);
+  // Only THIS signer's areas stay interactive — everything else reads as
+  // plain text (the Maltivas signing view).
+  const signing = prepareSigningHtml(displayHtml, {
+    signerEmail: row.signerEmail.trim().toLowerCase(),
+    isDefaultRecipient:
+      row.signerEmail.trim().toLowerCase() ===
+      contract.clientEmail.trim().toLowerCase(),
+  });
+  const partiesSigned = roster.filter((r) => r.signedAt).length;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
@@ -195,58 +207,64 @@ export default async function SignPage({
         ))}
       </div>
 
-      <div className="mt-6 rounded-[3px] border border-neutral-300/80 bg-white px-6 py-8 text-neutral-900 shadow-[0_1px_3px_rgba(0,0,0,0.08),0_12px_32px_rgba(0,0,0,0.12)] sm:px-10 dark:border-neutral-600">
-        {contract.logoUrl && (
-          <div className="border-b-2 border-neutral-200 pb-4 text-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={contract.logoUrl} alt="" className="mx-auto h-20 object-contain" />
-          </div>
-        )}
-        <div
-          className="prose-reader text-[15px] leading-7"
-          dangerouslySetInnerHTML={{ __html: displayHtml }}
-        />
-      </div>
-
-      {creatorSig?.signedAt && (
-        <div className="mt-4 text-sm text-neutral-500">
-          Signed for {contract.channel.name} on{" "}
-          {creatorSig.signedAt.toLocaleDateString()}:
-          {creatorSig.signature?.startsWith("data:image") ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={creatorSig.signature}
-              alt={creatorSig.signerName}
-              className="mt-1 h-14 rounded-lg border border-neutral-200 bg-white px-3 dark:border-neutral-700"
-            />
-          ) : (
-            <span className="ml-1 font-serif text-base italic">
-              {creatorSig.signerName}
-            </span>
+      {usable === "ok" ? (
+        <div className="mt-2">
+          {contract.logoUrl && (
+            <div className="mt-6 text-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={contract.logoUrl} alt="" className="mx-auto h-20 object-contain" />
+            </div>
           )}
-        </div>
-      )}
-
-      <div className="mt-8">
-        {usable === "ok" ? (
-          <SignContract
+          <SigningExperience
             token={token}
+            contractId={contract.id}
             signerName={row.signerName}
             consentText={CONTRACT_CONSENT_TEXT}
+            html={signing.html}
             fields={recipientFields}
+            myChips={signing.myChips}
+            partiesSigned={partiesSigned}
+            partiesTotal={roster.length}
           />
-        ) : (
-          <p className="rounded-2xl border border-neutral-200 p-6 text-sm text-neutral-500 dark:border-neutral-800">
-            {usable === "used" && contract.status === "SIGNED"
-              ? "This agreement is fully signed. Keep the verification link for your records."
-              : usable === "used"
-                ? "This signing link was already used."
-                : usable === "expired"
-                  ? "This signing link has expired — ask the sender for a fresh one."
-                  : "This contract is no longer open for signing."}
-          </p>
-        )}
-      </div>
+        </div>
+      ) : (
+        <>
+          <div className="mt-6 rounded-[3px] border border-neutral-300/80 bg-white px-6 py-8 text-neutral-900 shadow-[0_1px_3px_rgba(0,0,0,0.08),0_12px_32px_rgba(0,0,0,0.12)] sm:px-10 dark:border-neutral-600">
+            {contract.logoUrl && (
+              <div className="border-b-2 border-neutral-200 pb-4 text-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={contract.logoUrl} alt="" className="mx-auto h-20 object-contain" />
+              </div>
+            )}
+            <div
+              className="prose-reader text-[15px] leading-7"
+              dangerouslySetInnerHTML={{ __html: flattenCreatorFields(displayHtml) }}
+            />
+          </div>
+          <div className="mt-8">
+            <p className="rounded-2xl border border-neutral-200 p-6 text-sm text-neutral-500 dark:border-neutral-800">
+              {usable === "used" && contract.status === "SIGNED" ? (
+                <>
+                  This agreement is fully signed —{" "}
+                  <Link
+                    href={`/signed/${contract.id}`}
+                    className="font-medium text-amber-700 underline underline-offset-2 dark:text-amber-400"
+                  >
+                    view the signed contract
+                  </Link>
+                  .
+                </>
+              ) : usable === "used" ? (
+                "This signing link was already used."
+              ) : usable === "expired" ? (
+                "This signing link has expired — ask the sender for a fresh one."
+              ) : (
+                "This contract is no longer open for signing."
+              )}
+            </p>
+          </div>
+        </>
+      )}
 
       <p className="mt-6 text-xs text-neutral-400">
         Anyone can verify this document&apos;s integrity at{" "}

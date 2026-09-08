@@ -1,13 +1,23 @@
 import type { Metadata } from "next";
+import { Hurricane } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { SiteHeader } from "@/components/SiteHeader";
 import "./globals.css";
+
+// The signature script (the Maltivas look) — used everywhere a typed
+// signature renders: dialog previews, chips, and executed documents.
+const hurricane = Hurricane({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-signature",
+  display: "swap",
+});
 
 const description =
   "A home for sound doctrine — taught, sung, and lived. In essentials, UNITY. In non-essentials, liberty. In all things, charity.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.thechristian.foundation"),
+  metadataBase: new URL("https://thecf.online"),
   title: {
     default: "Christian Foundation",
     template: "%s · Christian Foundation",
@@ -33,13 +43,15 @@ const hasClerkKeys = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
 /* Runs before paint so the page never flashes the wrong theme. Users with a
    saved choice get it; everyone else follows the OS, live. */
-const themeInitScript = `(function(){try{var m=window.matchMedia("(prefers-color-scheme: dark)");function apply(){var s=localStorage.getItem("theme");document.documentElement.classList.toggle("dark",s==="dark"||(s!=="light"&&m.matches))}apply();m.addEventListener("change",apply)}catch(e){}})()`;
+// Light is the default; dark only when the visitor explicitly chose it
+// via the toggle (no OS-preference fallback).
+const themeInitScript = `(function(){try{document.documentElement.classList.toggle("dark",localStorage.getItem("theme")==="dark")}catch(e){}})()`;
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const body = (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={hurricane.variable}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
