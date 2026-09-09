@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Hurricane } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 import "./globals.css";
 
 // The signature script (the Maltivas look) — used everywhere a typed
@@ -55,9 +56,10 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="min-h-screen antialiased">
+      <body className="flex min-h-screen flex-col antialiased">
         <SiteHeader />
-        {children}
+        <div className="flex-1">{children}</div>
+        <SiteFooter />
       </body>
     </html>
   );

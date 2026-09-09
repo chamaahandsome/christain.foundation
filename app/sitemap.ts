@@ -21,6 +21,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/apply",
   ].map((path) => ({ url: `${BASE}${path}`, changeFrequency: "daily" as const }));
 
+  // Legal pages change rarely but must be findable — Google's API review
+  // looks for them.
+  const legal: MetadataRoute.Sitemap = ["/privacy", "/terms"].map((path) => ({
+    url: `${BASE}${path}`,
+    changeFrequency: "yearly" as const,
+  }));
+
   const startTopics: MetadataRoute.Sitemap = startHereTopics().map((topic) => ({
     url: `${BASE}/start/${topic.slug}`,
     changeFrequency: "weekly" as const,
@@ -48,6 +55,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     ...statics,
+    ...legal,
     ...startTopics,
     ...questions.map((q) => ({
       url: `${BASE}/map/${q.slug}`,
