@@ -9,6 +9,7 @@
 import { NotificationType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { formatMin } from "@/lib/availability";
+import { bookingSlot } from "@/lib/bookings";
 import {
   createMeetEvent,
   deleteCalendarEvent,
@@ -26,33 +27,9 @@ function siteUrl(): string {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 }
 
-/** The one slot a session occupies, read back off the request. */
-function slotOf(request: {
-  eventDate: Date | null;
-  slotStartMin: number | null;
-  slotSelections: unknown;
-}): { ymd: string; startMin: number; endMin: number } | null {
-  const picks = Array.isArray(request.slotSelections)
-    ? (request.slotSelections as { date?: string; startMin?: number; endMin?: number }[])
-    : [];
-  const first = picks[0];
-  if (
-    first &&
-    typeof first.date === "string" &&
-    typeof first.startMin === "number" &&
-    typeof first.endMin === "number"
-  ) {
-    return { ymd: first.date, startMin: first.startMin, endMin: first.endMin };
-  }
-  if (request.eventDate && request.slotStartMin !== null) {
-    return {
-      ymd: request.eventDate.toISOString().slice(0, 10),
-      startMin: request.slotStartMin,
-      endMin: request.slotStartMin + 30,
-    };
-  }
-  return null;
-}
+// The one slot a session occupies is read back with the shared parser
+// (lib/bookings) — the same shape The Table renders to the guest.
+const slotOf = bookingSlot;
 
 export interface SessionPayment {
   status: "free" | "paid";

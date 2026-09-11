@@ -155,6 +155,10 @@ the watch surface for active members. Gating applies to NATIVE and text
 content only — embedded YouTube stays public (the video is public on YouTube;
 paywalling our chrome over it reads badly). Tiers ship before Mux by gating
 ebooks/updates; courses land with native hosting.
+**The member's half of this is mapped in §11.3** — the access helper, tier
+granularity, what a tier may unlock, the member-facing surfaces, and dunning.
+Read it before extending tiers: the gate is enforced but nothing lists
+member content, so today a paying member has no link to what they bought.
 
 ### Business (Do-Biz rebuilt faithfully 2026-09-01 — flows and layouts mirror Maltivas, CF-skinned)
 ```
@@ -446,3 +450,296 @@ signed-in), ebook comments, bookmarks (later).
 7. **Partner giving Mode B**: direct charges on connected accounts, disclosure machinery, partner updates surface, lapse signals.
 8. **Events + ticketing** (incl. reserved seating), **crowdfunding** (MISSION/CREATIVE first; RESEARCH with qualification workflow; NEED last), **bookings, newsletters, Trickl, native film/premieres**.
 9. **Mode A agency giving** (post-counsel), communities, live Q&A, mobile/TV.
+
+The audience-facing counterpart to phases 6–9 is **§11**, which runs its own
+U1–U5 order alongside them.
+
+---
+
+## 11. The user side (audience surfaces) — mapped 2026-09-10
+
+Phases 1–8 built the creator. The creator has a **place** — `/studio`, one
+address owning their whole relationship with CF. The audience has no place:
+five orphaned pages and a query parameter. This section maps the counterpart.
+
+### 11.1 Audit at time of writing
+
+What exists: `/feed` (followed channels' latest), `/books` (purchased ebooks),
+`/backed` (pledges — not linked from the nav at all), `/notifications`,
+`/read/[ebookId]`. The header's SignedIn cluster is `Feed · eBooks · Studio`
+as flat peers, which tells every visitor CF is a creator tool.
+
+Every money event returns the buyer to **the seller's page with a flag**:
+
+```
+ebook      → /book/[id]?purchased=1
+pledge     → /campaign/[slug]?thanks=1
+tip        → /@handle/support?thanks=1
+membership → /@handle/support?member=1
+booking    → /@handle/book?booked=<id>
+```
+
+No receipt, no record, no surface that belongs to the buyer. Three structural
+findings behind that:
+
+1. **Notifications are one-directional.** In `lib/fulfillment.ts`, tips,
+   pledges and memberships notify the **creator only**; the ebook buyer is the
+   single exception. Somebody can pay $50/month and CF never addresses them —
+   not at join, not at renewal, not when their card fails.
+2. **Entitlement is scattered.** `EbookPurchase`, `ChannelMembership`,
+   `CampaignPledge`+reward, and (coming) film/ticket/course each answer "what
+   do I have?" differently. No single query stands behind a library page.
+3. **Do-Biz gave the counterparty nothing.** Quotes, contracts and invoices
+   reach the client as tokenized email links; `BookingRequest.userId` is
+   nullable, so many aren't attached to an account at all.
+
+### 11.2 The Table (`/table`)
+
+The signed-in home for everyone not in the Studio — named to be sat at rather
+than managed, the way Studio is worked in.
+
+```
+/table
+├── Continue       where you left off — reading, watching, Start Here step, next lesson
+├── Library        books · courses · films · member content · tickets  (one Entitlement query)
+├── Standing with  following · memberships · backed campaigns · gifts given
+├── Sessions       1:1s booked + your quotes, contracts, invoices
+├── Orders         merch and physical campaign rewards, with delivery status
+└── Receipts       every transaction, with its disclosure preserved
+```
+
+**Continue** earns the daily return; everything else is storage. It is also
+nearly free — `WatchProgress` and `PathwayProgress` are already written and
+read today only by creator analytics. Nav: the SignedIn cluster collapses to
+an avatar menu → **Your Table**, with Studio shown only to approved creators.
+
+### 11.3 Membership access — the member's half of the tier system
+
+**Built (2026-09-01):** `MembershipTier` / `ChannelMembership`; a monthly
+Stripe subscription created *on the creator's connected account* with
+`application_fee_percent` (`/api/checkout/membership`); `invoice.paid` ledgers
+each cycle and rolls `currentPeriodEnd`; `customer.subscription.deleted` flips
+`CANCELLED` and decrements `membersCount`. `lib/membership.ts` holds the rules:
+`TIER_MIN_CENTS` $2, `TIER_MAX_CENTS` $1k, `GRACE_DAYS = 3`, the pure
+`membershipCurrent()` and the DB `isActiveMember()`.
+
+**The gate works; there is no door.** `Visibility.MEMBERS` is enforced at
+exactly one surface — `app/watch/[id]/page.tsx` — while *every* surface that
+lists content hard-filters `visibility: PUBLIC`: `/explore`, `lib/search.ts`,
+`/feed`, `/@handle`, `/@handle/videos`. Member content therefore appears
+nowhere a member can reach it. **Rule going forward: no query that lists
+content may write a `PUBLIC` literal — it takes a viewer context.**
+
+Concretely, `lib/visibility.ts`:
+
+```
+viewerVisibility(userId, channelId) → Visibility[]      // single-channel surfaces
+memberChannelIds(userId)            → string[]          // cross-channel surfaces
+// filter becomes:
+OR: [ { visibility: PUBLIC },
+      { visibility: MEMBERS, channelId: { in: memberChannelIds } } ]
+```
+
+One helper, six call sites. The channel's own team already passes the watch
+gate — that allowance moves into the helper rather than being re-derived.
+
+**Tier granularity — decide before tiers ship.** Access today is boolean per
+*channel*: `isActiveMember(channelId, userId)`. A channel running
+Bronze/Silver/Gold cannot differentiate — any tier unlocks all MEMBERS
+content. Two options: (a) keep channel-level access and say so plainly in the
+tier editor (tiers differ by price and perks-in-words only), or (b) the
+Patreon shape, a **price threshold**. Recommended: (b), as
+`ContentItem.minTierCents Int?` — unlocked when the member's tier
+`priceCents ≥ minTierCents`. Price rank rather than a tier id because
+creators rename and restructure tiers, and an id reference either breaks or
+silently revokes; upgrades and downgrades then resolve by comparison with no
+migration. `isActiveMember` gains a sibling
+`memberTierCents(channelId, userId): number | null`, and the check is one
+integer comparison. `membershipCurrent()`'s grace semantics stay untouched.
+
+**What a tier may unlock** (map now, so the tier editor can offer it):
+
+- `ContentItem.visibility = MEMBERS` — native + document content. **Embedded
+  YouTube stays public**, per §6: the video is public on YouTube and
+  paywalling CF's chrome over it reads badly. The tier editor must say this
+  out loud, or creators will mark their YouTube library MEMBERS and watch the
+  setting be ignored.
+- **Ebooks**: `Ebook.includedForTierCents Int?` — members read without buying.
+  §6's "tiers ship before Mux by gating ebooks" is this field, plus a
+  membership branch in the reader's access check (currently `EbookPurchase`
+  only) and an "Included with your membership" state on `/book/[id]`.
+- **Member posts** — a channel-scoped post kind (the Patreon posts surface),
+  also the natural home for members-only announcements ahead of §11.5.
+- **Early access**: `ContentItem.publicAt DateTime?` — MEMBERS until that
+  moment, PUBLIC after. One cron flip, and it is the perk creators actually
+  ask for.
+- Reserved, not built: discounts on ebooks/merch/tickets, a members-only room
+  (§11.5), priority on booking requests.
+
+**Member-facing surfaces (none exist today):**
+
+- `/table/memberships` — a card per membership: tier, member since, what it
+  unlocks (the tier's own words plus a live count of what is actually
+  unlocked), next charge date, manage, cancel. **The cancel UI has never
+  existed** — `/api/membership/cancel` is an endpoint with no page.
+- A **Members** filter in `/feed` and a member row on `/@handle` — the door
+  from §11.3's helper.
+- `/@handle` for an active member renders member content inline with a tier
+  badge instead of a join CTA.
+- Joining lands on `/receipt/[txn]` (§11.4) — "here's what you just unlocked"
+  and a first link into it — replacing `?member=1` on the creator's support
+  page. The new member gets a notification; today only the creator does.
+
+**Dunning is invisible on both sides.** `MembershipStatus.PAST_DUE` is in the
+enum and **never written** — the Stripe webhook handles `account.updated`,
+`invoice.paid`, `customer.subscription.deleted` and
+`checkout.session.completed` only. A failed card rides the 3-day grace in
+silence and then access simply disappears, unannounced to either party.
+Needs: `invoice.payment_failed` → `PAST_DUE` + member email carrying Stripe's
+update-payment link + an in-app banner; `invoice.paid` → back to `ACTIVE`;
+`customer.subscription.deleted` → the existing `CANCELLED` plus a member
+notice and a rejoin path. The creator's side of the same event is §8's
+partner-lapse signal — retention is the product.
+
+**Grace and revocation:** `membershipCurrent()` is the single source of truth
+and nothing may compute access from `status` alone. Membership-derived
+entitlements (§11.4) are **derived at request time, never materialized** — a
+cancelled member must lose access on the next request, not on the next cron.
+
+### 11.4 Cross-cutting spines
+
+**A. `Entitlement` — one answer to "do I have this?"**
+
+```prisma
+model Entitlement {
+  userId String; channelId String
+  kind   EBOOK | COURSE | FILM | MEMBER_CONTENT | TICKET | PRODUCT
+  refId  String
+  source PURCHASE | MEMBERSHIP | REWARD | GIFT | FREE
+  status PENDING | ACTIVE | EXPIRED | REVOKED
+  transactionId String?      // the receipt behind it
+  grantedAt DateTime; expiresAt DateTime?
+  @@unique([userId, kind, refId])
+}
+```
+
+Written from the idempotent grant paths already in `lib/fulfillment.ts`;
+`EbookPurchase` and `ChannelMembership` stay and also write here. Library
+becomes one query, gating one helper. `PENDING` is what Trickl forces (E).
+Membership is the exception noted in §11.3 — resolved live, not stored.
+
+**B. `/receipt/[transactionId]` — the confirmation moment.** One page, five
+rails, replacing all five `?flag` returns: what you got · from whom · what it
+cost · **one** next action (*Start reading* · *Add to your calendar* · *Join
+the room* · *See the campaign* · *Track your order*) · the framing for that
+rail. The rails genuinely differ and the copy must follow: destination-charge
+commerce (ebook, merch, ticket) is a CF receipt; direct charges (tips,
+MISSION pledges) are a **record from the creator as merchant of record, never
+a tax receipt**, carrying the §9 disclosure already stored per transaction;
+Trickl shows what has passed through so far — no wallet, balance or savings
+language, ever. `Transaction` already carries `userId`, `type`, `feeCents`
+and `provider`, so Receipts is a list view over rows we already write.
+
+**C. Guest → account claim.** `BookingRequest`, `Quote`, `Invoice` and
+`Contract` key on **email**, not `userId`. On signup, claim every row matching
+the newly verified address in the Clerk webhook. That alone turns the Do-Biz
+token links into a client portal.
+
+**D. Notifications.** `NotificationType`'s six values are all creator/admin
+facing. Add the buyer side, and make every money event notify **both**
+parties. Email (SES, already wired for bookings and business docs): purchase
+confirmation, shipment, renewal and card-failure, session reminders at 24h and
+1h, campaign updates. Which then makes a **notification preferences page**
+non-optional.
+
+**E. Trickl pending state.** A Trickl purchase completes over days or weeks;
+today the buyer leaves with nothing — no card, no state, no word until the
+goal completes, so they will assume it failed. A `PENDING` entitlement card at
+The Table showing the goal's live progress (§9 language rules apply) is what
+makes Trickl safe to put in front of real buyers.
+
+**F. User-initiated refunds.** Refunds today are creator-initiated, campaigns
+only. Without a *request a refund* path (→ creator inbox → CF admin
+escalation, stated window), the chargeback is the buyer's only instrument —
+and on a Connect platform that damages the creator's account and CF's.
+
+### 11.5 The journeys
+
+**Buy a book** (exists, ends badly). Beyond §11.4: reading position moves
+server-side (`ReadingProgress`, currently device-local typography only) so
+Continue works across devices; the last chapter is the highest-intent moment
+CF will ever get from a reader and is currently a dead end — it should offer
+the creator's other books, follow, and a cup of cold water. *Gift a book*
+(checkbox at checkout, claim link by email) is the most natural sharing
+mechanic a discipleship platform has.
+
+**Buy merch** (nothing exists; `Product/Variant/Order/OrderItem/
+ShippingAddress/Shipment`). v1 is **creator-fulfilled** — the creator ships
+and marks shipped with tracking; no CF warehousing, no POD integration until
+volume justifies it — which makes merch a two-sided build (a Shop tab and an
+Orders inbox in the Studio). Trickl on physical goods needs a `ProductHold`
+reusing the booking-slot hold pattern and `expire-holds`, or the last unit
+sells twice and chunks have to be unwound. **Existing debt this absorbs:**
+campaign physical rewards already collect shipping addresses through Stripe
+and have **no delivery status anywhere**, for backer or creator.
+
+**Book a course** — three distinct things. (a) *Book time*: `BookableService`
+is built well (slots, holds, Meet links, emails) and needs only the guest's
+half — Sessions at The Table, with the quote/contract/invoice attached via
+(C). (b) *Enroll in a course*: `Course → Lesson (ContentItem) → Enrollment (an
+Entitlement)`, per-lesson progress, resume in Continue; two choices worth
+making early — **cohorts** (a start date, people walking it together, which
+makes a course the community anchor) and **attachment to the map** (a course
+hangs off a `Question` or requires a `Pathway`, so learning and the doctrinal
+spine stay one system). (c) *Membership* — §11.3.
+
+**Engage in the community** (nothing beyond post-moderated comments; the wrong
+design here is worse than nothing, because an open forum on a doctrinal
+platform becomes a doctrinal war and the map is the product). Three anchors,
+deliberately not a forum:
+
+1. **Under the teaching** — comments, plus *ask a question* that queues to the
+   creator and can be promoted into content.
+2. **The channel room** — `DISCUSSION | PRAYER_REQUEST | TESTIMONY |
+   ANNOUNCEMENT` (announcements creator-only), gated to followers or members
+   at the creator's choice. Pusher is already in the stack for it.
+3. **The Prayer Wall** — one global surface; *N praying* rather than likes,
+   answered-prayer marking, replies off by default and opened by the poster.
+   Small, native, and the reason a signed-in visitor who owns nothing returns.
+
+**Deliberately not built: open discussion on disputed map questions.** On a
+Position page the only affordance is *ask*; questions route to creators
+holding that view and the answer becomes content. Governance ships *with*
+community, not after: viewers pass no gate (§5 keeps the viewer level wide
+open), so per-channel creator moderation is required — today only CF admins
+moderate, at `/admin/moderation` — alongside rate limits (`lib/rate-limit.ts`),
+a report path shaped like `ReportTeachingButton`, and a first-posts-held trust
+level.
+
+### 11.6 Build order (runs alongside §10 phases 6–9)
+
+1. **U1 — The Table, over data that already exists.** No new payment code:
+   the hub shell, `/receipt/[txn]` replacing all five `?flag` returns,
+   `/table/memberships` + the cancel UI, Sessions with the email claim,
+   buyer-side notifications, the Trickl `PENDING` card.
+2. **U2 — Member access + Entitlement + Continue.** `lib/visibility.ts` and
+   the six PUBLIC-literal call sites, `minTierCents`, ebook inclusion,
+   `invoice.payment_failed` dunning, the Entitlement read model, server-side
+   reading position, Start Here progress surfaced.
+3. **U3 — Community.** Prayer Wall first, then channel rooms, with creator
+   moderation shipping alongside.
+4. **U4 — Orders & merch** (two-sided; absorbs campaign reward fulfillment).
+5. **U5 — Courses** with native hosting, cohorts, map attachment.
+
+U2's first item is the one with a paying customer already waiting on it.
+
+### 11.7 Open decisions
+
+1. The hub's name and address — `/table` (recommended), `/my`, `/library`.
+2. Tier granularity — channel-level, or `minTierCents` (recommended).
+3. Merch fulfillment — creator-ships v1, or POD integration from the start.
+4. Community gating — channel rooms open to all signed-in, followers, or
+   members, at the creator's choice.
+5. Disputed-question discussion — recommended *ask only*, no threads.
+6. Refund policy — who decides, and what window.
+7. Receipt language per rail (§11.4 B) — counsel, alongside the §9 items.

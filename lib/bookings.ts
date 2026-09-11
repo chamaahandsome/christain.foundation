@@ -34,6 +34,61 @@ export function parseServiceImages(raw: unknown): string[] {
     .slice(0, 3);
 }
 
+export interface BookingSlot {
+  ymd: string; // "2026-09-10" — the service's wall clock, never converted
+  startMin: number;
+  endMin: number;
+}
+
+/**
+ * Every slot a request reserved, earliest first. Slot services store the
+ * whole selection as JSON; the single-slot shape (eventDate + slotStartMin)
+ * is read back as one half-hour slot so older rows still render.
+ */
+export function parseBookingSlots(request: {
+  eventDate: Date | null;
+  slotStartMin: number | null;
+  slotSelections: unknown;
+}): BookingSlot[] {
+  const picks = Array.isArray(request.slotSelections) ? request.slotSelections : [];
+  const out: BookingSlot[] = [];
+  for (const row of picks.slice(0, 50)) {
+    if (typeof row !== "object" || row === null) continue;
+    const r = row as Record<string, unknown>;
+    if (typeof r.date !== "string" || typeof r.startMin !== "number") continue;
+    out.push({
+      ymd: r.date,
+      startMin: r.startMin,
+      endMin: typeof r.endMin === "number" ? r.endMin : r.startMin + 30,
+    });
+  }
+  if (out.length > 0) {
+    return out.sort((a, b) => a.ymd.localeCompare(b.ymd) || a.startMin - b.startMin);
+  }
+  if (request.eventDate && request.slotStartMin !== null) {
+    return [
+      {
+        ymd: request.eventDate.toISOString().slice(0, 10),
+        startMin: request.slotStartMin,
+        endMin: request.slotStartMin + 30,
+      },
+    ];
+  }
+  return [];
+}
+
+/**
+ * Where a booking begins: the one slot a session occupies, or the first of
+ * a hire run. Null when the engagement has no agreed time yet.
+ */
+export function bookingSlot(request: {
+  eventDate: Date | null;
+  slotStartMin: number | null;
+  slotSelections: unknown;
+}): BookingSlot | null {
+  return parseBookingSlots(request)[0] ?? null;
+}
+
 /** Base rate + selected extras — what the engagement is expected to cost. */
 export function bookingTotalCents(input: {
   rateCents?: number | null;

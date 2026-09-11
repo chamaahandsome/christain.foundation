@@ -41,8 +41,8 @@ export async function SiteHeader() {
           {hasClerkKeys ? (
             <>
               <SignedIn>
-                <NavLink href="/feed">Feed</NavLink>
-                <NavLink href="/books">eBooks</NavLink>
+                {/* The audience's place and the creator's, as peers. */}
+                <NavLink href="/table">Your table</NavLink>
                 <NavLink href="/studio">Studio</NavLink>
                 {admin && <AdminMenu />}
                 <NotificationsBell />

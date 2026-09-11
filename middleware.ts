@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 // with the creator-gate milestone (ported HMAC-cookie pattern from Maltivas).
 const isProtectedRoute = createRouteMatcher([
   "/studio(.*)", // creator dashboard
+  "/table(.*)", // the audience's own place (PLAN §11)
   "/admin(.*)",
   "/settings(.*)",
   "/api/studio(.*)",
