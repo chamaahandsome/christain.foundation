@@ -43,6 +43,54 @@ export function membershipCurrent(
   );
 }
 
+/* ---------- what a paid invoice means for an existing member ----------
+ * A member is identified by (channel, user); their subscription id is not
+ * stable, because cancelling and coming back mints a new one while the old
+ * row keeps the slot. Deciding from the subscription id is what left
+ * returning members cancelled while Stripe kept charging them, so the
+ * decision lives here, in the open, where it can be tested. */
+
+export type MembershipAction = "create" | "renew" | "rejoin" | "switch-tier";
+
+export interface MembershipCyclePlan {
+  action: MembershipAction;
+  /** tier whose membersCount goes up, if any */
+  increment: string | null;
+  /** tier whose membersCount comes down, if any */
+  decrement: string | null;
+  /** tell the creator — a membership starting, never a renewal */
+  notify: boolean;
+}
+
+/** Pure: given the row that already exists (or none), what should a paid
+ * invoice for `tierId` do? */
+export function planMembershipCycle(input: {
+  prior: { tierId: string; status: MembershipStatus } | null;
+  tierId: string;
+}): MembershipCyclePlan {
+  const { prior, tierId } = input;
+  // Nobody here yet — a new member.
+  if (!prior) {
+    return { action: "create", increment: tierId, decrement: null, notify: true };
+  }
+  // They left and came back. The count came down when they went, so it has
+  // to go back up — on whichever tier they have now chosen.
+  if (prior.status === MembershipStatus.CANCELLED) {
+    return { action: "rejoin", increment: tierId, decrement: null, notify: true };
+  }
+  // Still a member, but on a different tier than the count records.
+  if (prior.tierId !== tierId) {
+    return {
+      action: "switch-tier",
+      increment: tierId,
+      decrement: prior.tierId,
+      notify: false,
+    };
+  }
+  // The ordinary monthly renewal: nothing moves.
+  return { action: "renew", increment: null, decrement: null, notify: false };
+}
+
 /** DB: does this user have member access to this channel right now? */
 export async function isActiveMember(
   channelId: string,

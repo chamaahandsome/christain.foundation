@@ -110,13 +110,22 @@ export async function POST(req: Request) {
       // A membership ended (member cancelled, or dunning gave up). Cups
       // have no standing row to update — only memberships care.
       const sub = event.data.object;
-      const { count } = await db.channelMembership.updateMany({
-        where: { stripeSubscriptionId: sub.id, status: { not: "CANCELLED" } },
-        data: { status: "CANCELLED" },
+      // Scoped to this subscription id on purpose: a member who cancelled
+      // and rejoined already carries their new subscription, so this late
+      // event for the old one matches nothing and leaves them alone.
+      const row = await db.channelMembership.findUnique({
+        where: { stripeSubscriptionId: sub.id },
+        select: { id: true, tierId: true, status: true },
       });
-      if (count > 0 && sub.metadata?.cfTierId) {
+      if (row && row.status !== "CANCELLED") {
+        await db.channelMembership.update({
+          where: { id: row.id },
+          data: { status: "CANCELLED" },
+        });
+        // The row's own tier is the truth — Stripe's metadata records the
+        // tier they signed up on, which a later switch would have moved.
         await db.membershipTier.updateMany({
-          where: { id: sub.metadata.cfTierId, membersCount: { gt: 0 } },
+          where: { id: row.tierId, membersCount: { gt: 0 } },
           data: { membersCount: { decrement: 1 } },
         });
       }

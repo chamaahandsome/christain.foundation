@@ -9,6 +9,7 @@ import {
   TransactionType,
 } from "@prisma/client";
 import { db } from "@/lib/db";
+import { planMembershipCycle } from "@/lib/membership";
 
 /** Ledger a cup of cold water and tell the creator. Idempotent on
  * providerRef; shared by the Stripe and Trickl webhooks. */
@@ -240,6 +241,38 @@ export async function fulfillPledge(input: {
  * membership upserts on the Stripe subscription id. The first cycle
  * creates the membership, bumps the tier's member count, and tells the
  * creator. */
+/** Tell the creator someone joined. Sent when a membership starts — a new
+ * member or one returning after cancelling — never on a renewal. */
+async function notifyNewMember(input: {
+  channelId: string;
+  tierId: string;
+  userId: string;
+  amountCents: number;
+}): Promise<void> {
+  const [channel, member, tier] = await Promise.all([
+    db.channel.findUnique({
+      where: { id: input.channelId },
+      select: { ownerId: true },
+    }),
+    db.user.findUnique({ where: { id: input.userId }, select: { name: true } }),
+    db.membershipTier.findUnique({
+      where: { id: input.tierId },
+      select: { name: true },
+    }),
+  ]);
+  if (!channel) return;
+  await db.notification.create({
+    data: {
+      userId: channel.ownerId,
+      type: NotificationType.SYSTEM,
+      title: `⭐ ${member?.name ?? "Someone"} became a member — ${tier?.name ?? "a tier"} · $${(
+        input.amountCents / 100
+      ).toFixed(2)}/mo`,
+      url: "/studio",
+    },
+  });
+}
+
 export async function recordMembershipCycle(input: {
   channelId: string;
   tierId: string;
@@ -250,72 +283,80 @@ export async function recordMembershipCycle(input: {
   providerRef: string;
   currentPeriodEnd: Date | null;
 }): Promise<void> {
-  const existing = await db.channelMembership.findUnique({
-    where: { stripeSubscriptionId: input.subscriptionId },
-    select: { id: true },
+  // A member is identified by (channel, user), not by their subscription —
+  // that id changes every time they leave and come back, and the row from
+  // their first run still holds the unique slot. Keying off the
+  // subscription instead would leave a returning member cancelled while
+  // Stripe kept charging them.
+  const prior = await db.channelMembership.findUnique({
+    where: {
+      channelId_userId: { channelId: input.channelId, userId: input.userId },
+    },
+    select: {
+      id: true,
+      tierId: true,
+      status: true,
+      stripeSubscriptionId: true,
+    },
   });
 
-  if (existing) {
-    await db.channelMembership.update({
-      where: { id: existing.id },
-      data: {
-        status: MembershipStatus.ACTIVE,
-        currentPeriodEnd: input.currentPeriodEnd,
-      },
-    });
+  const plan = planMembershipCycle({ prior, tierId: input.tierId });
+  const row = {
+    // A rejoin may land on a different tier, and always on a new
+    // subscription; a plain renewal leaves both where they were.
+    tierId: input.tierId,
+    stripeSubscriptionId: input.subscriptionId,
+    status: MembershipStatus.ACTIVE,
+    currentPeriodEnd: input.currentPeriodEnd,
+  };
+
+  if (prior) {
+    await db.channelMembership.update({ where: { id: prior.id }, data: row });
   } else {
     try {
       await db.channelMembership.create({
-        data: {
-          channelId: input.channelId,
-          tierId: input.tierId,
-          userId: input.userId,
-          status: MembershipStatus.ACTIVE,
-          stripeSubscriptionId: input.subscriptionId,
-          currentPeriodEnd: input.currentPeriodEnd,
-        },
+        data: { channelId: input.channelId, userId: input.userId, ...row },
       });
-      await db.membershipTier.update({
-        where: { id: input.tierId },
-        data: { membersCount: { increment: 1 } },
-      });
-      const [channel, member, tier] = await Promise.all([
-        db.channel.findUnique({
-          where: { id: input.channelId },
-          select: { ownerId: true },
-        }),
-        db.user.findUnique({ where: { id: input.userId }, select: { name: true } }),
-        db.membershipTier.findUnique({
-          where: { id: input.tierId },
-          select: { name: true },
-        }),
-      ]);
-      if (channel) {
-        await db.notification.create({
-          data: {
-            userId: channel.ownerId,
-            type: NotificationType.SYSTEM,
-            title: `⭐ ${member?.name ?? "Someone"} became a member — ${tier?.name ?? "a tier"} · $${(
-              input.amountCents / 100
-            ).toFixed(2)}/mo`,
-            url: "/studio",
-          },
-        });
-      }
     } catch (err) {
-      // Unique (channelId,userId) or subscription raced — another delivery
-      // created it; the cycle ledger below still applies.
+      // Two deliveries of the same first invoice raced. The winner created
+      // the row, counted them, and told the creator, so this one settles for
+      // making the period current and counts nobody twice.
       if ((err as { code?: string }).code !== "P2002") throw err;
       await db.channelMembership.updateMany({
-        where: { stripeSubscriptionId: input.subscriptionId },
-        data: {
-          status: MembershipStatus.ACTIVE,
-          currentPeriodEnd: input.currentPeriodEnd,
-        },
+        where: { channelId: input.channelId, userId: input.userId },
+        data: row,
       });
+      await recordMembershipTransaction(input);
+      return;
     }
   }
 
+  if (plan.decrement) {
+    await db.membershipTier.updateMany({
+      where: { id: plan.decrement, membersCount: { gt: 0 } },
+      data: { membersCount: { decrement: 1 } },
+    });
+  }
+  if (plan.increment) {
+    await db.membershipTier.update({
+      where: { id: plan.increment },
+      data: { membersCount: { increment: 1 } },
+    });
+  }
+  if (plan.notify) await notifyNewMember(input);
+
+  await recordMembershipTransaction(input);
+}
+
+/** The cycle's ledger row. Idempotent on providerRef, so a redelivered
+ * invoice adds nothing. */
+async function recordMembershipTransaction(input: {
+  channelId: string;
+  userId: string;
+  amountCents: number;
+  feeCents: number;
+  providerRef: string;
+}): Promise<void> {
   try {
     await db.transaction.create({
       data: {

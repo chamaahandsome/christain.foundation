@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { MembershipStatus } from "@prisma/client";
-import { membershipCurrent, validateTier } from "@/lib/membership";
+import {
+  membershipCurrent,
+  planMembershipCycle,
+  validateTier,
+} from "@/lib/membership";
 
 describe("validateTier", () => {
   const base = {
@@ -56,5 +60,86 @@ describe("membershipCurrent", () => {
         now,
       ),
     ).toBe(false);
+  });
+});
+
+describe("planMembershipCycle", () => {
+  const TIER = "tier_partner";
+  const OTHER = "tier_patron";
+
+  it("counts and announces a brand new member", () => {
+    expect(planMembershipCycle({ prior: null, tierId: TIER })).toEqual({
+      action: "create",
+      increment: TIER,
+      decrement: null,
+      notify: true,
+    });
+  });
+
+  it("restores a member who cancelled and came back", () => {
+    // The regression this exists for: keying off the subscription id left
+    // the old CANCELLED row untouched, so Stripe charged them every month
+    // while isActiveMember stayed false.
+    expect(
+      planMembershipCycle({
+        prior: { tierId: TIER, status: MembershipStatus.CANCELLED },
+        tierId: TIER,
+      }),
+    ).toEqual({
+      action: "rejoin",
+      increment: TIER,
+      decrement: null,
+      notify: true,
+    });
+  });
+
+  it("restores them even when they come back on a different tier", () => {
+    expect(
+      planMembershipCycle({
+        prior: { tierId: OTHER, status: MembershipStatus.CANCELLED },
+        tierId: TIER,
+      }),
+    ).toEqual({
+      action: "rejoin",
+      // Leaving already took them off the old tier — nothing to take down.
+      increment: TIER,
+      decrement: null,
+      notify: true,
+    });
+  });
+
+  it("moves the count when a current member switches tier", () => {
+    expect(
+      planMembershipCycle({
+        prior: { tierId: OTHER, status: MembershipStatus.ACTIVE },
+        tierId: TIER,
+      }),
+    ).toEqual({
+      action: "switch-tier",
+      increment: TIER,
+      decrement: OTHER,
+      notify: false,
+    });
+  });
+
+  it("leaves a plain renewal alone", () => {
+    for (const status of [MembershipStatus.ACTIVE, MembershipStatus.PAST_DUE]) {
+      expect(planMembershipCycle({ prior: { tierId: TIER, status }, tierId: TIER })).toEqual({
+        action: "renew",
+        increment: null,
+        decrement: null,
+        notify: false,
+      });
+    }
+  });
+
+  it("never announces the same membership twice", () => {
+    // A renewal must stay quiet, or the creator is told someone "became a
+    // member" every month.
+    const renewal = planMembershipCycle({
+      prior: { tierId: TIER, status: MembershipStatus.ACTIVE },
+      tierId: TIER,
+    });
+    expect(renewal.notify).toBe(false);
   });
 });
