@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Visibility } from "@prisma/client";
 import { VideoMarquee, type MarqueeItem } from "@/components/VideoMarquee";
 import { db } from "@/lib/db";
 import { thumbnailUrl } from "@/lib/youtube";
@@ -40,7 +39,6 @@ export default async function Home() {
       ? await db.contentItem
           .findMany({
             where: {
-              visibility: Visibility.PUBLIC,
               unavailableAt: null,
               youtubeVideoId: { not: null },
               channel: { status: "APPROVED" },
@@ -87,7 +85,6 @@ export default async function Home() {
     db.contentItem
       .findMany({
         where: {
-          visibility: Visibility.PUBLIC,
           unavailableAt: null,
           youtubeVideoId: { not: null },
           channel: { status: "APPROVED" },

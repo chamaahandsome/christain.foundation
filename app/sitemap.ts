@@ -41,7 +41,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     db.contentItem
       .findMany({
         where: {
-          visibility: "PUBLIC",
           unavailableAt: null,
           youtubeVideoId: { not: null },
           channel: { status: "APPROVED" },

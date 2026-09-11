@@ -4,7 +4,6 @@
 // has nothing to say (short words, partial terms). The map, channels, and
 // series are small tables — substring matching is right for them.
 
-import { Visibility } from "@prisma/client";
 import { db } from "@/lib/db";
 
 /**
@@ -20,8 +19,10 @@ export function sanitizeFulltextQuery(input: string): string {
     .slice(0, 200);
 }
 
+// Embedded YouTube is free to watch, so `visibility` is not consulted: the
+// youtubeVideoId requirement already keeps this to embeds, and visibility is
+// reserved for native and text content, which plays from CF itself.
 const PUBLIC_ITEM = {
-  visibility: Visibility.PUBLIC,
   unavailableAt: null,
   youtubeVideoId: { not: null },
   channel: { status: "APPROVED" as const },

@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
-import { Visibility } from "@prisma/client";
-import { isActiveMember } from "@/lib/membership";
 import { Comments } from "@/components/Comments";
 import { MobileWatchPanels } from "@/components/MobileWatchPanels";
 import { PinnedPlayer } from "@/components/PinnedPlayer";
@@ -13,10 +10,10 @@ import { db } from "@/lib/db";
 import { formatScriptureRef, type ScriptureRef } from "@/lib/scripture";
 import { thumbnailUrl } from "@/lib/youtube";
 
-// ISR (SCALABILITY §3.1): PUBLIC watch pages render identically for everyone
-// and are CDN-cached (continue-watching resumes client-side in YouTubeEmbed).
-// MEMBERS items call auth() below, which opts those paths — and only those —
-// into per-request rendering.
+// ISR (SCALABILITY §3.1): a watch page renders identically for everyone and
+// is CDN-cached (continue-watching resumes client-side in YouTubeEmbed).
+// Embedded YouTube is free to watch signed in or not, so nothing here reads
+// the viewer — the whole route stays static.
 export const revalidate = 300;
 
 async function getItem(id: string) {
@@ -55,10 +52,12 @@ export default async function WatchPage({
 }) {
   const { id } = await params;
   const item = await getItem(id).catch(() => null);
+  // Embedded YouTube is free: anyone may watch, signed in or not. The
+  // youtubeVideoId requirement is what keeps this page to embeds — native
+  // and text content will arrive with a gate of its own, and `visibility`
+  // is waiting for it.
   if (
     !item ||
-    (item.visibility !== Visibility.PUBLIC &&
-      item.visibility !== Visibility.MEMBERS) ||
     item.unavailableAt !== null ||
     item.channel.status !== "APPROVED" ||
     !item.youtubeVideoId
@@ -66,40 +65,9 @@ export default async function WatchPage({
     notFound();
   }
 
-  // MEMBERS content: active members (and the channel's own team) watch;
-  // everyone else meets a join gate, not a 404.
-  if (item.visibility === Visibility.MEMBERS) {
-    const { userId: viewerId } = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-      ? await auth()
-      : { userId: null };
-    const allowed =
-      viewerId !== null &&
-      (viewerId === item.channel.ownerId ||
-        (await isActiveMember(item.channel.id, viewerId)));
-    if (!allowed) {
-      return (
-        <main className="mx-auto max-w-xl px-4 py-20 text-center">
-          <p className="text-4xl">⭐</p>
-          <h1 className="mt-4 text-2xl font-semibold">{item.title}</h1>
-          <p className="mt-3 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
-            This is members-only content from {item.channel.name}. Join to
-            unlock it — memberships support the work directly.
-          </p>
-          <Link
-            href={`/@${item.channel.handle}/support`}
-            className="mt-6 inline-block rounded-xl bg-linear-to-r from-amber-500 to-orange-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:from-amber-400 hover:to-orange-500"
-          >
-            Become a member
-          </Link>
-        </main>
-      );
-    }
-  }
-
   const related = await db.contentItem.findMany({
     where: {
       channelId: item.channelId,
-      visibility: Visibility.PUBLIC,
       unavailableAt: null,
       id: { not: item.id },
       youtubeVideoId: { not: null },

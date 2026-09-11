@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { QuestionTier, Visibility } from "@prisma/client";
+import { QuestionTier } from "@prisma/client";
 import { db } from "@/lib/db";
 import { thumbnailUrl } from "@/lib/youtube";
 
@@ -24,7 +24,6 @@ async function getQuestion(slug: string) {
                   id: true,
                   title: true,
                   youtubeVideoId: true,
-                  visibility: true,
                   unavailableAt: true,
                   channel: { select: { name: true, handle: true, status: true } },
                 },
@@ -40,7 +39,6 @@ async function getQuestion(slug: string) {
               id: true,
               title: true,
               youtubeVideoId: true,
-              visibility: true,
               unavailableAt: true,
               channel: { select: { name: true, handle: true, status: true } },
             },
@@ -55,7 +53,6 @@ type PlacedContent = {
   id: string;
   title: string;
   youtubeVideoId: string | null;
-  visibility: Visibility;
   unavailableAt: Date | null;
   channel: { name: string; handle: string; status: string };
 };
@@ -63,7 +60,6 @@ type PlacedContent = {
 function visible(item: PlacedContent | null | undefined): item is PlacedContent {
   return Boolean(
     item &&
-      item.visibility === Visibility.PUBLIC &&
       !item.unavailableAt &&
       item.channel.status === "APPROVED" &&
       item.youtubeVideoId,

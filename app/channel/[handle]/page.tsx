@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Visibility } from "@prisma/client";
 import { db } from "@/lib/db";
 import { thumbnailUrl } from "@/lib/youtube";
 import { BookCard } from "@/components/BookCard";
@@ -82,7 +81,6 @@ export default async function ChannelHomePage({
     db.contentItem.findMany({
       where: {
         channelId: channel.id,
-        visibility: Visibility.PUBLIC,
         unavailableAt: null,
         youtubeVideoId: { not: null },
       },
@@ -124,7 +122,6 @@ export default async function ChannelHomePage({
   const videoCount = await db.contentItem.count({
     where: {
       channelId: channel.id,
-      visibility: Visibility.PUBLIC,
       unavailableAt: null,
       youtubeVideoId: { not: null },
     },

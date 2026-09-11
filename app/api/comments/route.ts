@@ -1,5 +1,5 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { CommentStatus, Visibility } from "@prisma/client";
+import { CommentStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { validateCommentBody } from "@/lib/comments";
@@ -49,11 +49,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: check.error }, { status: 422 });
   }
 
+  // Anyone may watch an embed; only a signed-in person may say something
+  // about it (the auth check above). So the comment is allowed wherever the
+  // watch page would play — visibility is not consulted here either.
   const item = await db.contentItem.findUnique({
     where: { id: parsed.data.contentItemId },
-    select: { id: true, visibility: true, channel: { select: { status: true } } },
+    select: {
+      id: true,
+      youtubeVideoId: true,
+      unavailableAt: true,
+      channel: { select: { status: true } },
+    },
   });
-  if (!item || item.visibility !== Visibility.PUBLIC || item.channel.status !== "APPROVED") {
+  if (
+    !item ||
+    !item.youtubeVideoId ||
+    item.unavailableAt !== null ||
+    item.channel.status !== "APPROVED"
+  ) {
     return NextResponse.json({ error: "Content not found." }, { status: 404 });
   }
 

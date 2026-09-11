@@ -17,7 +17,6 @@ export default async function MapPage() {
   // as an empty platform. Placement happens in /admin/curation.
   const visiblePlacement = {
     contentItem: {
-      visibility: "PUBLIC" as const,
       unavailableAt: null,
       youtubeVideoId: { not: null },
       channel: { status: "APPROVED" as const },

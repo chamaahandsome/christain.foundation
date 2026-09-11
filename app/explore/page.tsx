@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Visibility } from "@prisma/client";
 import { db } from "@/lib/db";
 import { thumbnailUrl } from "@/lib/youtube";
 
@@ -35,7 +34,6 @@ export default async function ExplorePage() {
     db.contentItem
       .findMany({
         where: {
-          visibility: Visibility.PUBLIC,
           youtubeVideoId: { not: null },
           channel: { status: "APPROVED" },
         },

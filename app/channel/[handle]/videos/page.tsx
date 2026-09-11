@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Visibility } from "@prisma/client";
 import { db } from "@/lib/db";
 import { thumbnailUrl } from "@/lib/youtube";
 import { VideoRow } from "@/components/VideoRow";
@@ -41,7 +40,6 @@ export default async function ChannelVideosPage({
     db.contentItem.findMany({
       where: {
         channelId: channel.id,
-        visibility: Visibility.PUBLIC,
         unavailableAt: null,
         youtubeVideoId: { not: null },
       },
@@ -56,7 +54,6 @@ export default async function ChannelVideosPage({
       ? await db.contentItem.findMany({
           where: {
             channelId: channel.id,
-            visibility: Visibility.PUBLIC,
             unavailableAt: null,
             youtubeVideoId: { not: null },
             seriesId: { in: seriesRows.map((s) => s.id) },
