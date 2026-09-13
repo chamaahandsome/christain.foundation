@@ -10,15 +10,32 @@
 //   - optional playlists (series): each 2–24 videos, no video twice, a
 //     title, a position of "first" or "last" when one is given, and no
 //     playlist listed twice in the same topic
+//   - optional debates (the other side, shown last): at most 6, no order
+//     or video twice
+//   - a depth, where given, is "milk" or "meat"
 //
 // Content (strict mode — enforced once curation begins / before launch):
 //   - no remaining "REPLACE" placeholders, valid youtube ids, durations > 0
-//     (for a playlist's videos too, plus a youtube.com channel link)
+//     (for a playlist's videos and for debates too, plus a youtube.com
+//     channel link)
+//   - every live video, debate and series carries a depth (milk or meat)
 //   - max 4 videos per creator across the whole pathway
 //   - every open_question topic carries ≥ 2 distinct creators
 
 import rawData from "@/content/start-here.json";
 import { isValidYouTubeId } from "@/lib/youtube";
+
+/**
+ * Milk or meat (Hebrews 5:12–14; 1 Corinthians 3:2). Milk is foundational
+ * teaching a new believer can take in straight away; meat is heavier and
+ * worth coming back to once the foundations are down. The file holds each
+ * item's first label; an admin's switch (lib/start-here-depth) wins.
+ */
+export type StartHereDepth = "milk" | "meat";
+
+export function isStartHereDepth(value: unknown): value is StartHereDepth {
+  return value === "milk" || value === "meat";
+}
 
 export interface StartHereVideo {
   youtube_id: string;
@@ -28,6 +45,8 @@ export interface StartHereVideo {
   duration_seconds: number;
   why_this_one: string;
   order: number;
+  /** Milk or meat. Required before launch. */
+  depth?: StartHereDepth;
 }
 
 /** One part of a playlist — the series supplies the creator and the "why". */
@@ -52,6 +71,8 @@ export interface StartHerePlaylist {
   videos: StartHerePlaylistVideo[];
   /** Above the picks ("first") or below them ("last", the default). */
   position?: "first" | "last";
+  /** Milk or meat, for the series as a whole. Required before launch. */
+  depth?: StartHereDepth;
 }
 
 export type StartHereTier = "essential" | "open_question";
@@ -75,6 +96,12 @@ export interface StartHereTopic {
    * the rest below. Not counted against MIN/MAX_VIDEOS.
    */
   playlists?: StartHerePlaylist[];
+  /**
+   * Optional debates — the other side of the question, heard in full, so a
+   * new believer meets the objections here before they meet them elsewhere.
+   * Shown last. Not counted against MIN/MAX_VIDEOS or a creator's share.
+   */
+  debates?: StartHereVideo[];
 }
 
 export interface StartHereData {
@@ -89,6 +116,7 @@ export const MIN_PLAYLIST_VIDEOS = 2;
 // Long enough for a full teaching series (Winger's Evidence for the Bible
 // runs to 20), short enough to still read as one card.
 export const MAX_PLAYLIST_VIDEOS = 24;
+export const MAX_DEBATES = 6;
 
 export function isPlaceholderVideo(video: StartHereVideo): boolean {
   return (
@@ -102,6 +130,61 @@ export function isPlaceholderVideo(video: StartHereVideo): boolean {
 /** A topic's series, in the order they were curated (none → empty). */
 export function topicPlaylists(topic: StartHereTopic): StartHerePlaylist[] {
   return topic.playlists ?? [];
+}
+
+/** A topic's debates, in curated order (none → empty). */
+export function topicDebates(topic: StartHereTopic): StartHereVideo[] {
+  return [...(topic.debates ?? [])].sort((a, b) => a.order - b.order);
+}
+
+// ---------- milk or meat: keys and admin overrides ----------
+
+/** The override key for a single video (a pick or a debate). */
+export function videoDepthKey(youtubeId: string): string {
+  return `video:${youtubeId}`;
+}
+
+/** The override key for a series, as a whole. */
+export function seriesDepthKey(playlistId: string): string {
+  return `series:${playlistId}`;
+}
+
+/** Every key an admin may relabel: live picks, debates, and series. */
+export function startHereDepthKeys(data: StartHereData): Set<string> {
+  const keys = new Set<string>();
+  for (const topic of data.topics) {
+    for (const video of [...topic.videos, ...topicDebates(topic)]) {
+      if (!isPlaceholderVideo(video)) keys.add(videoDepthKey(video.youtube_id));
+    }
+    for (const playlist of topicPlaylists(topic)) {
+      keys.add(seriesDepthKey(playlist.youtube_playlist_id));
+    }
+  }
+  return keys;
+}
+
+/** Topics with each admin override laid over the file's label. Pure. */
+export function applyDepthOverrides(
+  topics: StartHereTopic[],
+  overrides: Record<string, StartHereDepth>,
+): StartHereTopic[] {
+  const relabel = (video: StartHereVideo): StartHereVideo => ({
+    ...video,
+    depth: overrides[videoDepthKey(video.youtube_id)] ?? video.depth,
+  });
+  return topics.map((topic) => ({
+    ...topic,
+    videos: topic.videos.map(relabel),
+    ...(topic.debates ? { debates: topic.debates.map(relabel) } : {}),
+    ...(topic.playlists
+      ? {
+          playlists: topic.playlists.map((playlist) => ({
+            ...playlist,
+            depth: overrides[seriesDepthKey(playlist.youtube_playlist_id)] ?? playlist.depth,
+          })),
+        }
+      : {}),
+  }));
 }
 
 export function hasPlaceholders(data: StartHereData): boolean {
@@ -164,6 +247,17 @@ export function validateStartHere(
       }
       videoOrders.add(video.order);
     }
+    // A depth, where one is given, must be milk or meat.
+    const depths: [string, unknown][] = [
+      ...topic.videos.map((v): [string, unknown] => [`video #${v.order}`, v.depth]),
+      ...topicDebates(topic).map((d): [string, unknown] => [`debate #${d.order}`, d.depth]),
+      ...topicPlaylists(topic).map((s): [string, unknown] => [`playlist "${s.title}"`, s.depth]),
+    ];
+    for (const [label, depth] of depths) {
+      if (depth !== undefined && !isStartHereDepth(depth)) {
+        errors.push(`${topic.slug}: ${label} depth must be "milk" or "meat"`);
+      }
+    }
     if (topic.framing.trim().length < 40) {
       errors.push(`${topic.slug}: framing is too short to be the value-add`);
     }
@@ -209,6 +303,23 @@ export function validateStartHere(
         seen.add(part.youtube_id);
       }
     }
+
+    const debates = topicDebates(topic);
+    if (debates.length > MAX_DEBATES) {
+      errors.push(`${topic.slug}: ${debates.length} debates (max ${MAX_DEBATES})`);
+    }
+    const debateOrders = new Set<number>();
+    const debateIds = new Set<string>();
+    for (const debate of debates) {
+      if (debateOrders.has(debate.order)) {
+        errors.push(`${topic.slug}: duplicate debate order ${debate.order}`);
+      }
+      debateOrders.add(debate.order);
+      if (debate.youtube_id !== PLACEHOLDER && debateIds.has(debate.youtube_id)) {
+        errors.push(`${topic.slug}: debate ${debate.youtube_id} is listed twice`);
+      }
+      debateIds.add(debate.youtube_id);
+    }
   }
 
   if (opts.strict) {
@@ -251,7 +362,47 @@ export function validateStartHere(
       }
     }
 
-    // curation constraints
+    for (const topic of topics) {
+      for (const debate of topicDebates(topic)) {
+        if (isPlaceholderVideo(debate)) {
+          errors.push(`${topic.slug}: debate #${debate.order} still has REPLACE placeholders`);
+          continue;
+        }
+        if (!isValidYouTubeId(debate.youtube_id)) {
+          errors.push(`${topic.slug}: debate #${debate.order} has invalid youtube_id "${debate.youtube_id}"`);
+        }
+        if (debate.duration_seconds <= 0) {
+          errors.push(`${topic.slug}: debate #${debate.order} has no duration`);
+        }
+        if (!debate.channel_url.startsWith("https://www.youtube.com/")) {
+          errors.push(`${topic.slug}: debate #${debate.order} channel_url must be a youtube.com channel link`);
+        }
+      }
+    }
+
+    // Every live item is labelled before launch, so a new believer can
+    // always tell milk from meat.
+    for (const topic of topics) {
+      for (const video of topic.videos) {
+        if (!isPlaceholderVideo(video) && video.depth === undefined) {
+          errors.push(`${topic.slug}: video #${video.order} has no depth (milk or meat)`);
+        }
+      }
+      for (const debate of topicDebates(topic)) {
+        if (!isPlaceholderVideo(debate) && debate.depth === undefined) {
+          errors.push(`${topic.slug}: debate #${debate.order} has no depth (milk or meat)`);
+        }
+      }
+      for (const playlist of topicPlaylists(topic)) {
+        if (playlist.depth === undefined) {
+          errors.push(`${topic.slug}: playlist has no depth (milk or meat) ("${playlist.title}")`);
+        }
+      }
+    }
+
+    // curation constraints — debates are left out of a creator's share:
+    // they're there to show the other side, and one debate channel may
+    // host several.
     const perCreator = new Map<string, number>();
     for (const topic of topics) {
       for (const video of topic.videos) {

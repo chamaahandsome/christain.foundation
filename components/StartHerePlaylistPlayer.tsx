@@ -14,11 +14,13 @@ import {
   loadYouTubeIframeApi,
   reportYouTubeError,
 } from "@/components/useYouTubeErrorLog";
+import { DepthBadge } from "@/components/DepthBadge";
 import {
   formatDuration,
   formatDurationCoarse,
   nextPlaylistIndex,
   playlistDuration,
+  seriesDepthKey,
   type StartHerePlaylist,
 } from "@/lib/start-here";
 import { isFatalYouTubeError } from "@/lib/youtube-embed-errors";
@@ -38,7 +40,14 @@ function embedUrl(youtubeId: string): string {
   return `https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1&enablejsapi=1&autoplay=1${origin}`;
 }
 
-export function StartHerePlaylistPlayer({ playlist }: { playlist: StartHerePlaylist }) {
+export function StartHerePlaylistPlayer({
+  playlist,
+  depthEditable = false,
+}: {
+  playlist: StartHerePlaylist;
+  /** Admins: the milk/meat badge becomes a switch. */
+  depthEditable?: boolean;
+}) {
   const parts = playlist.videos;
   const [started, setStarted] = useState(false);
   const [startAt, setStartAt] = useState(0); // the part the frame first loads
@@ -170,7 +179,7 @@ export function StartHerePlaylistPlayer({ playlist }: { playlist: StartHerePlayl
         </a>
       </div>
       <h3 className="mt-1 text-lg font-semibold leading-snug">{playlist.title}</h3>
-      <p className="text-sm text-neutral-500">
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-neutral-500">
         <a
           href={playlist.channel_url}
           target="_blank"
@@ -179,6 +188,13 @@ export function StartHerePlaylistPlayer({ playlist }: { playlist: StartHerePlayl
         >
           {playlist.creator}
         </a>
+        {playlist.depth && (
+          <DepthBadge
+            depth={playlist.depth}
+            itemKey={seriesDepthKey(playlist.youtube_playlist_id)}
+            editable={depthEditable}
+          />
+        )}
       </p>
       <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
         {playlist.why_this_one}

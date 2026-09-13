@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 import rawData from "@/content/start-here.json";
 import {
+  applyDepthOverrides,
   formatDuration,
   formatDurationCoarse,
   hasPlaceholders,
   nextPlaylistIndex,
   playlistDuration,
+  seriesDepthKey,
+  startHereDepthKeys,
   validateStartHere,
+  videoDepthKey,
   type StartHereData,
   type StartHerePlaylist,
   type StartHereTopic,
@@ -22,6 +26,7 @@ function video(overrides: Partial<StartHereVideo> = {}): StartHereVideo {
     duration_seconds: 600,
     why_this_one: "The clearest walk-through of the question.",
     order: 1,
+    depth: "milk",
     ...overrides,
   };
 }
@@ -53,6 +58,7 @@ function playlist(overrides: Partial<StartHerePlaylist> = {}): StartHerePlaylist
     channel_url: "https://www.youtube.com/@series",
     youtube_playlist_id: "PL1mr9ZTZb3TUYymBPce08oyuhnHLLkR_B",
     why_this_one: "Walks the question in order, one part at a time.",
+    depth: "milk",
     videos: [
       { youtube_id: "aaaaaaaaaaa", title: "Part 1", duration_seconds: 300 },
       { youtube_id: "bbbbbbbbbbb", title: "Part 2", duration_seconds: 600 },
@@ -274,6 +280,28 @@ describe("step 5 carries two series", () => {
   });
 });
 
+describe("step 1's debates", () => {
+  it("opens with the debate added for the other side", () => {
+    const step1 = (rawData as StartHereData).topics.find((t) => t.slug === "who-is-jesus");
+    expect(step1?.debates?.[0]?.youtube_id).toBe("uEnC9FelHL8");
+  });
+});
+
+describe("milk and meat on the real content", () => {
+  it("labels every live video, debate and series", () => {
+    const missing: string[] = [];
+    for (const t of (rawData as StartHereData).topics) {
+      for (const v of [...t.videos, ...(t.debates ?? [])]) {
+        if (v.youtube_id !== "REPLACE" && !v.depth) missing.push(`${t.slug}: ${v.title}`);
+      }
+      for (const s of t.playlists ?? []) {
+        if (!s.depth) missing.push(`${t.slug}: series ${s.title}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+});
+
 describe("real content pills", () => {
   it("every topic has a short label for the progress pills", () => {
     for (const t of (rawData as StartHereData).topics) {
@@ -422,6 +450,155 @@ describe("playlist helpers", () => {
 
   it("totals a series' running time", () => {
     expect(playlistDuration(playlist())).toBe(1800);
+  });
+});
+
+describe("validateStartHere — debates", () => {
+  const debate = (overrides: Partial<StartHereVideo> = {}) =>
+    video({
+      youtube_id: "fffffffffff",
+      title: "A debate",
+      creator: "Debate Channel",
+      why_this_one: "Hear the objection made in full, and answered.",
+      ...overrides,
+    });
+
+  it("passes a topic with debates, outside the 3–6 video limit", () => {
+    const data = chain(
+      topic({
+        debates: [debate({ order: 1 }), debate({ order: 2, youtube_id: "ggggggggggg" })],
+      }),
+    );
+    expect(validateStartHere(data, { strict: true })).toEqual([]);
+  });
+
+  it("fails a repeated debate, a repeated order, and more than six", () => {
+    const repeated = chain(topic({ debates: [debate({ order: 1 }), debate({ order: 2 })] }));
+    expect(validateStartHere(repeated).join(" ")).toMatch(/is listed twice/);
+
+    const sameOrder = chain(
+      topic({ debates: [debate({ order: 1 }), debate({ order: 1, youtube_id: "ggggggggggg" })] }),
+    );
+    expect(validateStartHere(sameOrder).join(" ")).toMatch(/duplicate debate order 1/);
+
+    const seven = chain(
+      topic({
+        debates: "abcdefg".split("").map((c, i) => debate({ order: i + 1, youtube_id: c.repeat(11) })),
+      }),
+    );
+    expect(validateStartHere(seven).join(" ")).toMatch(/7 debates \(max 6\)/);
+  });
+
+  it("strict mode holds debates to the same standard as the picks", () => {
+    const data = chain(
+      topic({
+        debates: [
+          debate({ order: 1, title: "REPLACE" }),
+          debate({ order: 2, youtube_id: "short" }),
+          debate({ order: 3, youtube_id: "hhhhhhhhhhh", duration_seconds: 0 }),
+        ],
+      }),
+    );
+    const joined = validateStartHere(data, { strict: true }).join(" ");
+    expect(joined).toMatch(/debate #1 still has REPLACE/);
+    expect(joined).toMatch(/debate #2 has invalid youtube_id/);
+    expect(joined).toMatch(/debate #3 has no duration/);
+  });
+
+  it("leaves debates out of a creator's share", () => {
+    const fourPicks = [1, 2, 3, 4].map((order) => video({ order, creator: "Creator A" }));
+    const data = chain(
+      topic({
+        videos: fourPicks,
+        debates: [
+          debate({ order: 1, creator: "Creator A" }),
+          debate({ order: 2, creator: "Creator A", youtube_id: "ggggggggggg" }),
+        ],
+      }),
+    );
+    expect(validateStartHere(data, { strict: true }).join(" ")).not.toMatch(/appears/);
+  });
+});
+
+describe("milk and meat", () => {
+  it("rejects a depth that isn't milk or meat", () => {
+    const odd = video({ order: 1, depth: "cheese" as unknown as "milk" });
+    const data = chain(topic({ videos: [odd, video({ order: 2 }), video({ order: 3 })] }));
+    expect(validateStartHere(data).join(" ")).toMatch(/video #1 depth must be "milk" or "meat"/);
+  });
+
+  it("strict mode requires a depth on every live video, debate and series", () => {
+    const data = chain(
+      topic({
+        videos: [video({ order: 1, depth: undefined }), video({ order: 2 }), video({ order: 3 })],
+        debates: [video({ order: 1, youtube_id: "fffffffffff", depth: undefined })],
+        playlists: [playlist({ depth: undefined })],
+      }),
+    );
+    expect(validateStartHere(data)).toEqual([]); // structural mode doesn't require it
+    const joined = validateStartHere(data, { strict: true }).join(" ");
+    expect(joined).toMatch(/video #1 has no depth/);
+    expect(joined).toMatch(/debate #1 has no depth/);
+    expect(joined).toMatch(/playlist has no depth/);
+  });
+
+  it("doesn't ask an unfilled slot for a depth", () => {
+    const data = chain(
+      topic({
+        videos: [
+          video({ order: 1, title: "REPLACE", depth: undefined }),
+          video({ order: 2 }),
+          video({ order: 3 }),
+        ],
+      }),
+    );
+    expect(validateStartHere(data, { strict: true }).join(" ")).not.toMatch(/has no depth/);
+  });
+
+  it("lets an admin's switch win over the file, item by item, without touching the file", () => {
+    const original = topic({
+      videos: [
+        video({ order: 1, youtube_id: "aaaaaaaaaaa", depth: "milk" }),
+        video({ order: 2, youtube_id: "bbbbbbbbbbb", depth: "meat" }),
+        video({ order: 3, youtube_id: "ccccccccccc" }),
+      ],
+      debates: [video({ order: 1, youtube_id: "ddddddddddd", depth: "meat" })],
+      playlists: [playlist({ depth: "milk" })],
+    });
+    const [out] = applyDepthOverrides([original], {
+      [videoDepthKey("aaaaaaaaaaa")]: "meat",
+      [videoDepthKey("ddddddddddd")]: "milk",
+      [seriesDepthKey("PL1mr9ZTZb3TUYymBPce08oyuhnHLLkR_B")]: "meat",
+    });
+    expect(out.videos.map((v) => v.depth)).toEqual(["meat", "meat", "milk"]);
+    expect(out.debates?.[0]?.depth).toBe("milk");
+    expect(out.playlists?.[0]?.depth).toBe("meat");
+    expect(original.videos[0].depth).toBe("milk");
+  });
+
+  it("adds no empty debate or series lists to a topic that had none", () => {
+    const [out] = applyDepthOverrides([topic()], {});
+    expect(out.debates).toBeUndefined();
+    expect(out.playlists).toBeUndefined();
+  });
+
+  it("knows the key of every live item an admin may switch, and none for empty slots", () => {
+    const data = chain(
+      topic({
+        videos: [
+          video({ order: 1, youtube_id: "aaaaaaaaaaa" }),
+          video({ order: 2, youtube_id: "REPLACE", title: "REPLACE" }),
+          video({ order: 3, youtube_id: "ccccccccccc" }),
+        ],
+        debates: [video({ order: 1, youtube_id: "ddddddddddd" })],
+        playlists: [playlist()],
+      }),
+    );
+    const keys = startHereDepthKeys(data);
+    expect(keys.has(videoDepthKey("aaaaaaaaaaa"))).toBe(true);
+    expect(keys.has(videoDepthKey("ddddddddddd"))).toBe(true);
+    expect(keys.has(seriesDepthKey("PL1mr9ZTZb3TUYymBPce08oyuhnHLLkR_B"))).toBe(true);
+    expect(keys.has(videoDepthKey("REPLACE"))).toBe(false);
   });
 });
 

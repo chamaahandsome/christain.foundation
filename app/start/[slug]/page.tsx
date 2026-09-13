@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { StartHerePathway } from "@/components/StartHerePathway";
-import { getStartHereTopic, startHereTopics } from "@/lib/start-here";
+import { isAdminUser } from "@/lib/admin";
+import {
+  applyDepthOverrides,
+  getStartHereTopic,
+  startHereTopics,
+} from "@/lib/start-here";
+import { loadDepthOverrides } from "@/lib/start-here-depth";
 
 export function generateStaticParams() {
   return startHereTopics().map((topic) => ({ slug: topic.slug }));
@@ -28,9 +34,20 @@ export default async function StartTopicPage({
   const { slug } = await params;
   if (!getStartHereTopic(slug)) notFound();
 
+  // Milk/meat: the file's labels with any admin switches laid over them,
+  // and whether this viewer may switch them.
+  const [overrides, canEditDepth] = await Promise.all([
+    loadDepthOverrides(),
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? isAdminUser() : Promise.resolve(false),
+  ]);
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
-      <StartHerePathway topics={startHereTopics()} initialSlug={slug} />
+      <StartHerePathway
+        topics={applyDepthOverrides(startHereTopics(), overrides)}
+        initialSlug={slug}
+        canEditDepth={canEditDepth}
+      />
     </main>
   );
 }

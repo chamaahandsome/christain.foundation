@@ -6,8 +6,9 @@
 
 import { useRef, useState } from "react";
 import { useYouTubeErrorLog } from "@/components/useYouTubeErrorLog";
+import { DepthBadge } from "@/components/DepthBadge";
 import type { StartHereVideo } from "@/lib/start-here";
-import { formatDurationCoarse } from "@/lib/start-here";
+import { formatDurationCoarse, videoDepthKey } from "@/lib/start-here";
 
 function embedUrl(youtubeId: string): string {
   // enablejsapi lets us observe onError events (logging + dead-video swap);
@@ -17,21 +18,36 @@ function embedUrl(youtubeId: string): string {
   return `https://www.youtube-nocookie.com/embed/${youtubeId}?rel=0&modestbranding=1&enablejsapi=1${origin}`;
 }
 
-function Caption({ video }: { video: StartHereVideo }) {
+function Caption({
+  video,
+  depthEditable,
+}: {
+  video: StartHereVideo;
+  depthEditable: boolean;
+}) {
   return (
     <div className="min-w-0">
       <p className="text-base font-semibold leading-snug">{video.title}</p>
-      <p className="mt-1 text-sm text-neutral-500">
-        <a
-          href={video.channel_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:underline"
-        >
-          {video.creator}
-        </a>
-        {video.duration_seconds > 0 && (
-          <> · {formatDurationCoarse(video.duration_seconds)}</>
+      <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-neutral-500">
+        <span>
+          <a
+            href={video.channel_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline"
+          >
+            {video.creator}
+          </a>
+          {video.duration_seconds > 0 && (
+            <> · {formatDurationCoarse(video.duration_seconds)}</>
+          )}
+        </span>
+        {video.depth && (
+          <DepthBadge
+            depth={video.depth}
+            itemKey={videoDepthKey(video.youtube_id)}
+            editable={depthEditable}
+          />
         )}
       </p>
       <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
@@ -44,9 +60,11 @@ function Caption({ video }: { video: StartHereVideo }) {
 function PlayingEmbed({
   video,
   onFatal,
+  depthEditable,
 }: {
   video: StartHereVideo;
   onFatal: () => void;
+  depthEditable: boolean;
 }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   useYouTubeErrorLog(iframeRef, video.youtube_id, {
@@ -79,13 +97,20 @@ function PlayingEmbed({
         </a>
       </p>
       <div className="mt-2">
-        <Caption video={video} />
+        <Caption video={video} depthEditable={depthEditable} />
       </div>
     </div>
   );
 }
 
-export function StartHereVideoCard({ video }: { video: StartHereVideo }) {
+export function StartHereVideoCard({
+  video,
+  depthEditable = false,
+}: {
+  video: StartHereVideo;
+  /** Admins: the milk/meat badge becomes a switch. */
+  depthEditable?: boolean;
+}) {
   const [playing, setPlaying] = useState(false);
   const [dead, setDead] = useState(false);
 
@@ -102,13 +127,19 @@ export function StartHereVideoCard({ video }: { video: StartHereVideo }) {
             Watch on YouTube ↗
           </a>
         </div>
-        <Caption video={video} />
+        <Caption video={video} depthEditable={depthEditable} />
       </div>
     );
   }
 
   if (playing) {
-    return <PlayingEmbed video={video} onFatal={() => setDead(true)} />;
+    return (
+      <PlayingEmbed
+        video={video}
+        onFatal={() => setDead(true)}
+        depthEditable={depthEditable}
+      />
+    );
   }
 
   return (
@@ -138,7 +169,7 @@ export function StartHereVideoCard({ video }: { video: StartHereVideo }) {
           </span>
         </span>
       </button>
-      <Caption video={video} />
+      <Caption video={video} depthEditable={depthEditable} />
     </div>
   );
 }

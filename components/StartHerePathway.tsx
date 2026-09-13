@@ -11,9 +11,14 @@ import { StartHerePlaylistPlayer } from "@/components/StartHerePlaylistPlayer";
 import { StartHereVideoCard } from "@/components/StartHereVideoCard";
 import {
   isPlaceholderVideo,
+  topicDebates,
   topicPlaylists,
+  type StartHereDepth,
   type StartHereTopic,
 } from "@/lib/start-here";
+
+/** Remembered per viewer, on their own device. */
+const MILK_ONLY_KEY = "start-here:milk-only";
 
 /** How far the edge fade reaches into the strip, in px. */
 const STRIP_FADE = 28;
@@ -77,11 +82,33 @@ function TierBadge({ tier, note }: { tier: string; note: string }) {
 export function StartHerePathway({
   topics,
   initialSlug,
+  canEditDepth = false,
 }: {
   topics: StartHereTopic[];
   initialSlug: string;
+  /** Admins: every milk/meat badge becomes a switch. */
+  canEditDepth?: boolean;
 }) {
   const [slug, setSlug] = useState(initialSlug);
+
+  // "Milk only" hides the heavier teaching for a viewer who wants the
+  // foundations first. Read after mount: storage can be missing or refuse.
+  const [milkOnly, setMilkOnly] = useState(false);
+  useEffect(() => {
+    try {
+      setMilkOnly(localStorage.getItem(MILK_ONLY_KEY) === "1");
+    } catch {
+      // private window or blocked storage — default stays off
+    }
+  }, []);
+  function chooseMilkOnly(value: boolean) {
+    setMilkOnly(value);
+    try {
+      localStorage.setItem(MILK_ONLY_KEY, value ? "1" : "0");
+    } catch {
+      // not remembered; the choice still holds for this visit
+    }
+  }
 
   const index = Math.max(
     0,
@@ -152,13 +179,27 @@ export function StartHerePathway({
     return () => window.removeEventListener("popstate", onPop);
   }, [topics]);
 
-  const videos = [...topic.videos]
+  const allVideos = [...topic.videos]
     .sort((a, b) => a.order - b.order)
     .filter((video) => !isPlaceholderVideo(video));
-  // Series keep their curated order; "first" ones lead, the rest follow.
   const playlists = topicPlaylists(topic);
-  const leadingSeries = playlists.filter((p) => p.position === "first");
-  const trailingSeries = playlists.filter((p) => p.position !== "first");
+  const allDebates = topicDebates(topic).filter((video) => !isPlaceholderVideo(video));
+
+  // Milk only keeps curated order and simply leaves meat out.
+  const shown = (depth?: StartHereDepth) => !milkOnly || depth !== "meat";
+  const videos = allVideos.filter((v) => shown(v.depth));
+  // Series keep their curated order; "first" ones lead, the rest follow.
+  const leadingSeries = playlists.filter((p) => p.position === "first" && shown(p.depth));
+  const trailingSeries = playlists.filter((p) => p.position !== "first" && shown(p.depth));
+  // The other side, heard in full — kept last, after the teaching.
+  const debates = allDebates.filter((d) => shown(d.depth));
+
+  const labelled = [...allVideos, ...playlists, ...allDebates].some((item) => item.depth);
+  const hiddenCount =
+    allVideos.length -
+    videos.length +
+    (playlists.length - leadingSeries.length - trailingSeries.length) +
+    (allDebates.length - debates.length);
 
   const stripMask = `linear-gradient(to right, ${
     edges.left ? "transparent" : "black"
@@ -168,8 +209,14 @@ export function StartHerePathway({
 
   return (
     <>
-      {/* Progress strip — every step, slid sideways to choose one */}
-      <nav aria-label="Pathway progress" className="mb-5 flex items-center gap-1">
+      {/* Progress strip — every step, slid sideways to choose one. Sticky just
+          under the site header (h-14) so the page scrolls beneath it; the
+          page background keeps text from showing through, and the negative
+          margin carries that background across main's side padding. */}
+      <nav
+        aria-label="Pathway progress"
+        className="sticky top-14 z-30 -mx-4 mb-5 flex items-center gap-1 border-b border-neutral-200/70 bg-[var(--background)] px-4 py-2 dark:border-neutral-800/70"
+      >
         <StripArrow direction={-1} show={edges.left} onClick={() => nudgeStrip(-1)} />
         <div
           ref={stripRef}
@@ -211,12 +258,43 @@ export function StartHerePathway({
           {topic.framing}
         </p>
 
+        {/* Milk or meat — and a way to leave the meat for later. */}
+        {labelled && (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 px-4 py-3 dark:border-neutral-800">
+            <p className="text-sm text-neutral-600 dark:text-neutral-400">
+              <span className="font-medium text-neutral-800 dark:text-neutral-200">Milk</span>{" "}
+              is foundational teaching;{" "}
+              <span className="font-medium text-neutral-800 dark:text-neutral-200">meat</span>{" "}
+              is heavier (Hebrews 5:12–14).
+            </p>
+            <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={milkOnly}
+                onChange={(e) => chooseMilkOnly(e.target.checked)}
+                className="h-4 w-4 accent-amber-600"
+              />
+              Milk only
+            </label>
+          </div>
+        )}
+        {milkOnly && hiddenCount > 0 && (
+          <p className="mt-3 text-sm text-neutral-500">
+            {hiddenCount} heavier {hiddenCount === 1 ? "item is" : "items are"} hidden —
+            untick Milk only to see {hiddenCount === 1 ? "it" : "them"}.
+          </p>
+        )}
+
         <div className="mt-8 space-y-6">
           {/* Series asked to lead sit above the picks. */}
           {leadingSeries.map((series) => (
-            <StartHerePlaylistPlayer key={series.youtube_playlist_id} playlist={series} />
+            <StartHerePlaylistPlayer
+              key={series.youtube_playlist_id}
+              playlist={series}
+              depthEditable={canEditDepth}
+            />
           ))}
-          {videos.length === 0 && playlists.length === 0 ? (
+          {allVideos.length === 0 && playlists.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-500 dark:border-neutral-700">
               The teaching for this question is being hand-picked. Check back
               soon.
@@ -226,15 +304,56 @@ export function StartHerePathway({
               <StartHereVideoCard
                 key={`${video.youtube_id}-${video.order}`}
                 video={video}
+                depthEditable={canEditDepth}
               />
             ))
           )}
           {/* The rest follow the picks, in the order they were curated —
               each watched in order, one part into the next. */}
           {trailingSeries.map((series) => (
-            <StartHerePlaylistPlayer key={series.youtube_playlist_id} playlist={series} />
+            <StartHerePlaylistPlayer
+              key={series.youtube_playlist_id}
+              playlist={series}
+              depthEditable={canEditDepth}
+            />
           ))}
         </div>
+
+        {/* Debates: the objections a new believer will meet, and how they are
+            answered — so no one is caught flat-footed. Set apart from the
+            teaching, in the sky tone the page already uses for open
+            questions, because this is where the other side gets its say. */}
+        {debates.length > 0 && (
+          <section
+            aria-labelledby={`debates-${topic.slug}`}
+            className="mt-10 rounded-2xl border border-sky-200 bg-sky-50/60 p-5 sm:p-6 dark:border-sky-900/60 dark:bg-sky-950/20"
+          >
+            <p className="text-xs font-semibold uppercase tracking-widest text-sky-700 dark:text-sky-400">
+              Hear the other side
+            </p>
+            <h2
+              id={`debates-${topic.slug}`}
+              className="mt-1 text-xl font-semibold tracking-tight"
+            >
+              See the counter-arguments
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-400">
+              Sooner or later someone will bring these objections to you. Watch
+              how they are made and how they are answered, so you are not caught
+              flat-footed — and can give a reason for the hope that is in you,
+              with gentleness and respect (1 Peter 3:15).
+            </p>
+            <div className="mt-5 space-y-6">
+              {debates.map((debate) => (
+                <StartHereVideoCard
+                  key={`${debate.youtube_id}-${debate.order}`}
+                  video={debate}
+                  depthEditable={canEditDepth}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         <hr className="mt-10 border-neutral-200 dark:border-neutral-800" />
 

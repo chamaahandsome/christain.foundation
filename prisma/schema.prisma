@@ -1292,3 +1292,22 @@ model Invoice {
   @@unique([channelId, invoiceNumber])
   @@index([channelId, status])
 }
+
+// ---------- Start Here: milk or meat ----------
+// Every Start Here item carries a first label in content/start-here.json
+// (Hebrews 5:12–14 — milk for new believers, meat for later). An admin's
+// switch lands here and wins over the file, so a relabel shows without a
+// redeploy. Keyed "video:<youtubeId>" or "series:<playlistId>", the same
+// keys lib/start-here builds.
+enum StartHereDepthLevel {
+  MILK
+  MEAT
+}
+
+model StartHereDepthOverride {
+  key         String              @id
+  depth       StartHereDepthLevel
+  updatedById String // Clerk user id of the admin who last switched it
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}

@@ -13,6 +13,7 @@
       "videos": [
         {
           "youtube_id": "Kud-UrLXjjA",
+          "depth": "milk",
           "title": "The God-Man",
           "creator": "Voddie Baucham",
           "channel_url": "https://www.youtube.com/@FoundersMinistries",
@@ -22,6 +23,7 @@
         },
         {
           "youtube_id": "WgnnennoOI8",
+          "depth": "milk",
           "title": "The Person of Jesus in the Nicene Creed",
           "creator": "Dallas Theological Seminary",
           "channel_url": "https://www.youtube.com/channel/UCDeFY9KGgMd6V52ViVNhnIg",
@@ -31,6 +33,7 @@
         },
         {
           "youtube_id": "E9hEzm4SrTE",
+          "depth": "meat",
           "title": "Jesus is YHWH: The Hebrews Series part 5 (Heb 1:6-2:1)",
           "creator": "Mike Winger",
           "channel_url": "https://www.youtube.com/@MikeWinger",
@@ -39,13 +42,36 @@
           "order": 3
         },
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "fp05LniGORU",
+          "depth": "meat",
+          "title": "How is Jesus God AND Man? Lutheran vs. Reformed Views of Chalcedon",
+          "creator": "Gavin Ortlund",
+          "channel_url": "https://www.youtube.com/@truthunites",
+          "duration_seconds": 2673,
+          "why_this_one": "Gavin Ortlund compares Lutheran and Reformed readings of Chalcedon: how Christ's divine and human natures relate, and whether divine attributes can be shared with His humanity.",
           "order": 4
+        }
+      ],
+      "debates": [
+        {
+          "youtube_id": "uEnC9FelHL8",
+          "depth": "meat",
+          "title": "GodLogic Vs Capt. Tazaryach | Is Jesus God?",
+          "creator": "GodLogic Apologetics",
+          "channel_url": "https://www.youtube.com/@godlogicapologetics",
+          "duration_seconds": 4246,
+          "why_this_one": "GodLogic debates Captain Tazaryach on the question at the heart of this step: is Jesus God?",
+          "order": 1
+        },
+        {
+          "youtube_id": "dzsmr0oX-dM",
+          "depth": "meat",
+          "title": "Debate | Is Jesus God? [ Elijah Johnson vs Metaphysics Mike ]",
+          "creator": "GodLogic 2.0",
+          "channel_url": "https://www.youtube.com/@godlogic2.0",
+          "duration_seconds": 9699,
+          "why_this_one": "Elijah Johnson and Metaphysics Mike debate the question at the heart of this step: is Jesus God?",
+          "order": 2
         }
       ]
     },
@@ -62,6 +88,7 @@
       "videos": [
         {
           "youtube_id": "_sef7IpImoE",
+          "depth": "milk",
           "title": "Sanctification: The Believer’s Transformation, Part 1",
           "creator": "Grace to You",
           "channel_url": "https://www.youtube.com/@gracetoyou",
@@ -71,6 +98,7 @@
         },
         {
           "youtube_id": "4PzqX_gPYW8",
+          "depth": "milk",
           "title": "Sanctification: The Believer’s Transformation, Part 2",
           "creator": "Grace to You",
           "channel_url": "https://www.youtube.com/@gracetoyou",
@@ -80,6 +108,7 @@
         },
         {
           "youtube_id": "0QItYMEbSEM",
+          "depth": "milk",
           "title": "The Doctrine of Regeneration",
           "creator": "Voddie Baucham",
           "channel_url": "https://www.youtube.com/@HopeReformedBaptistChurch",
@@ -105,6 +134,7 @@
           "creator": "InspiringPhilosophy",
           "channel_url": "https://www.youtube.com/@inspiringphilosophy",
           "youtube_playlist_id": "PL1mr9ZTZb3TUYymBPce08oyuhnHLLkR_B",
+          "depth": "meat",
           "why_this_one": "A six-part series that walks the historical case one step at a time — the evidence, where the belief came from, and the alternative theories people offer instead.",
           "videos": [
             { "youtube_id": "-ErnJF_nwBk", "title": "1. The Resurrection of Jesus (Introduction)", "duration_seconds": 348 },
@@ -119,6 +149,7 @@
       "videos": [
         {
           "youtube_id": "Q936WgiD7j8",
+          "depth": "milk",
           "title": "EVIDENCE for the RESURRECTION of Christ",
           "creator": "Mike Winger",
           "channel_url": "https://www.youtube.com/@MikeWinger",
@@ -128,6 +159,7 @@
         },
         {
           "youtube_id": "82MTXq71oMc",
+          "depth": "milk",
           "title": "Do we Have Actual Evidence for the Resurrection of Jesus? - Gary Habermas",
           "creator": "Gary Habermas",
           "channel_url": "https://www.youtube.com/@garyhabermas1473",
@@ -137,12 +169,25 @@
         },
         {
           "youtube_id": "zAgMwXpC6Wc",
+          "depth": "milk",
           "title": "Resurrection",
           "creator": "William Lane Craig",
           "channel_url": "https://www.youtube.com/@reasonablefaithorg",
           "duration_seconds": 2953,
           "why_this_one": "In a Veritas Forum interview, William Lane Craig explains why the resurrection carries so much weight for the Christian faith.",
           "order": 3
+        }
+      ],
+      "debates": [
+        {
+          "youtube_id": "OEfkfXy253s",
+          "depth": "meat",
+          "title": "Mike Winger reviews his debate with Matt Dillahunty on the Resurrection",
+          "creator": "Mike Winger",
+          "channel_url": "https://www.youtube.com/@MikeWinger",
+          "duration_seconds": 7278,
+          "why_this_one": "Not the debate itself but Mike Winger's review of it: how history and a cumulative case actually work, and where he finds Matt Dillahunty's objections to the resurrection falling short.",
+          "order": 1
         }
       ]
     },
@@ -162,6 +207,7 @@
           "creator": "Allen Nolan",
           "channel_url": "https://www.youtube.com/@allennolan",
           "youtube_playlist_id": "PLaPig5gEoOs3Uig4Klvtzbp4Wi9b0w7fg",
+          "depth": "milk",
           "position": "first",
           "why_this_one": "A five-part Bible study on the attributes of God: what He is like, how He can know everything, and what that means when you pray.",
           "videos": [
@@ -176,6 +222,7 @@
       "videos": [
         {
           "youtube_id": "iq8bDEo95gg",
+          "depth": "meat",
           "title": "Trinity in the Old Testament",
           "creator": "GodLogic Apologetics",
           "channel_url": "https://www.youtube.com/@godlogicapologetics",
@@ -185,6 +232,7 @@
         },
         {
           "youtube_id": "e9T2K8f6W3o",
+          "depth": "milk",
           "title": "One in Essence, Three in Person: The Mystery of the Trinity with R.C. Sproul",
           "creator": "R.C. Sproul",
           "channel_url": "https://www.youtube.com/@ligonier",
@@ -194,11 +242,54 @@
         },
         {
           "youtube_id": "xTrfb9tJzp4",
+          "depth": "milk",
           "title": "Michael Reeves: The Triunity of God",
           "creator": "Michael Reeves",
           "channel_url": "https://www.youtube.com/@ligonier",
           "duration_seconds": 2425,
           "why_this_one": "Michael Reeves shows Father, Son, and Spirit at work together in salvation itself, and why the doctrine of the Trinity matters for standing firm today.",
+          "order": 3
+        },
+        {
+          "youtube_id": "gYIBb5SDybg",
+          "depth": "meat",
+          "title": "The Trinity is Apostolic (NOT an Accretion!)",
+          "creator": "Gavin Ortlund",
+          "channel_url": "https://www.youtube.com/@truthunites",
+          "duration_seconds": 3868,
+          "why_this_one": "Gavin Ortlund argues the Trinity faithfully explains what the apostles taught rather than being a later addition, tracing the doctrine back through the New Testament.",
+          "order": 4
+        }
+      ],
+      "debates": [
+        {
+          "youtube_id": "FlpDkbLjOh4",
+          "depth": "meat",
+          "title": "DEBATE: Which Is More Biblical? Trinity VS LDS Godhead",
+          "creator": "Inspiring Philosophy Academy",
+          "channel_url": "https://www.youtube.com/@inspiringphilosophyacademy",
+          "duration_seconds": 6174,
+          "why_this_one": "A debate on which is more biblical: the Trinity, or the Latter-day Saint view of the Godhead.",
+          "order": 1
+        },
+        {
+          "youtube_id": "W-2yIIb9YCo",
+          "depth": "meat",
+          "title": "Trinitarianism vs. Unitarianism | William Lane Craig & Dale Tuggy Dialogue Opposing Views",
+          "creator": "William Lane Craig",
+          "channel_url": "https://www.youtube.com/@reasonablefaithorg",
+          "duration_seconds": 3800,
+          "why_this_one": "William Lane Craig defends the Trinity against Dale Tuggy's case for a Unitarian view of God.",
+          "order": 2
+        },
+        {
+          "youtube_id": "7Y9_unCe__M",
+          "depth": "meat",
+          "title": "Protestant and Mormon Discuss the Trinity (Jacob Hansen and Gavin Ortlund)",
+          "creator": "Gavin Ortlund",
+          "channel_url": "https://www.youtube.com/@truthunites",
+          "duration_seconds": 5272,
+          "why_this_one": "Gavin Ortlund and Latter-day Saint Jacob Hansen talk through Protestant and Mormon views of the Trinity, including whether Jesus taught it and whether it is essential for salvation.",
           "order": 3
         }
       ]
@@ -219,6 +310,7 @@
           "creator": "Mike Winger",
           "channel_url": "https://www.youtube.com/@MikeWinger",
           "youtube_playlist_id": "PLZ3iRMLYFlHuhA0RPKZFHVcjIMN_-F596",
+          "depth": "meat",
           "why_this_one": "A twenty-part case for trusting Scripture, built slowly: fulfilled prophecy, how we got the Old and New Testaments, manuscript variants, translations, and the contradictions people point to.",
           "videos": [
             {"youtube_id": "EjnwldgqN8c", "title": "Has God Spoken? EVIDENCE FOR THE BIBLE pt1", "duration_seconds": 2970},
@@ -248,6 +340,7 @@
           "creator": "Wes Huff",
           "channel_url": "https://www.youtube.com/@weshuff",
           "youtube_playlist_id": "PLNOXJdb0gACFBB43j4YwG9fYGE-YtRzhG",
+          "depth": "milk",
           "why_this_one": "Wes Huff's series with Apologetics Canada on whether we have the right books and the right text, with short answers on translation, manuscripts like Oxyrhynchus, and the Gospels as ancient biography.",
           "videos": [
             {"youtube_id": "nMufJZeRdCI", "title": "How names show biblical reliability", "duration_seconds": 132},
@@ -291,6 +384,28 @@
           "why_this_one": "REPLACE",
           "order": 3
         }
+      ],
+      "debates": [
+        {
+          "youtube_id": "F7ngjtT43-4",
+          "depth": "meat",
+          "title": "Full unedited unaltered Wes Huff vs. Billy Carson debate",
+          "creator": "Wes Huff",
+          "channel_url": "https://www.youtube.com/@weshuff",
+          "duration_seconds": 7359,
+          "why_this_one": "Wes Huff and Billy Carson debate Billy's widely shared criticisms of the Bible and historic Christianity — the full, unedited recording from Mark Minard's show.",
+          "order": 1
+        },
+        {
+          "youtube_id": "MsVWFS9r9DY",
+          "depth": "meat",
+          "title": "Daniel B. Wallace and Bart D. Ehrman Debate: Can We Trust the Text of the New Testament?",
+          "creator": "CSNTM Productions",
+          "channel_url": "https://www.youtube.com/@csntmproductions",
+          "duration_seconds": 7858,
+          "why_this_one": "Daniel Wallace and Bart Ehrman debate whether we can recover what the New Testament originally said, or whether early scribes corrupted it beyond repair — the question behind Ehrman's bestselling Misquoting Jesus.",
+          "order": 2
+        }
       ]
     },
     {
@@ -306,6 +421,7 @@
       "videos": [
         {
           "youtube_id": "U0l5mTeqNhg",
+          "depth": "milk",
           "title": "How to Read the Bible (A Plan That Works)",
           "creator": "Gavin Ortlund",
           "channel_url": "https://www.youtube.com/@truthunites",
@@ -346,6 +462,7 @@
       "videos": [
         {
           "youtube_id": "NKaIFf_nhJc",
+          "depth": "milk",
           "title": "Paul Washer \"On Prayer\" Matthew 6:9-11",
           "creator": "Paul Washer",
           "channel_url": "https://www.youtube.com/@themastersseminary",
@@ -355,6 +472,7 @@
         },
         {
           "youtube_id": "QgwzuFG5LCk",
+          "depth": "milk",
           "title": "Let the Psalms Teach You to Pray",
           "creator": "Tim Keller",
           "channel_url": "https://www.youtube.com/@thegospelcoalition",
@@ -363,12 +481,13 @@
           "order": 2
         },
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "lnz5kcGdzdc",
+          "depth": "milk",
+          "title": "John MacArthur: How Should We Pray?",
+          "creator": "John MacArthur",
+          "channel_url": "https://www.youtube.com/@ligonier",
+          "duration_seconds": 3274,
+          "why_this_one": "John MacArthur shows how the Lord's Prayer still answers the most basic question about prayer: how should we pray?",
           "order": 3
         }
       ]
@@ -385,31 +504,44 @@
       "next": "why-do-i-still-sin",
       "videos": [
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "1NxjBI5b8Uk",
+          "depth": "milk",
+          "title": "Gaining True Assurance: The Assurance of Salvation with R.C. Sproul",
+          "creator": "R.C. Sproul",
+          "channel_url": "https://www.youtube.com/@ligonier",
+          "duration_seconds": 1352,
+          "why_this_one": "R.C. Sproul asks whether professing Christians can truly know they are saved, and answers from what Scripture teaches about salvation.",
           "order": 1
         },
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "5KV3xmPo5iE",
+          "depth": "milk",
+          "title": "How to Get Assurance of Salvation",
+          "creator": "Gavin Ortlund",
+          "channel_url": "https://www.youtube.com/@truthunites",
+          "duration_seconds": 1794,
+          "why_this_one": "Gavin Ortlund makes the case that assurance of salvation is possible, tells it apart from presumption, and gives practical steps toward it.",
           "order": 2
         },
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "In9HQDwQc4U",
+          "depth": "milk",
+          "title": "How You Can Know You Are a Child Of God — John Piper — 2015",
+          "creator": "John Piper",
+          "channel_url": "https://www.youtube.com/@desiringgod",
+          "duration_seconds": 2940,
+          "why_this_one": "John Piper on the doubts every believer faces, and how God gives His Spirit to testify that you are His child.",
           "order": 3
+        },
+        {
+          "youtube_id": "KLE55jzhUT8",
+          "depth": "milk",
+          "title": "Paul Washer: Assurance of salvation",
+          "creator": "Paul Washer",
+          "channel_url": "https://www.youtube.com/@efeserne619",
+          "duration_seconds": 4860,
+          "why_this_one": "Paul Washer preaches from 1 John that assurance rests on Christ alone, grounded in God's Word and confirmed by His Spirit.",
+          "order": 4
         }
       ]
     },
@@ -426,6 +558,7 @@
       "videos": [
         {
           "youtube_id": "Yaj7tBY2UGI",
+          "depth": "milk",
           "title": "Voddie Baucham: The World, the Flesh, and the Devil",
           "creator": "Voddie Baucham",
           "channel_url": "https://www.youtube.com/@ligonier",
