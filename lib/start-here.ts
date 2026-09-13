@@ -7,9 +7,13 @@
 //   - `next` chains topics in order; only the last topic has next: null
 //   - 3–6 videos per topic; unique video `order` within a topic
 //   - tier is `essential` or `open_question`
+//   - optional playlists (series): each 2–24 videos, no video twice, a
+//     title, a position of "first" or "last" when one is given, and no
+//     playlist listed twice in the same topic
 //
 // Content (strict mode — enforced once curation begins / before launch):
 //   - no remaining "REPLACE" placeholders, valid youtube ids, durations > 0
+//     (for a playlist's videos too, plus a youtube.com channel link)
 //   - max 4 videos per creator across the whole pathway
 //   - every open_question topic carries ≥ 2 distinct creators
 
@@ -24,6 +28,30 @@ export interface StartHereVideo {
   duration_seconds: number;
   why_this_one: string;
   order: number;
+}
+
+/** One part of a playlist — the series supplies the creator and the "why". */
+export interface StartHerePlaylistVideo {
+  youtube_id: string;
+  title: string;
+  duration_seconds: number;
+}
+
+/**
+ * A series watched in order, one part leading into the next. Curated like
+ * everything else here: the parts are copied in, not read live from YouTube,
+ * so a change to the source playlist never silently changes the pathway.
+ */
+export interface StartHerePlaylist {
+  title: string;
+  creator: string;
+  channel_url: string;
+  /** The source playlist, linked for credit. */
+  youtube_playlist_id: string;
+  why_this_one: string;
+  videos: StartHerePlaylistVideo[];
+  /** Above the picks ("first") or below them ("last", the default). */
+  position?: "first" | "last";
 }
 
 export type StartHereTier = "essential" | "open_question";
@@ -42,6 +70,11 @@ export interface StartHereTopic {
   framing: string;
   next: string | null;
   videos: StartHereVideo[];
+  /**
+   * Optional series, in the order they appear: "first" ones above the picks,
+   * the rest below. Not counted against MIN/MAX_VIDEOS.
+   */
+  playlists?: StartHerePlaylist[];
 }
 
 export interface StartHereData {
@@ -52,6 +85,10 @@ export const PLACEHOLDER = "REPLACE";
 export const MIN_VIDEOS = 3;
 export const MAX_VIDEOS = 6;
 export const MAX_PER_CREATOR = 4;
+export const MIN_PLAYLIST_VIDEOS = 2;
+// Long enough for a full teaching series (Winger's Evidence for the Bible
+// runs to 20), short enough to still read as one card.
+export const MAX_PLAYLIST_VIDEOS = 24;
 
 export function isPlaceholderVideo(video: StartHereVideo): boolean {
   return (
@@ -60,6 +97,11 @@ export function isPlaceholderVideo(video: StartHereVideo): boolean {
     video.creator === PLACEHOLDER ||
     video.why_this_one === PLACEHOLDER
   );
+}
+
+/** A topic's series, in the order they were curated (none → empty). */
+export function topicPlaylists(topic: StartHereTopic): StartHerePlaylist[] {
+  return topic.playlists ?? [];
 }
 
 export function hasPlaceholders(data: StartHereData): boolean {
@@ -135,6 +177,38 @@ export function validateStartHere(
     ) {
       errors.push(`${topic.slug}: cover_image must be a /public path or https:// URL`);
     }
+    // A topic may carry several series; each error names the one at fault.
+    const playlistIds = new Set<string>();
+    for (const playlist of topicPlaylists(topic)) {
+      const named = `"${playlist.title}"`;
+      if (!playlist.title.trim()) {
+        errors.push(`${topic.slug}: playlist needs a title`);
+      }
+      if (playlistIds.has(playlist.youtube_playlist_id)) {
+        errors.push(`${topic.slug}: playlist ${playlist.youtube_playlist_id} is listed twice`);
+      }
+      playlistIds.add(playlist.youtube_playlist_id);
+      if (
+        playlist.position !== undefined &&
+        playlist.position !== "first" &&
+        playlist.position !== "last"
+      ) {
+        errors.push(`${topic.slug}: playlist position must be "first" or "last" (${named})`);
+      }
+      const count = playlist.videos.length;
+      if (count < MIN_PLAYLIST_VIDEOS || count > MAX_PLAYLIST_VIDEOS) {
+        errors.push(
+          `${topic.slug}: playlist has ${count} videos (must be ${MIN_PLAYLIST_VIDEOS}–${MAX_PLAYLIST_VIDEOS}) (${named})`,
+        );
+      }
+      const seen = new Set<string>();
+      for (const part of playlist.videos) {
+        if (seen.has(part.youtube_id)) {
+          errors.push(`${topic.slug}: playlist repeats video ${part.youtube_id} (${named})`);
+        }
+        seen.add(part.youtube_id);
+      }
+    }
   }
 
   if (opts.strict) {
@@ -157,12 +231,36 @@ export function validateStartHere(
       }
     }
 
+    for (const topic of topics) {
+      for (const playlist of topicPlaylists(topic)) {
+        const named = `"${playlist.title}"`;
+        if (!playlist.channel_url.startsWith("https://www.youtube.com/")) {
+          errors.push(`${topic.slug}: playlist channel_url must be a youtube.com channel link (${named})`);
+        }
+        if (!playlist.why_this_one.trim() || playlist.why_this_one === PLACEHOLDER) {
+          errors.push(`${topic.slug}: playlist needs a why_this_one (${named})`);
+        }
+        playlist.videos.forEach((part, i) => {
+          if (!isValidYouTubeId(part.youtube_id)) {
+            errors.push(`${topic.slug}: playlist part ${i + 1} has invalid youtube_id "${part.youtube_id}" (${named})`);
+          }
+          if (part.duration_seconds <= 0) {
+            errors.push(`${topic.slug}: playlist part ${i + 1} has no duration (${named})`);
+          }
+        });
+      }
+    }
+
     // curation constraints
     const perCreator = new Map<string, number>();
     for (const topic of topics) {
       for (const video of topic.videos) {
         if (isPlaceholderVideo(video)) continue;
         perCreator.set(video.creator, (perCreator.get(video.creator) ?? 0) + 1);
+      }
+      // Each series counts once toward its creator's share, however long.
+      for (const playlist of topicPlaylists(topic)) {
+        perCreator.set(playlist.creator, (perCreator.get(playlist.creator) ?? 0) + 1);
       }
     }
     for (const [creator, count] of perCreator) {
@@ -185,6 +283,16 @@ export function validateStartHere(
   }
 
   return errors;
+}
+
+/** The part after `index`, or null once the series is done. */
+export function nextPlaylistIndex(index: number, length: number): number | null {
+  return index + 1 < length ? index + 1 : null;
+}
+
+/** Total running time of a series. */
+export function playlistDuration(playlist: StartHerePlaylist): number {
+  return playlist.videos.reduce((sum, part) => sum + Math.max(0, part.duration_seconds), 0);
 }
 
 export function formatDuration(totalSeconds: number): string {

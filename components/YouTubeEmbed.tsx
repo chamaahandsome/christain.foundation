@@ -13,7 +13,11 @@ declare global {
       Player: new (
         el: HTMLIFrameElement,
         opts: { events: Record<string, (e: { data: number }) => void> },
-      ) => { getCurrentTime?: () => number; getPlayerState?: () => number };
+      ) => {
+        getCurrentTime?: () => number;
+        getPlayerState?: () => number;
+        loadVideoById?: (videoId: string) => void;
+      };
     };
     onYouTubeIframeAPIReady?: () => void;
   }

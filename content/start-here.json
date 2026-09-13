@@ -99,32 +99,49 @@
       "tier_note": "Christians do not disagree on this",
       "framing": "If Christ is not raised, your faith is worthless — the Bible itself says so. Christianity is the only faith that invites you to check its founding event as history: an empty tomb, hostile witnesses, men who died rather than recant what they saw. You are not asked to believe blindly. Look at the evidence; it holds.",
       "next": "who-is-god",
+      "playlists": [
+        {
+          "title": "The Resurrection of Jesus",
+          "creator": "InspiringPhilosophy",
+          "channel_url": "https://www.youtube.com/@inspiringphilosophy",
+          "youtube_playlist_id": "PL1mr9ZTZb3TUYymBPce08oyuhnHLLkR_B",
+          "why_this_one": "A six-part series that walks the historical case one step at a time — the evidence, where the belief came from, and the alternative theories people offer instead.",
+          "videos": [
+            { "youtube_id": "-ErnJF_nwBk", "title": "1. The Resurrection of Jesus (Introduction)", "duration_seconds": 348 },
+            { "youtube_id": "A0iDNLxmWVM", "title": "2. The Resurrection of Jesus (The Historical Evidence)", "duration_seconds": 2757 },
+            { "youtube_id": "HdIM8QoD8UE", "title": "3. The Resurrection of Jesus (Origins)", "duration_seconds": 1249 },
+            { "youtube_id": "UWbShiINl4s", "title": "4. The Resurrection of Jesus (Advanced Theories)", "duration_seconds": 1069 },
+            { "youtube_id": "9VEQWQHYy7s", "title": "5. The Resurrection of Jesus (A Miracle?)", "duration_seconds": 763 },
+            { "youtube_id": "rffmrioFnBY", "title": "6. The Resurrection of Jesus (Ghost?)", "duration_seconds": 948 }
+          ]
+        }
+      ],
       "videos": [
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "Q936WgiD7j8",
+          "title": "EVIDENCE for the RESURRECTION of Christ",
+          "creator": "Mike Winger",
+          "channel_url": "https://www.youtube.com/@MikeWinger",
+          "duration_seconds": 4253,
+          "why_this_one": "Builds the case from widely accepted historical facts to the conclusion that Jesus rose — the evidence the framing above invites you to check.",
           "order": 1
         },
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "82MTXq71oMc",
+          "title": "Do we Have Actual Evidence for the Resurrection of Jesus? - Gary Habermas",
+          "creator": "Gary Habermas",
+          "channel_url": "https://www.youtube.com/@garyhabermas1473",
+          "duration_seconds": 3658,
+          "why_this_one": "One of the foremost historians of the resurrection asks whether we have real evidence for it, or only faith.",
           "order": 2
         },
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "zAgMwXpC6Wc",
+          "title": "Resurrection",
+          "creator": "William Lane Craig",
+          "channel_url": "https://www.youtube.com/@reasonablefaithorg",
+          "duration_seconds": 2953,
+          "why_this_one": "In a Veritas Forum interview, William Lane Craig explains why the resurrection carries so much weight for the Christian faith.",
           "order": 3
         }
       ]
@@ -139,32 +156,49 @@
       "tier_note": "Christians do not disagree on this",
       "framing": "One God, three persons — Father, Son, and Holy Spirit. Not three gods, not one person wearing masks. This is the deepest mystery of the faith and also the most practical: it means God has been love from all eternity, that the Father sent the Son, and that the Spirit now lives in everyone who belongs to Him — including you.",
       "next": "can-i-trust-the-bible",
+      "playlists": [
+        {
+          "title": "The Attributes of God Bible Study",
+          "creator": "Allen Nolan",
+          "channel_url": "https://www.youtube.com/@allennolan",
+          "youtube_playlist_id": "PLaPig5gEoOs3Uig4Klvtzbp4Wi9b0w7fg",
+          "position": "first",
+          "why_this_one": "A five-part Bible study on the attributes of God: what He is like, how He can know everything, and what that means when you pray.",
+          "videos": [
+            {"youtube_id": "WnYB8zypYxA", "title": "What You Need to Know About God 🤔 Attributes of God 1 | Pastor Allen Nolan Sermon", "duration_seconds": 2846},
+            {"youtube_id": "HtB-rg8CWTc", "title": "How Can God Know Everything? Attributes of God 2 | Pastor Allen Nolan Sermon", "duration_seconds": 2631},
+            {"youtube_id": "EauMrZOcMbE", "title": "1 Truth You Must Know About God: Attributes of God 3 | Pastor Allen Nolan Sermon", "duration_seconds": 2620},
+            {"youtube_id": "p1jXUGqFLAI", "title": "Does God Always Answer Your Prayer? Attributes of God 4 Pastor Allen Nolan Sermon", "duration_seconds": 2779},
+            {"youtube_id": "pTijCOee9Zs", "title": "What You Need to Know About God: Attributes of God 5 | Pastor Allen Nolan Sermon", "duration_seconds": 2578}
+          ]
+        }
+      ],
       "videos": [
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "iq8bDEo95gg",
+          "title": "Trinity in the Old Testament",
+          "creator": "GodLogic Apologetics",
+          "channel_url": "https://www.youtube.com/@godlogicapologetics",
+          "duration_seconds": 3838,
+          "why_this_one": "GodLogic finds the Trinity throughout the Old Testament — the Word and Spirit in Genesis, the Angel of the Lord, Isaiah's Arm of the Lord — and answers objections from the Hebrew Scriptures alone.",
           "order": 1
         },
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "e9T2K8f6W3o",
+          "title": "One in Essence, Three in Person: The Mystery of the Trinity with R.C. Sproul",
+          "creator": "R.C. Sproul",
+          "channel_url": "https://www.youtube.com/@ligonier",
+          "duration_seconds": 1365,
+          "why_this_one": "R.C. Sproul unpacks the careful language the early church used for the Trinity — one in essence, three in person — and why each word was chosen.",
           "order": 2
         },
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "xTrfb9tJzp4",
+          "title": "Michael Reeves: The Triunity of God",
+          "creator": "Michael Reeves",
+          "channel_url": "https://www.youtube.com/@ligonier",
+          "duration_seconds": 2425,
+          "why_this_one": "Michael Reeves shows Father, Son, and Spirit at work together in salvation itself, and why the doctrine of the Trinity matters for standing firm today.",
           "order": 3
         }
       ]
@@ -179,6 +213,56 @@
       "tier_note": "Christians do not disagree on this",
       "framing": "The Bible is not one book but sixty-six, written across centuries, and it is the best-attested text of the ancient world by an enormous margin. But trust is not just about manuscripts — it's about whether God has spoken. Jesus treated Scripture as God's word, and if He is who He says He is, that settles the question of authority.",
       "next": "how-do-i-read-the-bible",
+      "playlists": [
+        {
+          "title": "Evidence for the Bible",
+          "creator": "Mike Winger",
+          "channel_url": "https://www.youtube.com/@MikeWinger",
+          "youtube_playlist_id": "PLZ3iRMLYFlHuhA0RPKZFHVcjIMN_-F596",
+          "why_this_one": "A twenty-part case for trusting Scripture, built slowly: fulfilled prophecy, how we got the Old and New Testaments, manuscript variants, translations, and the contradictions people point to.",
+          "videos": [
+            {"youtube_id": "EjnwldgqN8c", "title": "Has God Spoken? EVIDENCE FOR THE BIBLE pt1", "duration_seconds": 2970},
+            {"youtube_id": "3t7fCLgFjuo", "title": "The Destruction of Tyre - EVIDENCE for the Bible pt 2", "duration_seconds": 2482},
+            {"youtube_id": "VfQCgNLV6Rw", "title": "Fulfilled Prophecy (Daniel 7-8) Evidence for the Bible pt3", "duration_seconds": 3046},
+            {"youtube_id": "5z4c4DxTHhE", "title": "Defending Daniel - Evidence for the Bible pt4", "duration_seconds": 3052},
+            {"youtube_id": "lXrPhtQLj9E", "title": "The MOST prophetic passage of the Bible: EVIDENCE for the Bible pt5", "duration_seconds": 3574},
+            {"youtube_id": "9VAWL7her5o", "title": "Jesus in Psalm 22: Evidence for the Bible pt6", "duration_seconds": 3175},
+            {"youtube_id": "Ng0HMOs7ky0", "title": "Fulfilled Prophecy: Evidence for the Bible pt7 - Isaiah 53", "duration_seconds": 3227},
+            {"youtube_id": "vNY6M89Ts_4", "title": "Jesus in Genesis 22: Evidence for the Bible pt8", "duration_seconds": 2407},
+            {"youtube_id": "pK5RsOaVy4U", "title": "Daniel 9 and The Prediction of Jesus’ Coming: Evidence for the Bible pt9", "duration_seconds": 3697},
+            {"youtube_id": "mEDlb6znvGA", "title": "Prophecies that JESUS fulfilled: EVIDENCE for the Bible pt10", "duration_seconds": 3914},
+            {"youtube_id": "T8vd2QXHc2I", "title": "How we got the OT Canon: Evidence for the Bible pt11", "duration_seconds": 2969},
+            {"youtube_id": "5hItK8IY-Us", "title": "How We Got the New Testament: Evidence for the Bible pt12", "duration_seconds": 2969},
+            {"youtube_id": "3kaVKSnLJhk", "title": "The REAL story of the New Testament: Evidence for the Bible pt13", "duration_seconds": 3236},
+            {"youtube_id": "D2cc_WHVfTg", "title": "The Truth About the \"Banned Books\" of the Bible: Evidence for the Bible pt14", "duration_seconds": 3484},
+            {"youtube_id": "WclIZwBFhq0", "title": "What you NEED to know about the \"400,000 VARIANTS\" in the Bible!  Evidence for the Bible pt15", "duration_seconds": 3663},
+            {"youtube_id": "G0VE7f-CzOQ", "title": "How the Bible Was Changed: Evidence for the Bible pt16", "duration_seconds": 3735},
+            {"youtube_id": "BCPoKIE5y1U", "title": "Can I Trust Bible Translations: Evidence for the Bible pt17", "duration_seconds": 4665},
+            {"youtube_id": "OA-4eQN16n0", "title": "\"FULL of Contradictions!\" pt1: Evidence for the Bible pt18", "duration_seconds": 1616},
+            {"youtube_id": "uoLYyyqijfU", "title": "13 Bible Contradictions refuted: Evidence for the Bible pt19", "duration_seconds": 3313},
+            {"youtube_id": "7zS4VgFDf8s", "title": "Biggest Bible Contradictions: Evidence for the Bible pt20", "duration_seconds": 4070}
+          ]
+        },
+        {
+          "title": "Can I Trust the Bible",
+          "creator": "Wes Huff",
+          "channel_url": "https://www.youtube.com/@weshuff",
+          "youtube_playlist_id": "PLNOXJdb0gACFBB43j4YwG9fYGE-YtRzhG",
+          "why_this_one": "Wes Huff's series with Apologetics Canada on whether we have the right books and the right text, with short answers on translation, manuscripts like Oxyrhynchus, and the Gospels as ancient biography.",
+          "videos": [
+            {"youtube_id": "nMufJZeRdCI", "title": "How names show biblical reliability", "duration_seconds": 132},
+            {"youtube_id": "JS5oAcdyKfs", "title": "Is the Bible a translation of a translation?", "duration_seconds": 79},
+            {"youtube_id": "etESeF5lj44", "title": "What is The Bible?", "duration_seconds": 78},
+            {"youtube_id": "tBaK8MOi8-4", "title": "Can I Trust the Bible? | Official Trailer | Apologetics Canada", "duration_seconds": 89},
+            {"youtube_id": "Gm4_ZvIvIj0", "title": "Can I Trust the Bible? Ep.1 The Right Books", "duration_seconds": 1148},
+            {"youtube_id": "dU8YfC77RBg", "title": "Can I Trust the Bible? Ep.2 The Right Text", "duration_seconds": 1170},
+            {"youtube_id": "zWiaG-ql9HU", "title": "Can I Trust the Bible coming IN YOUR LANGAUGE", "duration_seconds": 90},
+            {"youtube_id": "zF_-lsW6b5U", "title": "Oxyrhynchus, the manuscript treasure trove | clip from Ep.2 Can I Trust the Bible", "duration_seconds": 111},
+            {"youtube_id": "UmCZK8a0Q98", "title": "Does the Protestant Bible have a problem?", "duration_seconds": 644},
+            {"youtube_id": "L7jF3LHqfc8", "title": "Biblical Gospels are some of the best examples of ancient biography", "duration_seconds": 225}
+          ]
+        }
+      ],
       "videos": [
         {
           "youtube_id": "REPLACE",
@@ -341,12 +425,12 @@
       "next": "do-i-need-a-church",
       "videos": [
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "Yaj7tBY2UGI",
+          "title": "Voddie Baucham: The World, the Flesh, and the Devil",
+          "creator": "Voddie Baucham",
+          "channel_url": "https://www.youtube.com/@ligonier",
+          "duration_seconds": 3511,
+          "why_this_one": "Becoming a Christian enlists you in a war fought on three fronts. Baucham explains why the struggle that follows conversion should not surprise you.",
           "order": 1
         },
         {

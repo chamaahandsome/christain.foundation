@@ -11,6 +11,45 @@ import {
   isFatalYouTubeError,
 } from "@/lib/youtube-embed-errors";
 
+/** Load YouTube's iframe API once, then call `ready`. Safe to call again:
+ * a second caller waits on the same script rather than adding another. */
+export function loadYouTubeIframeApi(ready: () => void): void {
+  if (window.YT?.Player) {
+    ready();
+    return;
+  }
+  const prior = window.onYouTubeIframeAPIReady;
+  window.onYouTubeIframeAPIReady = () => {
+    prior?.();
+    ready();
+  };
+  if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+    const script = document.createElement("script");
+    script.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(script);
+  }
+}
+
+/** Log an embed error to the console and to /api/log. */
+export function reportYouTubeError(source: string, videoId: string, code: number): void {
+  const message = describeYouTubeError(code);
+  console.warn(`[youtube-embed] ${videoId} error ${code}: ${message}`);
+  const body = JSON.stringify({ source, videoId, code, message });
+  if (
+    !navigator.sendBeacon?.(
+      "/api/log",
+      new Blob([body], { type: "application/json" }),
+    )
+  ) {
+    fetch("/api/log", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+      keepalive: true,
+    }).catch(() => {});
+  }
+}
+
 export function useYouTubeErrorLog(
   iframeRef: RefObject<HTMLIFrameElement | null>,
   videoId: string,
@@ -27,42 +66,14 @@ export function useYouTubeErrorLog(
         events: {
           onError: (event: { data: number }) => {
             const code = event.data;
-            const message = describeYouTubeError(code);
-            console.warn(`[youtube-embed] ${videoId} error ${code}: ${message}`);
-            const body = JSON.stringify({ source, videoId, code, message });
-            if (
-              !navigator.sendBeacon?.(
-                "/api/log",
-                new Blob([body], { type: "application/json" }),
-              )
-            ) {
-              fetch("/api/log", {
-                method: "POST",
-                headers: { "content-type": "application/json" },
-                body,
-                keepalive: true,
-              }).catch(() => {});
-            }
+            reportYouTubeError(source, videoId, code);
             if (isFatalYouTubeError(code)) onFatal?.(code);
           },
         },
       });
     };
 
-    if (window.YT?.Player) {
-      attach();
-    } else {
-      const prior = window.onYouTubeIframeAPIReady;
-      window.onYouTubeIframeAPIReady = () => {
-        prior?.();
-        attach();
-      };
-      if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
-        const script = document.createElement("script");
-        script.src = "https://www.youtube.com/iframe_api";
-        document.head.appendChild(script);
-      }
-    }
+    loadYouTubeIframeApi(attach);
 
     return () => {
       cancelled = true;
