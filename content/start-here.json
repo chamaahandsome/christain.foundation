@@ -221,6 +221,16 @@
       ],
       "videos": [
         {
+          "youtube_id": "BOYFVZfi5jg",
+          "depth": "milk",
+          "title": "What Is God Like? - Dr. Frank Turek",
+          "creator": "Frank Turek",
+          "channel_url": "https://www.youtube.com/@drchipbennett",
+          "duration_seconds": 1852,
+          "why_this_one": "Frank Turek on what God is like: the creator and sustainer of all things, and yet near to us as Savior.",
+          "order": 1
+        },
+        {
           "youtube_id": "iq8bDEo95gg",
           "depth": "meat",
           "title": "Trinity in the Old Testament",
@@ -228,7 +238,7 @@
           "channel_url": "https://www.youtube.com/@godlogicapologetics",
           "duration_seconds": 3838,
           "why_this_one": "GodLogic finds the Trinity throughout the Old Testament — the Word and Spirit in Genesis, the Angel of the Lord, Isaiah's Arm of the Lord — and answers objections from the Hebrew Scriptures alone.",
-          "order": 1
+          "order": 2
         },
         {
           "youtube_id": "e9T2K8f6W3o",
@@ -238,7 +248,7 @@
           "channel_url": "https://www.youtube.com/@ligonier",
           "duration_seconds": 1365,
           "why_this_one": "R.C. Sproul unpacks the careful language the early church used for the Trinity — one in essence, three in person — and why each word was chosen.",
-          "order": 2
+          "order": 3
         },
         {
           "youtube_id": "xTrfb9tJzp4",
@@ -248,7 +258,7 @@
           "channel_url": "https://www.youtube.com/@ligonier",
           "duration_seconds": 2425,
           "why_this_one": "Michael Reeves shows Father, Son, and Spirit at work together in salvation itself, and why the doctrine of the Trinity matters for standing firm today.",
-          "order": 3
+          "order": 4
         },
         {
           "youtube_id": "gYIBb5SDybg",
@@ -258,7 +268,7 @@
           "channel_url": "https://www.youtube.com/@truthunites",
           "duration_seconds": 3868,
           "why_this_one": "Gavin Ortlund argues the Trinity faithfully explains what the apostles taught rather than being a later addition, tracing the doctrine back through the New Testament.",
-          "order": 4
+          "order": 5
         }
       ],
       "debates": [
@@ -567,21 +577,23 @@
           "order": 1
         },
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "Xzm8hWOdGLk",
+          "depth": "milk",
+          "title": "Tim Keller on Getting Out of Egypt (And Bondage to Sin) [TGC Podcast Ep. 383]",
+          "creator": "Tim Keller",
+          "channel_url": "https://www.youtube.com/@thegospelcoalition",
+          "duration_seconds": 3172,
+          "why_this_one": "Tim Keller reads the Red Sea crossing as a picture of salvation: getting out of bondage to the law, our sinful nature and our idols, by grace alone.",
           "order": 2
         },
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "HynerviUiTc",
+          "depth": "milk",
+          "title": "Ongoing Sin | Paul Washer",
+          "creator": "Paul Washer",
+          "channel_url": "https://www.youtube.com/@heartcrymissionary",
+          "duration_seconds": 1081,
+          "why_this_one": "A short message from Paul Washer on ongoing sin.",
           "order": 3
         }
       ]
@@ -598,30 +610,33 @@
       "next": "why-is-there-suffering",
       "videos": [
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "GQhzWW-dauY",
+          "depth": "milk",
+          "title": "Do Christians Need to go to Church?",
+          "creator": "Allen Parr",
+          "channel_url": "https://www.youtube.com/@thebeatagp",
+          "duration_seconds": 282,
+          "why_this_one": "Allen Parr gives reasons to be in church, starting with Christ's own example and His love for the church as His bride, and the part you have to contribute.",
           "order": 1
         },
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "jdnQL_trVqQ",
+          "depth": "milk",
+          "title": "8 reasons God wants you to go to CHURCH",
+          "creator": "Mike Winger",
+          "channel_url": "https://www.youtube.com/@MikeWinger",
+          "duration_seconds": 490,
+          "why_this_one": "Mike Winger gives eight reasons from the Bible for going to church, and answers six common excuses for staying away.",
           "order": 2
         },
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "xHNS5TIV-5M",
+          "depth": "milk",
+          "title": "How to choose a GOOD church! 10 TIPS!",
+          "creator": "Mike Winger",
+          "channel_url": "https://www.youtube.com/@MikeWinger",
+          "duration_seconds": 880,
+          "why_this_one": "Mike Winger's ten questions to ask before you settle on a church, from what it believes and how it teaches to whether you can serve there.",
           "order": 3
         }
       ]
@@ -638,31 +653,76 @@
       "next": "only-one-way",
       "videos": [
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "AS16dqAjQ9k",
+          "depth": "meat",
+          "title": "The Problem of Suffering: A Christian Response",
+          "creator": "InspiringPhilosophy",
+          "channel_url": "https://www.youtube.com/@inspiringphilosophy",
+          "duration_seconds": 2510,
+          "why_this_one": "InspiringPhilosophy asks why God allows suffering and what a world with suffering might accomplish, making a philosophical case that it is compatible with a good God.",
           "order": 1
         },
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "70T8mm0W2tA",
+          "depth": "milk",
+          "title": "How to Answer the Problem of Evil in 5 Steps 😨",
+          "creator": "Mike Winger",
+          "channel_url": "https://www.youtube.com/@MikeWinger",
+          "duration_seconds": 3165,
+          "why_this_one": "Mike Winger's five steps for facing the problem of evil, starting by separating the emotional problem from the intellectual one and ending with getting help for the pain.",
           "order": 2
         },
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "jtdCr3Pxg4w",
+          "depth": "milk",
+          "title": "Answering the Problem of Evil and Suffering",
+          "creator": "Sean McDowell",
+          "channel_url": "https://www.youtube.com/@seanmcdowell",
+          "duration_seconds": 3106,
+          "why_this_one": "Sean McDowell argues that every worldview has to explain why the world is broken, and asks which one best accounts for evil and suffering.",
           "order": 3
+        },
+        {
+          "youtube_id": "V2eNyrknOAk",
+          "depth": "milk",
+          "title": "If God, Why Evil? | Dr. Frank Turek",
+          "creator": "Frank Turek",
+          "channel_url": "https://www.youtube.com/@compassbiblechurch",
+          "duration_seconds": 3035,
+          "why_this_one": "Frank Turek takes on the question of why a good God would allow evil, in a talk at Compass Bible Church.",
+          "order": 4
+        },
+        {
+          "youtube_id": "g6UgMDx9rJY",
+          "depth": "milk",
+          "title": "If God Is Good, Why Do I Suffer?: The Classic Collection with R.C. Sproul",
+          "creator": "R.C. Sproul",
+          "channel_url": "https://www.youtube.com/@ligonier",
+          "duration_seconds": 2837,
+          "why_this_one": "R.C. Sproul faces why a good and all-powerful God permits suffering, and comforts believers that God works even through tragedy for their good.",
+          "order": 5
+        }
+      ],
+      "debates": [
+        {
+          "youtube_id": "wxUu4ncP-JM",
+          "depth": "meat",
+          "title": "Alex O'Connor on Animal Suffering: Christian Response",
+          "creator": "Gavin Ortlund",
+          "channel_url": "https://www.youtube.com/@truthunites",
+          "duration_seconds": 1253,
+          "why_this_one": "Not a debate itself but Gavin Ortlund's response to Alex O'Connor's case, made in recent debates, that animal suffering counts against God — including the angelic fall view and what C.S. Lewis, Augustine and Aquinas said.",
+          "order": 1
+        },
+        {
+          "youtube_id": "cxy2w3lTNkQ",
+          "depth": "meat",
+          "title": "Alex O’Connor’s Biggest Objection to Christianity Backfires",
+          "creator": "Glen Scrivener",
+          "channel_url": "https://www.youtube.com/@speaklifemedia",
+          "duration_seconds": 2775,
+          "why_this_one": "Not a debate itself but Glen Scrivener's reaction to William Lane Craig's debate with Alex O'Connor on the existence of God.",
+          "order": 2
         }
       ]
     },
@@ -678,21 +738,23 @@
       "next": "what-will-my-family-say",
       "videos": [
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "toFfthC-Xto",
+          "depth": "milk",
+          "title": "Stop Saying All Roads Lead to God!",
+          "creator": "Mike Winger",
+          "channel_url": "https://www.youtube.com/@MikeWinger",
+          "duration_seconds": 4582,
+          "why_this_one": "Mike Winger takes apart the idea that all roads lead to God, answering slogans like 'all religions teach the same thing' and 'sincere people will be OK'.",
           "order": 1
         },
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "0eSNW8WBHr4",
+          "depth": "milk",
+          "title": "John MacArthur: Is Jesus the Only Way?",
+          "creator": "John MacArthur",
+          "channel_url": "https://www.youtube.com/@ligonier",
+          "duration_seconds": 3440,
+          "why_this_one": "John MacArthur explains how religious pluralism conflicts with Christ's exclusive claims and undermines the Great Commission.",
           "order": 2
         },
         {
@@ -838,30 +900,33 @@
       "next": null,
       "videos": [
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "y02a28FrMKs",
+          "depth": "meat",
+          "title": "Does Science Point To God? - Stephen Meyer at Dallas Science Faith Conference 2020",
+          "creator": "Stephen Meyer",
+          "channel_url": "https://www.youtube.com/@discoverysciencechannel",
+          "duration_seconds": 3969,
+          "why_this_one": "Stephen Meyer, a philosopher of science, makes the case that discoveries in physics, cosmology and biology point to God rather than away from Him.",
           "order": 1
         },
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "JW9gcjpt89o",
+          "depth": "meat",
+          "title": "Three Scientists on the Origins of Everything | Stephen Meyer, John Lennox, and James Tour",
+          "creator": "Hoover Institution",
+          "channel_url": "https://www.youtube.com/@hooverinstitution",
+          "duration_seconds": 3691,
+          "why_this_one": "Mathematician John Lennox, philosopher of science Stephen Meyer and chemist James Tour ask whether the Big Bang, the fine-tuning of physics and the information in DNA point to blind processes or to an intelligent mind.",
           "order": 2
         },
         {
-          "youtube_id": "REPLACE",
-          "title": "REPLACE",
-          "creator": "REPLACE",
-          "channel_url": "https://www.youtube.com/",
-          "duration_seconds": 0,
-          "why_this_one": "REPLACE",
+          "youtube_id": "9r96ewpbVgs",
+          "depth": "meat",
+          "title": "Rice Professor Demands Transparency on Origin of Life Chemistry #abiogenesis #science #chemistry",
+          "creator": "James Tour",
+          "channel_url": "https://www.youtube.com/@drjamestour",
+          "duration_seconds": 4593,
+          "why_this_one": "Chemist James Tour walks through why origin-of-life research is still far from making life in the lab — from molecule stability to building a cell — and closes on the resurrection of Jesus.",
           "order": 3
         }
       ]

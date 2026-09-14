@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import rawData from "@/content/start-here.json";
 import {
+  MAX_PER_CREATOR,
   applyDepthOverrides,
   formatDuration,
   formatDurationCoarse,
@@ -72,6 +73,27 @@ function chain(...topics: StartHereTopic[]): StartHereData {
   return { topics };
 }
 
+/**
+ * Topics chained in order carrying `count` picks by `creator`, three to a
+ * topic with the gaps filled by one-off creators — so a test can sit a
+ * creator exactly at MAX_PER_CREATOR, or one past it, whatever it's set to.
+ */
+function creatorPicks(creator: string, count: number): StartHereTopic[] {
+  const perTopic = 3;
+  const n = Math.max(1, Math.ceil(count / perTopic));
+  return Array.from({ length: n }, (_, i) => {
+    const mine = Math.min(perTopic, count - i * perTopic);
+    return topic({
+      slug: `t${i + 1}`,
+      order: i + 1,
+      next: i + 1 < n ? `t${i + 2}` : null,
+      videos: Array.from({ length: perTopic }, (_, j) =>
+        video({ order: j + 1, creator: j < mine ? creator : `Filler ${i}-${j}` }),
+      ),
+    });
+  });
+}
+
 describe("validateStartHere — structural rules", () => {
   it("passes a well-formed two-topic chain", () => {
     const data = chain(
@@ -141,21 +163,12 @@ describe("validateStartHere — strict content rules", () => {
     expect(joined).toMatch(/no duration/);
   });
 
-  it("fails a creator appearing more than 4 times across the pathway", () => {
-    const many = (slug: string, order: number, next: string | null) =>
-      topic({
-        slug,
-        order,
-        next,
-        videos: [
-          video({ order: 1, creator: "Prolific" }),
-          video({ order: 2, creator: "Prolific" }),
-          video({ order: 3, creator: `Other-${slug}` }),
-        ],
-      });
-    const data = chain(many("a", 1, "b"), many("b", 2, "c"), many("c", 3, null));
-    expect(validateStartHere(data, { strict: true }).join(" ")).toMatch(
-      /Prolific appears 6 times/,
+  it("fails a creator appearing more than MAX_PER_CREATOR times across the pathway", () => {
+    const atLimit = chain(...creatorPicks("Prolific", MAX_PER_CREATOR));
+    expect(validateStartHere(atLimit, { strict: true }).join(" ")).not.toMatch(/Prolific appears/);
+    const over = chain(...creatorPicks("Prolific", MAX_PER_CREATOR + 1));
+    expect(validateStartHere(over, { strict: true }).join(" ")).toMatch(
+      new RegExp(`Prolific appears ${MAX_PER_CREATOR + 1} times`),
     );
   });
 
@@ -368,26 +381,25 @@ describe("validateStartHere — playlists", () => {
   });
 
   it("counts each series in a topic toward its creator's share", () => {
-    const picks = [
-      video({ order: 1, creator: "Creator A" }),
-      video({ order: 2, creator: "Creator A" }),
-      video({ order: 3, creator: "Creator B" }),
-    ];
     const two = [
       playlist({ creator: "Creator A" }),
       playlist({ creator: "Creator A", youtube_playlist_id: "PLNOXJdb0gACFBB43j4YwG9fYGE-YtRzhG" }),
     ];
-    // 2 picks + 2 series = 4, the limit; a third series tips it over.
-    expect(
-      validateStartHere(chain(topic({ videos: picks, playlists: two })), { strict: true }).join(" "),
-    ).not.toMatch(/appears/);
+    const withSeries = (series: StartHerePlaylist[]) => {
+      // Two picks short of the limit, so two series land exactly on it.
+      const topics = creatorPicks("Creator A", MAX_PER_CREATOR - 2);
+      topics[0] = { ...topics[0], playlists: series };
+      return chain(...topics);
+    };
+    expect(validateStartHere(withSeries(two), { strict: true }).join(" ")).not.toMatch(/appears/);
+    // A third series tips it over.
     const three = [
       ...two,
       playlist({ creator: "Creator A", youtube_playlist_id: "PLZ3iRMLYFlHuhA0RPKZFHVcjIMN_-F596" }),
     ];
-    expect(
-      validateStartHere(chain(topic({ videos: picks, playlists: three })), { strict: true }).join(" "),
-    ).toMatch(/Creator A appears 5 times/);
+    expect(validateStartHere(withSeries(three), { strict: true }).join(" ")).toMatch(
+      new RegExp(`Creator A appears ${MAX_PER_CREATOR + 1} times`),
+    );
   });
 
   it("fails a one-part series and a repeated part", () => {
@@ -420,23 +432,20 @@ describe("validateStartHere — playlists", () => {
   });
 
   it("counts a series once toward its creator's share, not once per part", () => {
-    const threePicks = [
-      video({ order: 1, creator: "Creator A" }),
-      video({ order: 2, creator: "Creator A" }),
-      video({ order: 3, creator: "Creator A" }),
-    ];
-    // 3 picks + one 3-part series = 4, the limit exactly.
-    const atLimit = chain(topic({ videos: threePicks, playlists: [playlist({ creator: "Creator A" })] }));
-    expect(validateStartHere(atLimit, { strict: true }).join(" ")).not.toMatch(/appears/);
-
-    // A fourth pick tips it over.
-    const over = chain(
-      topic({
-        videos: [...threePicks, video({ order: 4, creator: "Creator A" })],
-        playlists: [playlist({ creator: "Creator A" })],
-      }),
+    const withSeries = (picks: number) => {
+      const topics = creatorPicks("Creator A", picks);
+      // One three-part series: it adds one appearance, not three.
+      topics[0] = { ...topics[0], playlists: [playlist({ creator: "Creator A" })] };
+      return chain(...topics);
+    };
+    // One pick short of the limit, plus the series, lands exactly on it.
+    expect(validateStartHere(withSeries(MAX_PER_CREATOR - 1), { strict: true }).join(" ")).not.toMatch(
+      /appears/,
     );
-    expect(validateStartHere(over, { strict: true }).join(" ")).toMatch(/Creator A appears 5 times/);
+    // One more pick tips it over.
+    expect(validateStartHere(withSeries(MAX_PER_CREATOR), { strict: true }).join(" ")).toMatch(
+      new RegExp(`Creator A appears ${MAX_PER_CREATOR + 1} times`),
+    );
   });
 });
 
@@ -506,17 +515,16 @@ describe("validateStartHere — debates", () => {
   });
 
   it("leaves debates out of a creator's share", () => {
-    const fourPicks = [1, 2, 3, 4].map((order) => video({ order, creator: "Creator A" }));
-    const data = chain(
-      topic({
-        videos: fourPicks,
-        debates: [
-          debate({ order: 1, creator: "Creator A" }),
-          debate({ order: 2, creator: "Creator A", youtube_id: "ggggggggggg" }),
-        ],
-      }),
-    );
-    expect(validateStartHere(data, { strict: true }).join(" ")).not.toMatch(/appears/);
+    // Exactly at the limit in picks; two debates on top must not tip it over.
+    const topics = creatorPicks("Creator A", MAX_PER_CREATOR);
+    topics[0] = {
+      ...topics[0],
+      debates: [
+        debate({ order: 1, creator: "Creator A" }),
+        debate({ order: 2, creator: "Creator A", youtube_id: "ggggggggggg" }),
+      ],
+    };
+    expect(validateStartHere(chain(...topics), { strict: true }).join(" ")).not.toMatch(/appears/);
   });
 });
 

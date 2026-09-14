@@ -19,7 +19,8 @@
 //     (for a playlist's videos and for debates too, plus a youtube.com
 //     channel link)
 //   - every live video, debate and series carries a depth (milk or meat)
-//   - max 4 videos per creator across the whole pathway
+//   - max 10 appearances per creator across the whole pathway (a series
+//     counts once; debates don't count)
 //   - every open_question topic carries ≥ 2 distinct creators
 
 import rawData from "@/content/start-here.json";
@@ -111,7 +112,10 @@ export interface StartHereData {
 export const PLACEHOLDER = "REPLACE";
 export const MIN_VIDEOS = 3;
 export const MAX_VIDEOS = 6;
-export const MAX_PER_CREATOR = 4;
+// Raised from 4: a handful of teachers carry much of the pathway, and a
+// clear voice across several steps helps a new believer more than an
+// artificially rotated one.
+export const MAX_PER_CREATOR = 10;
 export const MIN_PLAYLIST_VIDEOS = 2;
 // Long enough for a full teaching series (Winger's Evidence for the Bible
 // runs to 20), short enough to still read as one card.
