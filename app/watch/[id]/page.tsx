@@ -2,25 +2,45 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Comments } from "@/components/Comments";
+import { FollowButton } from "@/components/FollowButton";
 import { MobileWatchPanels } from "@/components/MobileWatchPanels";
 import { PinnedPlayer } from "@/components/PinnedPlayer";
 import { ReportTeachingButton } from "@/components/ReportTeachingButton";
+import { WatchRail } from "@/components/WatchRail";
 import { YouTubeEmbed } from "@/components/YouTubeEmbed";
 import { db } from "@/lib/db";
 import { formatScriptureRef, type ScriptureRef } from "@/lib/scripture";
+import {
+  RAIL_ORDER,
+  RAIL_PAGE_SIZE,
+  RAIL_SELECT,
+  pageWithCursor,
+  railWhere,
+} from "@/lib/watch-rail";
 import { thumbnailUrl } from "@/lib/youtube";
 
 // ISR (SCALABILITY §3.1): a watch page renders identically for everyone and
 // is CDN-cached (continue-watching resumes client-side in YouTubeEmbed).
 // Embedded YouTube is free to watch signed in or not, so nothing here reads
-// the viewer — the whole route stays static.
+// the viewer — the whole route stays static. Follow state and later rail
+// pages are fetched by the client, for the same reason.
 export const revalidate = 300;
 
 async function getItem(id: string) {
   return db.contentItem.findUnique({
     where: { id },
     include: {
-      channel: { select: { id: true, handle: true, name: true, status: true, ownerId: true } },
+      channel: {
+        select: {
+          id: true,
+          handle: true,
+          name: true,
+          status: true,
+          ownerId: true,
+          avatarUrl: true,
+          _count: { select: { followers: true } },
+        },
+      },
       series: { select: { id: true, title: true } },
     },
   });
@@ -65,46 +85,26 @@ export default async function WatchPage({
     notFound();
   }
 
-  const related = await db.contentItem.findMany({
-    where: {
-      channelId: item.channelId,
-      unavailableAt: null,
-      id: { not: item.id },
-      youtubeVideoId: { not: null },
-    },
-    orderBy: { publishedAt: "desc" },
-    take: 8,
-    select: { id: true, title: true, youtubeVideoId: true, durationSec: true },
-  });
+  // The rail's first page; WatchRail fetches the rest as the viewer scrolls.
+  const rail = pageWithCursor(
+    await db.contentItem.findMany({
+      where: railWhere(item.channelId, item.id),
+      orderBy: RAIL_ORDER,
+      take: RAIL_PAGE_SIZE + 1,
+      select: RAIL_SELECT,
+    }),
+    RAIL_PAGE_SIZE,
+  );
 
   const refs = (item.scriptureRefs as ScriptureRef[] | null) ?? [];
 
-  const relatedList = (
-    <div>
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-        More from {item.channel.name}
-      </h2>
-      <ul className="space-y-3">
-        {related.map((video) => (
-          <li key={video.id}>
-            <Link href={`/watch/${video.id}`} className="group flex items-start gap-3">
-              {video.youtubeVideoId && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={thumbnailUrl(video.youtubeVideoId, "mqdefault")}
-                  alt=""
-                  className="h-22 w-40 shrink-0 rounded-lg object-cover"
-                />
-              )}
-              <span className="line-clamp-3 pt-0.5 text-[15px] leading-snug group-hover:underline">
-                {video.title}
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+  const railProps = {
+    channelId: item.channel.id,
+    channelName: item.channel.name,
+    excludeId: item.id,
+    initialItems: rail.items,
+    initialCursor: rail.nextCursor,
+  };
 
   return (
     <main className="mx-auto max-w-6xl pb-8 lg:grid lg:grid-cols-[1fr_320px] lg:gap-8 lg:px-4 lg:py-8">
@@ -128,15 +128,43 @@ export default async function WatchPage({
           <span aria-hidden>←</span> Back to @{item.channel.handle}
         </Link>
         <h1 className="mt-2 text-2xl font-semibold lg:mt-4">{item.title}</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-neutral-500">
+
+        {/* Who taught it, and the way to keep up with them — YouTube's
+            channel row under the title. */}
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <Link
             href={`/@${item.channel.handle}`}
-            className="font-medium text-neutral-800 hover:underline dark:text-neutral-200"
+            className="group flex min-w-0 items-center gap-3"
           >
-            {item.channel.name}
+            {item.channel.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={item.channel.avatarUrl}
+                alt=""
+                className="h-10 w-10 shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-amber-500 to-orange-600 font-semibold text-white">
+                {item.channel.name.slice(0, 1).toUpperCase()}
+              </span>
+            )}
+            <span className="min-w-0">
+              <span className="block truncate font-semibold text-neutral-900 group-hover:underline dark:text-neutral-100">
+                {item.channel.name}
+              </span>
+              {item.series && (
+                <span className="block truncate text-xs text-neutral-500">
+                  {item.series.title}
+                </span>
+              )}
+            </span>
           </Link>
-          {item.series && <span>· {item.series.title}</span>}
+          <FollowButton
+            channelId={item.channel.id}
+            initialFollowers={item.channel._count.followers}
+          />
         </div>
+
         {refs.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {refs.map((ref, i) => (
@@ -159,7 +187,7 @@ export default async function WatchPage({
         {/* Mobile: comments swap in over the videos list, YT-app style */}
         <div className="lg:hidden">
           <MobileWatchPanels
-            related={relatedList}
+            related={<WatchRail key={item.id} {...railProps} />}
             comments={<Comments contentItemId={item.id} />}
           />
         </div>
@@ -171,7 +199,12 @@ export default async function WatchPage({
         </div>
       </div>
 
-      <aside className="hidden lg:block">{relatedList}</aside>
+      {/* Desktop: the rail holds its place under the header and scrolls on
+          its own, so the viewer can browse the channel with the player
+          still in view. */}
+      <aside className="hidden lg:sticky lg:top-22 lg:flex lg:max-h-[calc(100dvh-7.5rem)] lg:flex-col lg:self-start">
+        <WatchRail key={item.id} {...railProps} scroll />
+      </aside>
     </main>
   );
 }

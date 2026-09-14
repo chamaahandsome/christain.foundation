@@ -1,19 +1,10 @@
 import Link from "next/link";
+import { formatRuntime } from "@/lib/watch-rail";
 import { thumbnailUrl } from "@/lib/youtube";
 
 // A library item as a card: YouTube thumbnail, title, who taught it. The
 // thumbnail comes from YouTube's own CDN — we embed the player and link the
 // art, we never proxy either (PLAN §2, Layer 1).
-
-function runtime(seconds: number | null | undefined): string | null {
-  if (!seconds || seconds <= 0) return null;
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  return h > 0
-    ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
-    : `${m}:${String(s).padStart(2, "0")}`;
-}
 
 export function VideoCard({
   item,
@@ -29,7 +20,7 @@ export function VideoCard({
     channel: { name: string; handle: string };
   };
 }) {
-  const length = runtime(item.durationSec);
+  const length = formatRuntime(item.durationSec);
   return (
     <Link href={`/watch/${item.id}`} className={`group block ${className}`}>
       <div className="relative overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-800">

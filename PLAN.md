@@ -733,6 +733,35 @@ level.
 
 U2's first item is the one with a paying customer already waiting on it.
 
+**U1 status (2026-09-10, `b1e1c03`) — the hub shell and four rooms shipped.**
+`/table` (auth-protected in middleware) with rooms **Appointments**,
+**eBooks**, **Backing**, **Following**, each a real route under a shared
+layout + `TableTabs` carrying live counts. `/books`, `/backed` and `/feed`
+redirect into their rooms, so notification URLs and bookmarks still land.
+The hub leads with what the person has — Next up, then the newest teaching
+from followed creators — and folds unopened rooms into one invitation at
+the foot. Reads live in `lib/table-queries.ts` (hub takes a slice, room
+takes the lot, same query). Rules in `lib/table.ts`, pure and tested:
+`appointmentState` (UPCOMING | AWAITING | PAST | CLOSED — the guest's view,
+not the studio's), guest-worded status labels, `partitionAppointments`
+(upcoming reads forwards, the rest backwards), `canJoinNow` (Join goes live
+15 min early, closes at slot end). `parseBookingSlots`/`bookingSlot` moved
+into `lib/bookings.ts` and `lib/session-booking.ts` now uses the shared
+parser. **Email claim, read half:** Appointments match `userId` OR
+`requesterEmail`, via `lib/viewer.primaryEmail` — the primary address only
+once Clerk has verified it, since booking is open to guests and an
+unverified address would otherwise read a stranger's appointments. The
+AppointmentCard carries Join / meeting link / add-to-calendar (the existing
+no-OAuth template URL) / sent quote / signed agreement. Following shows
+embedded-YouTube teaching only (`unavailableAt` filtered, PUBLIC — member
+content waits on U2's visibility helper). Header: `Feed · eBooks` collapsed
+into **Your table** beside Studio.
+Still open in U1: `/receipt/[txn]` (checkouts still return `?flag` to the
+creator's page), `/table/memberships` + cancel UI, the claim's write half
+(attaching `userId` in the Clerk webhook), buyer-side notifications, the
+Trickl `PENDING` card, and invoices in Appointments (only quotes and
+contracts link today).
+
 ### 11.7 Open decisions
 
 1. The hub's name and address — `/table` (recommended), `/my`, `/library`.
