@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ContentKind, ContentSource } from "@prisma/client";
-import { videoToContentItemData } from "@/lib/ingest";
+import { ingestDecision, videoToContentItemData } from "@/lib/ingest";
 import type { YouTubeVideoInfo } from "@/lib/youtube-api";
 
 const video: YouTubeVideoInfo = {
@@ -41,5 +41,28 @@ describe("videoToContentItemData", () => {
     });
     expect(data.description).toBeNull();
     expect(data.publishedAt).toBeNull();
+  });
+});
+
+describe("ingestDecision", () => {
+  it("imports public, embeddable, non-Short videos", () => {
+    expect(ingestDecision(video, "STANDARD")).toBe("import");
+    expect(ingestDecision(video, "LIVE")).toBe("import");
+  });
+
+  it("leaves Shorts out", () => {
+    expect(ingestDecision(video, "SHORT")).toBe("skip-short");
+  });
+
+  it("counts an unservable video as unavailable, even when it is also a Short", () => {
+    expect(ingestDecision({ ...video, privacyStatus: "unlisted" }, "STANDARD")).toBe("skip-unavailable");
+    expect(ingestDecision({ ...video, embeddable: false }, "SHORT")).toBe("skip-unavailable");
+  });
+});
+
+describe("videoToContentItemData — detected format", () => {
+  it("stores the format it is given, and classifies when none is", () => {
+    expect(videoToContentItemData("channel-db-id", video, "LIVE").format).toBe("LIVE");
+    expect(videoToContentItemData("channel-db-id", { ...video, durationSec: 40 }).format).toBe("SHORT");
   });
 });

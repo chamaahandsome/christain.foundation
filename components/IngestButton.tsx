@@ -21,7 +21,7 @@ export function IngestButton({ channelId }: { channelId: string }) {
         return;
       }
       setResult(
-        `Imported ${data.ingested} of ${data.discovered} videos${data.skipped ? ` (${data.skipped} skipped)` : ""}${data.playlistsSynced ? `, ${data.playlistsSynced} playlists synced as series` : ""}.`,
+        `Imported ${data.ingested} of ${data.discovered} videos${data.skipped ? ` (${data.skipped} skipped)` : ""}${data.shortsSkipped ? `, ${data.shortsSkipped} Shorts left out` : ""}${data.playlistsSynced ? `, ${data.playlistsSynced} playlists synced as series` : ""}.`,
       );
     } finally {
       setBusy(false);

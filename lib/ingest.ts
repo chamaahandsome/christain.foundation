@@ -7,18 +7,37 @@ import { ContentKind, ContentSource, type Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
   classifyFormat,
+  detectFormat,
   fetchVideoDetails,
   isIngestable,
   listPlaylists,
   listUploads,
   resolveChannel,
+  type VideoFormat,
   type YouTubeVideoInfo,
 } from "@/lib/youtube-api";
 
-/** Pure transform: YouTube video metadata → ContentItem upsert data. */
+export type IngestDecision = "import" | "skip-unavailable" | "skip-short";
+
+/**
+ * Whether a video enters the library (pure, tested). Only public, embeddable
+ * videos can be served, and YouTube Shorts are not imported at all.
+ */
+export function ingestDecision(video: YouTubeVideoInfo, format: VideoFormat): IngestDecision {
+  if (!isIngestable(video)) return "skip-unavailable";
+  if (format === "SHORT") return "skip-short";
+  return "import";
+}
+
+/**
+ * Pure transform: YouTube video metadata → ContentItem upsert data. Pass the
+ * format when it has been detected (see detectFormat); otherwise the
+ * heuristic decides.
+ */
 export function videoToContentItemData(
   channelDbId: string,
   video: YouTubeVideoInfo,
+  format: VideoFormat = classifyFormat(video),
 ): Prisma.ContentItemUncheckedCreateInput {
   return {
     channelId: channelDbId,
@@ -28,7 +47,7 @@ export function videoToContentItemData(
     description: video.description || null,
     youtubeVideoId: video.videoId,
     durationSec: video.durationSec,
-    format: classifyFormat(video),
+    format,
     // Topical search fodder: creator tags. Transcripts need owner OAuth
     // (captions.download) — planned, see PLAN §8.
     searchText: video.tags.length > 0 ? video.tags.join(" ") : null,
@@ -42,6 +61,7 @@ export interface IngestResult {
   created: number; // new to the library (drives follower notifications)
   updated: number; // metadata refresh on existing rows
   skipped: number; // private / unlisted / embedding disabled
+  shortsSkipped: number; // YouTube Shorts, which are not imported
   playlistsSynced: number; // YouTube playlists mirrored as CF series
   createdItems: { id: string; title: string }[];
 }
@@ -142,18 +162,35 @@ export async function ingestChannel(
   });
   const existingIds = new Set(existing.map((row) => row.youtubeVideoId));
 
+  // Formats first, a few at a time. Only videos short enough to be a Short
+  // cost a request to YouTube (detectFormat); the rest resolve instantly.
+  const formats = new Map<string, VideoFormat>();
+  const candidates = videos.filter(isIngestable);
+  for (let i = 0; i < candidates.length; i += 8) {
+    const batch = candidates.slice(i, i + 8);
+    const detected = await Promise.all(batch.map((video) => detectFormat(video)));
+    batch.forEach((video, j) => formats.set(video.videoId, detected[j]));
+  }
+
   let ingested = 0;
   let created = 0;
   let updated = 0;
   let skipped = 0;
+  let shortsSkipped = 0;
   const createdItems: { id: string; title: string }[] = [];
 
   for (const video of videos) {
-    if (!isIngestable(video)) {
+    const format = formats.get(video.videoId) ?? classifyFormat(video);
+    const decision = ingestDecision(video, format);
+    if (decision === "skip-unavailable") {
       skipped += 1;
       continue;
     }
-    const data = videoToContentItemData(channel.id, video);
+    if (decision === "skip-short") {
+      shortsSkipped += 1;
+      continue;
+    }
+    const data = videoToContentItemData(channel.id, video, format);
     const row = await db.contentItem.upsert({
       where: {
         channelId_youtubeVideoId: {
@@ -194,6 +231,7 @@ export async function ingestChannel(
     created,
     updated,
     skipped,
+    shortsSkipped,
     playlistsSynced,
     createdItems,
   };

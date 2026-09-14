@@ -171,6 +171,66 @@ export function classifyFormat(video: {
   return "STANDARD";
 }
 
+/**
+ * Longest a Short can run. YouTube caps Shorts at three minutes; the few
+ * seconds of headroom absorb rounding in the API's duration.
+ */
+export const SHORTS_MAX_SEC = 183;
+
+/**
+ * Read YouTube's answer for youtube.com/shorts/{id} (pure, tested). A Short
+ * is served at that address (200); a regular video is redirected to /watch.
+ * Anything else — a consent page, a bot check, an error — is no answer at
+ * all, and the caller falls back to the heuristic rather than guess.
+ */
+export function shortsProbeVerdict(status: number, location: string | null): boolean | null {
+  if (status === 200) return true;
+  if (status >= 300 && status < 400 && location && /\/watch\?/.test(location)) return false;
+  return null;
+}
+
+/** Ask YouTube whether a video is a Short; null when YouTube won't say. */
+export async function probeIsShort(
+  videoId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<boolean | null> {
+  try {
+    const res = await fetchImpl(
+      `https://www.youtube.com/shorts/${encodeURIComponent(videoId)}`,
+      { method: "HEAD", redirect: "manual", signal: AbortSignal.timeout(5000) },
+    );
+    return shortsProbeVerdict(res.status, res.headers.get("location"));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The format, asking YouTube wherever the heuristic can't be sure. Live
+ * archives and anything longer than a Short never cost a request; for the
+ * rest YouTube's own /shorts answer wins — so an untagged two-minute Short
+ * is caught and a 45-second regular video isn't mistaken for one — and the
+ * heuristic fills in only when YouTube gives no answer.
+ */
+export async function detectFormat(
+  video: {
+    videoId: string;
+    wasLive: boolean;
+    durationSec: number | null;
+    title: string;
+    description: string;
+  },
+  fetchImpl: typeof fetch = fetch,
+): Promise<VideoFormat> {
+  if (video.wasLive) return "LIVE";
+  const duration = video.durationSec;
+  if (duration == null || duration <= 0 || duration > SHORTS_MAX_SEC) return "STANDARD";
+  const verdict = await probeIsShort(video.videoId, fetchImpl);
+  if (verdict === true) return "SHORT";
+  if (verdict === false) return "STANDARD";
+  return classifyFormat(video);
+}
+
 // Local import to avoid a cycle: lib/youtube.ts exports parseIsoDuration.
 import { parseIsoDuration } from "@/lib/youtube";
 function parseIsoDurationLoose(iso: string): number | null {
