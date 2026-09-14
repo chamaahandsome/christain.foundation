@@ -40,6 +40,7 @@ export default async function LibraryTab({
         publishedAt: true,
         durationSec: true,
         format: true,
+        source: true,
       },
     }),
     db.series.findMany({
@@ -54,8 +55,8 @@ export default async function LibraryTab({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-neutral-500">
           {items.length} items{items.length === 200 ? " (newest 200 shown)" : ""} ·
-          Public items appear in the library; Members/Paid stay off the public
-          surfaces until those tiers launch.
+          YouTube videos are always public, since anyone can watch them free on
+          YouTube. Members-only and paid apply to content hosted on CF itself.
         </p>
         {canEdit &&
           (!access.channel.youtubeChannelId ? (

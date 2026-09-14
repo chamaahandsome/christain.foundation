@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { ACCESS_LEVELS, FEATURES } from "@/lib/team";
 import { getChannelAccess } from "@/lib/team-authorization";
+import { visibilityProblem } from "@/lib/visibility";
 
 const BodySchema = z.object({
   contentItemId: z.string().min(1),
@@ -28,7 +29,7 @@ export async function PATCH(req: Request) {
 
   const item = await db.contentItem.findUnique({
     where: { id: body.contentItemId },
-    select: { id: true, channelId: true },
+    select: { id: true, channelId: true, source: true },
   });
   if (!item) {
     return NextResponse.json({ error: "Content not found." }, { status: 404 });
@@ -42,6 +43,14 @@ export async function PATCH(req: Request) {
   );
   if (!access.authorized) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // A YouTube video is free to anyone on YouTube, so it can't be gated here.
+  if (body.visibility !== undefined) {
+    const problem = visibilityProblem(item.source, body.visibility);
+    if (problem) {
+      return NextResponse.json({ error: problem }, { status: 422 });
+    }
   }
 
   // A series must belong to the same channel — no cross-channel grafting.

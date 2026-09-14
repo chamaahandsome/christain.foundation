@@ -2,9 +2,12 @@
 
 // Studio library: rename items, set visibility, group into series. Edits go
 // item by item — no bulk footguns; the ingest pipeline owns bulk import.
+// Visibility is only a choice for content CF serves itself: a YouTube video
+// is free on YouTube, so it is always public here (lib/visibility).
 
 import Link from "next/link";
 import { useState } from "react";
+import { allowedVisibilities } from "@/lib/visibility";
 
 interface Item {
   id: string;
@@ -15,6 +18,7 @@ interface Item {
   publishedAt: string | null;
   durationSec: number | null;
   format: string;
+  source: string;
 }
 
 interface SeriesRow {
@@ -22,8 +26,6 @@ interface SeriesRow {
   title: string;
   itemCount: number;
 }
-
-const VISIBILITIES = ["PUBLIC", "MEMBERS", "PAID"] as const;
 
 const FORMAT_FILTERS = [
   { key: "ALL", label: "All" },
@@ -218,18 +220,28 @@ export function LibraryManager({
                     </option>
                   ))}
                 </select>
-                <select
-                  value={item.visibility}
-                  onChange={(e) => void patchItem(item.id, { visibility: e.target.value })}
-                  disabled={busyId === item.id}
-                  className="rounded-lg border border-neutral-300 px-2 py-1 text-xs dark:border-neutral-700 dark:bg-neutral-900"
-                >
-                  {VISIBILITIES.map((v) => (
-                    <option key={v} value={v}>
-                      {v.toLowerCase()}
-                    </option>
-                  ))}
-                </select>
+                {allowedVisibilities(item.source).length > 1 ? (
+                  <select
+                    value={item.visibility}
+                    onChange={(e) => void patchItem(item.id, { visibility: e.target.value })}
+                    disabled={busyId === item.id}
+                    className="rounded-lg border border-neutral-300 px-2 py-1 text-xs dark:border-neutral-700 dark:bg-neutral-900"
+                  >
+                    {allowedVisibilities(item.source).map((v) => (
+                      <option key={v} value={v}>
+                        {v.toLowerCase()}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  // Free on YouTube, so always public here — nothing to choose.
+                  <span
+                    title="Anyone can watch this free on YouTube, so it's always public here."
+                    className="rounded-lg border border-dashed border-neutral-300 px-2 py-1 text-xs text-neutral-500 dark:border-neutral-700"
+                  >
+                    Public · YouTube
+                  </span>
+                )}
               </div>
             )}
           </li>
