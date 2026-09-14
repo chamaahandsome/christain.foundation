@@ -1311,3 +1311,29 @@ model StartHereDepthOverride {
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
 }
+
+// ---------- Start Here: usage analytics ----------
+// First-party and anonymous: which steps people reach and what they play.
+// visitorId is a random per-browser id — no name, email or fingerprint —
+// and userId rides along only when someone is signed in. Kept in our own
+// database rather than a third-party tracker: what someone watches on a
+// faith site can reveal what they believe.
+enum StartHereEventType {
+  STEP_VIEW
+  VIDEO_PLAY
+}
+
+model StartHereEvent {
+  id        String             @id @default(cuid())
+  type      StartHereEventType
+  visitorId String
+  userId    String? // Clerk user id, when signed in
+  stepSlug  String
+  itemKey   String? // "video:<youtubeId>" or "series:<playlistId>" for plays
+  createdAt DateTime           @default(now())
+
+  @@index([type, createdAt])
+  @@index([stepSlug, type, createdAt])
+  @@index([itemKey, createdAt])
+  @@index([visitorId])
+}

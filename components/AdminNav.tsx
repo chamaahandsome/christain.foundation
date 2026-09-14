@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/admin/curation", label: "Curation" },
   { href: "/admin/shelves", label: "Shelves" },
   { href: "/admin/moderation", label: "Moderation" },
+  { href: "/admin/start-here", label: "Start Here" },
 ];
 
 /** Shared admin navigation; `current` hides the self-link. */

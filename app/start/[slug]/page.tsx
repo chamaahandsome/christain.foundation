@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { StartHerePathway } from "@/components/StartHerePathway";
+import { StartHereFrame } from "@/components/StartHereFrame";
 import { isAdminUser } from "@/lib/admin";
 import {
   applyDepthOverrides,
@@ -42,12 +43,12 @@ export default async function StartTopicPage({
   ]);
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
+    <StartHereFrame>
       <StartHerePathway
         topics={applyDepthOverrides(startHereTopics(), overrides)}
         initialSlug={slug}
         canEditDepth={canEditDepth}
       />
-    </main>
+    </StartHereFrame>
   );
 }

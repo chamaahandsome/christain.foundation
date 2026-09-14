@@ -43,10 +43,13 @@ function embedUrl(youtubeId: string): string {
 export function StartHerePlaylistPlayer({
   playlist,
   depthEditable = false,
+  onPlay,
 }: {
   playlist: StartHerePlaylist;
   /** Admins: the milk/meat badge becomes a switch. */
   depthEditable?: boolean;
+  /** Called once, when the series starts — not again for each part. */
+  onPlay?: () => void;
 }) {
   const parts = playlist.videos;
   const [started, setStarted] = useState(false);
@@ -90,6 +93,7 @@ export function StartHerePlaylistPlayer({
       startAtRef.current = i;
       setStartAt(i);
       setStarted(true);
+      onPlay?.();
       return;
     }
     // Before the player is ready the frame is still loading startAt;

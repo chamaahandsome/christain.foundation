@@ -106,10 +106,13 @@ function PlayingEmbed({
 export function StartHereVideoCard({
   video,
   depthEditable = false,
+  onPlay,
 }: {
   video: StartHereVideo;
   /** Admins: the milk/meat badge becomes a switch. */
   depthEditable?: boolean;
+  /** Called once, when the viewer presses play. */
+  onPlay?: () => void;
 }) {
   const [playing, setPlaying] = useState(false);
   const [dead, setDead] = useState(false);
@@ -146,7 +149,10 @@ export function StartHereVideoCard({
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
       <button
         type="button"
-        onClick={() => setPlaying(true)}
+        onClick={() => {
+          setPlaying(true);
+          onPlay?.();
+        }}
         aria-label={`Play: ${video.title}`}
         className="group relative w-full shrink-0 overflow-hidden rounded-xl bg-neutral-950 sm:w-44"
       >

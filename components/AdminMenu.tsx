@@ -14,6 +14,7 @@ const LINKS = [
   { href: "/admin/doctrine", label: "Doctrine queue", hint: "§5.4 reports on published teaching" },
   { href: "/admin/moderation", label: "Moderation", hint: "Comment reports — safety, not doctrine" },
   { href: "/admin/invites", label: "Invites", hint: "Founding-cohort invite codes" },
+  { href: "/admin/start-here", label: "Start Here", hint: "Who uses the pathway, and how far they get" },
 ];
 
 export function AdminMenu() {

@@ -11,11 +11,14 @@ import { StartHerePlaylistPlayer } from "@/components/StartHerePlaylistPlayer";
 import { StartHereVideoCard } from "@/components/StartHereVideoCard";
 import {
   isPlaceholderVideo,
+  seriesDepthKey,
   topicDebates,
   topicPlaylists,
+  videoDepthKey,
   type StartHereDepth,
   type StartHereTopic,
 } from "@/lib/start-here";
+import { trackStartHere } from "@/lib/start-here-tracking";
 
 /** Remembered per viewer, on their own device. */
 const MILK_ONLY_KEY = "start-here:milk-only";
@@ -167,6 +170,15 @@ export function StartHerePathway({
     return () => window.removeEventListener("resize", measureEdges);
   }, []);
 
+  // Analytics: one step view per step per visit to the page — tabbing back
+  // to a step already seen doesn't count it twice.
+  const viewedSteps = useRef(new Set<string>());
+  useEffect(() => {
+    if (viewedSteps.current.has(topic.slug)) return;
+    viewedSteps.current.add(topic.slug);
+    trackStartHere({ type: "step_view", stepSlug: topic.slug });
+  }, [topic.slug]);
+
   // Browser back/forward stays inside the tabs.
   useEffect(() => {
     function onPop() {
@@ -292,6 +304,13 @@ export function StartHerePathway({
               key={series.youtube_playlist_id}
               playlist={series}
               depthEditable={canEditDepth}
+              onPlay={() =>
+                trackStartHere({
+                  type: "video_play",
+                  stepSlug: topic.slug,
+                  itemKey: seriesDepthKey(series.youtube_playlist_id),
+                })
+              }
             />
           ))}
           {allVideos.length === 0 && playlists.length === 0 ? (
@@ -305,6 +324,13 @@ export function StartHerePathway({
                 key={`${video.youtube_id}-${video.order}`}
                 video={video}
                 depthEditable={canEditDepth}
+                onPlay={() =>
+                  trackStartHere({
+                    type: "video_play",
+                    stepSlug: topic.slug,
+                    itemKey: videoDepthKey(video.youtube_id),
+                  })
+                }
               />
             ))
           )}
@@ -315,6 +341,13 @@ export function StartHerePathway({
               key={series.youtube_playlist_id}
               playlist={series}
               depthEditable={canEditDepth}
+              onPlay={() =>
+                trackStartHere({
+                  type: "video_play",
+                  stepSlug: topic.slug,
+                  itemKey: seriesDepthKey(series.youtube_playlist_id),
+                })
+              }
             />
           ))}
         </div>
@@ -349,6 +382,13 @@ export function StartHerePathway({
                   key={`${debate.youtube_id}-${debate.order}`}
                   video={debate}
                   depthEditable={canEditDepth}
+                  onPlay={() =>
+                    trackStartHere({
+                      type: "video_play",
+                      stepSlug: topic.slug,
+                      itemKey: videoDepthKey(debate.youtube_id),
+                    })
+                  }
                 />
               ))}
             </div>
