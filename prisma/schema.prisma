@@ -553,6 +553,10 @@ model ContentItem {
   channel        Channel       @relation(fields: [channelId], references: [id])
   seriesId       String?
   series         Series?       @relation(fields: [seriesId], references: [id])
+  // The video's place in its series, in the creator's order: ingest copies it
+  // from the YouTube playlist the series mirrors. Null sorts last (a hand-made
+  // series, or a video moved in by hand). See lib/series-order.
+  seriesPosition Int?
   source         ContentSource
   kind           ContentKind
   title          String
@@ -588,7 +592,7 @@ model ContentItem {
   @@unique([channelId, youtubeVideoId])
   @@index([channelId])
   @@index([channelId, format])
-  @@index([seriesId])
+  @@index([seriesId, seriesPosition])
   @@index([kind])
   @@index([publishedAt])
   // Topical search across metadata + transcript-derived text (PLAN §3).

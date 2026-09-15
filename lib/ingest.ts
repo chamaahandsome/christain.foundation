@@ -16,6 +16,7 @@ import {
   type VideoFormat,
   type YouTubeVideoInfo,
 } from "@/lib/youtube-api";
+import { playlistPositions, positionUpdates } from "@/lib/series-order";
 
 export type IngestDecision = "import" | "skip-unavailable" | "skip-short";
 
@@ -69,7 +70,8 @@ export interface IngestResult {
 /**
  * Mirror the channel's YouTube playlists as CF series and place imported
  * videos into them. Manual curation wins: only items without a series are
- * placed, and a video in several playlists keeps its first placement.
+ * placed, and a video in several playlists keeps its first placement. Each
+ * series keeps its playlist's order: every video takes its place in the list.
  */
 export async function syncPlaylistsAsSeries(
   channelDbId: string,
@@ -81,9 +83,9 @@ export async function syncPlaylistsAsSeries(
 
   for (const [index, playlist] of playlists.entries()) {
     if (playlist.itemCount === 0) continue;
-    // A playlist is just a playlist of video ids — reuse the pager (2 pages
-    // = the newest 100 entries per playlist keeps quota negligible).
-    const videoIds = await listUploads(playlist.playlistId, apiKey, { maxPages: 2 });
+    // A playlist is just a list of video ids, in the creator's order — reuse
+    // the pager. 20 pages reads 1,000 entries, at one quota unit a page.
+    const videoIds = await listUploads(playlist.playlistId, apiKey, { maxPages: 20 });
     const matching = videoIds.length
       ? await db.contentItem.count({
           where: { channelId: channelDbId, youtubeVideoId: { in: videoIds } },
@@ -122,6 +124,25 @@ export async function syncPlaylistsAsSeries(
         },
         data: { seriesId: series.id },
       });
+    }
+    // Put the series in the creator's order. An empty read is a hiccup, not
+    // an empty playlist (those were skipped above), so it changes nothing.
+    if (videoIds.length > 0) {
+      const members = await db.contentItem.findMany({
+        where: { seriesId: series.id },
+        select: { id: true, youtubeVideoId: true, seriesPosition: true },
+      });
+      const updates = positionUpdates(members, playlistPositions(videoIds));
+      if (updates.length > 0) {
+        await db.$transaction(
+          updates.map((update) =>
+            db.contentItem.update({
+              where: { id: update.id },
+              data: { seriesPosition: update.seriesPosition },
+            }),
+          ),
+        );
+      }
     }
     synced += 1;
   }

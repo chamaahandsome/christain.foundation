@@ -21,7 +21,7 @@ export async function GET(req: Request) {
   }
 
   const rows = await db.contentItem.findMany({
-    where: railWhere(query.channelId, query.excludeId),
+    where: railWhere(query.channelId, query.excludeIds),
     orderBy: RAIL_ORDER,
     take: query.take + 1,
     ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),

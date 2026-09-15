@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  RAIL_MAX_EXCLUDE,
   RAIL_MAX_TAKE,
   RAIL_PAGE_SIZE,
   formatRuntime,
@@ -16,7 +17,7 @@ describe("parseRailQuery", () => {
     expect(q(`channelId=${CH}`)).toEqual({
       channelId: CH,
       cursor: null,
-      excludeId: null,
+      excludeIds: [],
       take: RAIL_PAGE_SIZE,
     });
   });
@@ -24,8 +25,21 @@ describe("parseRailQuery", () => {
   it("carries the cursor and the video being watched", () => {
     expect(q(`channelId=${CH}&cursor=cmf1item00002&exclude=cmf1item00001`)).toMatchObject({
       cursor: "cmf1item00002",
-      excludeId: "cmf1item00001",
+      excludeIds: ["cmf1item00001"],
     });
+  });
+
+  it("carries the series parts already shown above the list", () => {
+    expect(q(`channelId=${CH}&exclude=cmf1item00001,cmf1item00002,cmf1item00003`)).toMatchObject({
+      excludeIds: ["cmf1item00001", "cmf1item00002", "cmf1item00003"],
+    });
+  });
+
+  it("refuses an exclude list longer than the page could show", () => {
+    const ids = Array.from({ length: RAIL_MAX_EXCLUDE + 1 }, (_, i) =>
+      `cmf1item${String(i).padStart(5, "0")}`,
+    );
+    expect(q(`channelId=${CH}&exclude=${ids.join(",")}`)).toHaveProperty("error");
   });
 
   it("clamps the page size", () => {
@@ -39,6 +53,7 @@ describe("parseRailQuery", () => {
     expect(q("channelId=x")).toHaveProperty("error");
     expect(q(`channelId=${CH}&cursor=' OR 1=1`)).toHaveProperty("error");
     expect(q(`channelId=${CH}&exclude=../../etc`)).toHaveProperty("error");
+    expect(q(`channelId=${CH}&exclude=cmf1item00001,,`)).toHaveProperty("error");
   });
 });
 
@@ -59,15 +74,15 @@ describe("pageWithCursor", () => {
 });
 
 describe("railWhere", () => {
-  it("keeps to the channel's live, approved embeds and leaves out what's playing", () => {
-    expect(railWhere(CH, "cmf1item00001")).toEqual({
+  it("keeps to the channel's live, approved embeds and leaves out what's shown", () => {
+    expect(railWhere(CH, ["cmf1item00001", "cmf1item00002"])).toEqual({
       channelId: CH,
       unavailableAt: null,
       youtubeVideoId: { not: null },
       channel: { status: "APPROVED" },
-      id: { not: "cmf1item00001" },
+      id: { notIn: ["cmf1item00001", "cmf1item00002"] },
     });
-    expect(railWhere(CH, null)).not.toHaveProperty("id");
+    expect(railWhere(CH, [])).not.toHaveProperty("id");
   });
 });
 

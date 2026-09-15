@@ -10,12 +10,14 @@ import { WatchRail } from "@/components/WatchRail";
 import { YouTubeEmbed } from "@/components/YouTubeEmbed";
 import { db } from "@/lib/db";
 import { formatScriptureRef, type ScriptureRef } from "@/lib/scripture";
+import { SERIES_ORDER, seriesUpNext } from "@/lib/series-order";
 import {
   RAIL_ORDER,
   RAIL_PAGE_SIZE,
   RAIL_SELECT,
   pageWithCursor,
   railWhere,
+  type RailSeries,
 } from "@/lib/watch-rail";
 import { thumbnailUrl } from "@/lib/youtube";
 
@@ -85,10 +87,29 @@ export default async function WatchPage({
     notFound();
   }
 
+  // A video in a series leads on to the series' next parts, in the
+  // creator's order. The channel list follows without repeating them.
+  const seriesItems = item.series
+    ? await db.contentItem.findMany({
+        where: {
+          seriesId: item.series.id,
+          unavailableAt: null,
+          youtubeVideoId: { not: null },
+        },
+        orderBy: SERIES_ORDER,
+        take: 1000,
+        select: RAIL_SELECT,
+      })
+    : [];
+  const upNext = seriesUpNext(seriesItems, item.id);
+  const series: RailSeries | null =
+    item.series && upNext.total > 1 ? { title: item.series.title, ...upNext } : null;
+  const excludeIds = [item.id, ...(series?.next.map((video) => video.id) ?? [])];
+
   // The rail's first page; WatchRail fetches the rest as the viewer scrolls.
   const rail = pageWithCursor(
     await db.contentItem.findMany({
-      where: railWhere(item.channelId, item.id),
+      where: railWhere(item.channelId, excludeIds),
       orderBy: RAIL_ORDER,
       take: RAIL_PAGE_SIZE + 1,
       select: RAIL_SELECT,
@@ -101,7 +122,8 @@ export default async function WatchPage({
   const railProps = {
     channelId: item.channel.id,
     channelName: item.channel.name,
-    excludeId: item.id,
+    excludeIds,
+    series,
     initialItems: rail.items,
     initialCursor: rail.nextCursor,
   };

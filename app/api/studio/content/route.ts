@@ -29,7 +29,7 @@ export async function PATCH(req: Request) {
 
   const item = await db.contentItem.findUnique({
     where: { id: body.contentItemId },
-    select: { id: true, channelId: true, source: true },
+    select: { id: true, channelId: true, source: true, seriesId: true },
   });
   if (!item) {
     return NextResponse.json({ error: "Content not found." }, { status: 404 });
@@ -72,7 +72,11 @@ export async function PATCH(req: Request) {
         ? { description: body.description?.trim() || null }
         : {}),
       ...(body.visibility !== undefined ? { visibility: body.visibility } : {}),
-      ...(body.seriesId !== undefined ? { seriesId: body.seriesId } : {}),
+      // A video moved to another series leaves its old place behind; it
+      // joins the new one at the end (lib/series-order).
+      ...(body.seriesId !== undefined && body.seriesId !== item.seriesId
+        ? { seriesId: body.seriesId, seriesPosition: null }
+        : {}),
     },
   });
 

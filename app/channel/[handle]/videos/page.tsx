@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { SERIES_ORDER } from "@/lib/series-order";
 import { thumbnailUrl } from "@/lib/youtube";
 import { VideoRow } from "@/components/VideoRow";
 
@@ -9,7 +10,8 @@ import { VideoRow } from "@/components/VideoRow";
 export const revalidate = 60;
 
 // Videos tab: the full library, shelved the way the channel looks on
-// YouTube — Latest, Shorts, Lives, then one slider per populated series.
+// YouTube — Latest, Shorts, Lives, then one slider per populated series,
+// each in the creator's order.
 export default async function ChannelVideosPage({
   params,
 }: {
@@ -58,7 +60,7 @@ export default async function ChannelVideosPage({
             youtubeVideoId: { not: null },
             seriesId: { in: seriesRows.map((s) => s.id) },
           },
-          orderBy: { publishedAt: "desc" },
+          orderBy: SERIES_ORDER,
           take: 200,
           select: itemSelect,
         })
