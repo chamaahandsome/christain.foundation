@@ -900,6 +900,16 @@
       "next": null,
       "videos": [
         {
+          "youtube_id": "ss-kzyXeqdQ",
+          "depth": "meat",
+          "title": "The Judeo-Christian Origins of Modern Science",
+          "creator": "Stephen Meyer",
+          "channel_url": "https://www.youtube.com/@discoverysciencechannel",
+          "duration_seconds": 3336,
+          "why_this_one": "Stephen Meyer shows how three Christian convictions about God and the world gave rise to modern science, and how faith shaped the life and work of Isaac Newton — the history behind the claim that science grew up in Christian soil.",
+          "order": 1
+        },
+        {
           "youtube_id": "y02a28FrMKs",
           "depth": "meat",
           "title": "Does Science Point To God? - Stephen Meyer at Dallas Science Faith Conference 2020",
@@ -907,7 +917,7 @@
           "channel_url": "https://www.youtube.com/@discoverysciencechannel",
           "duration_seconds": 3969,
           "why_this_one": "Stephen Meyer, a philosopher of science, makes the case that discoveries in physics, cosmology and biology point to God rather than away from Him.",
-          "order": 1
+          "order": 2
         },
         {
           "youtube_id": "JW9gcjpt89o",
@@ -917,7 +927,7 @@
           "channel_url": "https://www.youtube.com/@hooverinstitution",
           "duration_seconds": 3691,
           "why_this_one": "Mathematician John Lennox, philosopher of science Stephen Meyer and chemist James Tour ask whether the Big Bang, the fine-tuning of physics and the information in DNA point to blind processes or to an intelligent mind.",
-          "order": 2
+          "order": 3
         },
         {
           "youtube_id": "9r96ewpbVgs",
@@ -927,7 +937,29 @@
           "channel_url": "https://www.youtube.com/@drjamestour",
           "duration_seconds": 4593,
           "why_this_one": "Chemist James Tour walks through why origin-of-life research is still far from making life in the lab — from molecule stability to building a cell — and closes on the resurrection of Jesus.",
-          "order": 3
+          "order": 4
+        },
+        {
+          "youtube_id": "WKLgQzWhO4Q",
+          "depth": "meat",
+          "title": "Abiogenesis Hypothesis ULTRA Pack!  Free Course w/ Rice University Chemist",
+          "creator": "James Tour",
+          "channel_url": "https://www.youtube.com/@drjamestour",
+          "duration_seconds": 32749,
+          "why_this_one": "James Tour's full free course on the origin of life — the chemistry, lesson by lesson, of why no one has yet shown life arising on its own. Long; take it a session at a time.",
+          "order": 5
+        }
+      ],
+      "debates": [
+        {
+          "youtube_id": "3DHvNRK452c",
+          "depth": "meat",
+          "title": "Are we close to discovering the Origin Of Life? James Tour vs Lee Cronin",
+          "creator": "Premier Unbelievable?",
+          "channel_url": "https://www.youtube.com/@premierunbelievable",
+          "duration_seconds": 4816,
+          "why_this_one": "Chemist James Tour and origin-of-life researcher Lee Cronin, who says life from chemistry is within reach, go head to head on how close the lab really is — hear Cronin's case in his own words.",
+          "order": 1
         }
       ]
     }
