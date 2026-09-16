@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { affirmationComplete } from "@/lib/gate";
 import { ChannelTabs, type ChannelTab } from "@/components/ChannelTabs";
-import { FOLLOWER_COUNT_FLOOR, FollowButton } from "@/components/FollowButton";
+import { FollowButton } from "@/components/FollowButton";
 import { StatementBadge } from "@/components/StatementBadge";
 
 // ISR (SCALABILITY §3.1): the channel header is the same for every viewer —
@@ -114,99 +114,95 @@ export default async function ChannelLayout({
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
       <header>
-        {channel.bannerUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={channel.bannerUrl}
-            alt=""
-            className="-mx-4 mb-5 aspect-[4/1] w-[calc(100%+2rem)] max-w-none object-cover sm:mx-0 sm:w-full sm:rounded-2xl"
+        {/* The banner carries the channel's name, and the avatar sits half in,
+            half out of its bottom edge. A channel without a banner of its own
+            gets the brand gradient, so the name always has a ground to sit on.
+            Full-bleed on a phone, a rounded card from sm up. */}
+        <div className="relative -mx-4 sm:mx-0">
+          {channel.bannerUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={channel.bannerUrl}
+              alt=""
+              className="aspect-[5/2] w-full object-cover sm:aspect-[4/1] sm:rounded-2xl"
+            />
+          ) : (
+            <div className="aspect-[5/2] w-full bg-linear-to-br from-amber-500 to-orange-600 sm:aspect-[4/1] sm:rounded-2xl" />
+          )}
+          {/* Scrim: keeps the white name legible on any banner. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-3/4 bg-linear-to-t from-black/75 via-black/30 to-transparent sm:rounded-b-2xl"
           />
-        )}
-        {/* Mobile: link-in-bio hero (the Maltivas mobile pattern, CF amber) */}
-        <div className="flex flex-col items-center text-center sm:hidden">
-          <div className={`rounded-full bg-linear-to-br from-amber-500 to-orange-600 p-1 shadow-lg shadow-amber-500/20 ${channel.bannerUrl ? "-mt-14" : ""}`}>
+
+          {/* Name and handle, to the right of the avatar's upper half. */}
+          <div className="absolute inset-x-0 bottom-0 pb-3 pl-27 pr-4 sm:pb-4 sm:pl-39 sm:pr-6">
+            <h1 className="truncate text-xl font-semibold text-white drop-shadow-sm sm:text-3xl">
+              {channel.name}
+            </h1>
+            <p className="truncate text-sm text-white/85 drop-shadow-sm">
+              @{channel.handle}
+            </p>
+          </div>
+
+          <div className="absolute bottom-0 left-4 translate-y-1/2 sm:left-6">
             {channel.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={channel.avatarUrl}
                 alt=""
-                className="h-20 w-20 rounded-full object-cover"
+                className="h-20 w-20 rounded-full object-cover shadow-md ring-4 ring-white sm:h-28 sm:w-28 dark:ring-neutral-950"
               />
             ) : (
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white text-2xl font-bold text-amber-600 dark:bg-neutral-950 dark:text-amber-400">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white text-2xl font-bold text-amber-600 shadow-md ring-4 ring-white sm:h-28 sm:w-28 sm:text-3xl dark:bg-neutral-950 dark:text-amber-400 dark:ring-neutral-950">
                 {initials}
               </div>
             )}
           </div>
-          <h1 className="mt-3 text-2xl font-semibold">{channel.name}</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            @{channel.handle}
-            {channel._count.followers >= FOLLOWER_COUNT_FLOOR &&
-              ` · ${channel._count.followers} followers`}
-          </p>
-          {channel.bio && (
-            <p className="mt-2 line-clamp-3 max-w-xs text-sm leading-6 text-neutral-600 dark:text-neutral-400">
-              {channel.bio}
-            </p>
-          )}
-          <div className="mt-4">
-            <FollowButton
-              channelId={channel.id}
-              initialFollowers={channel._count.followers}
-            />
-          </div>
-          {badge && <div className="mt-3">{badge}</div>}
         </div>
 
-        {/* Desktop: the full header */}
-        <div className="hidden sm:block">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              {channel.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={channel.avatarUrl}
-                  alt=""
-                  className={`h-16 w-16 shrink-0 rounded-full object-cover ring-2 ring-amber-500/60 ${channel.bannerUrl ? "-mt-10 h-20 w-20 ring-4 ring-white dark:ring-neutral-950" : ""}`}
-                />
-              ) : null}
-              <div>
-              <h1 className="text-3xl font-semibold">{channel.name}</h1>
-              <p className="mt-1 text-sm text-neutral-500">
-                @{channel.handle} · {channel._count.contentItems} items
-                {bookCount > 0 && <> · {bookCount} books</>}
-              </p>
-              {badge && <div className="mt-2">{badge}</div>}
-              </div>
-            </div>
-            <FollowButton
-              channelId={channel.id}
-              initialFollowers={channel._count.followers}
-            />
-          </div>
-          {channel.bio && (
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-400">
-              {channel.bio}
-            </p>
-          )}
-          {channel.links != null && Object.keys(channel.links).length > 0 && (
-            <p className="mt-3 flex flex-wrap gap-3 text-sm">
-              {Object.entries(channel.links as Record<string, string>).map(
-                ([key, url]) => (
-                  <a
-                    key={key}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="capitalize text-neutral-500 underline-offset-2 hover:text-amber-600 hover:underline"
-                  >
-                    {key}
-                  </a>
-                ),
-              )}
-            </p>
-          )}
+        {/* Beside the avatar's lower half: what the channel holds, and Follow.
+            The min height clears the part of the avatar below the banner. */}
+        <div className="flex min-h-12 flex-wrap items-center justify-between gap-x-4 gap-y-2 pl-23 pt-2 sm:min-h-16 sm:pl-39 sm:pt-3">
+          <p className="text-sm text-neutral-500">
+            {channel._count.contentItems} items
+            {bookCount > 0 && (
+              <>
+                {" "}
+                · {bookCount} {bookCount === 1 ? "book" : "books"}
+              </>
+            )}
+          </p>
+          <FollowButton
+            channelId={channel.id}
+            initialFollowers={channel._count.followers}
+          />
         </div>
+
+        {badge && <div className="mt-3">{badge}</div>}
+        {channel.bio && (
+          <p className="mt-3 line-clamp-3 max-w-2xl text-sm leading-6 text-neutral-600 sm:line-clamp-none dark:text-neutral-400">
+            {channel.bio}
+          </p>
+        )}
+        {/* On a phone the Home stack carries the links (Linktree-style). */}
+        {channel.links != null && Object.keys(channel.links).length > 0 && (
+          <p className="mt-3 hidden flex-wrap gap-3 text-sm sm:flex">
+            {Object.entries(channel.links as Record<string, string>).map(
+              ([key, url]) => (
+                <a
+                  key={key}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="capitalize text-neutral-500 underline-offset-2 hover:text-amber-600 hover:underline"
+                >
+                  {key}
+                </a>
+              ),
+            )}
+          </p>
+        )}
 
         {tabs.length > 1 && <ChannelTabs handle={channel.handle} tabs={tabs} />}
       </header>
